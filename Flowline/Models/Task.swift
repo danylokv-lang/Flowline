@@ -14,7 +14,7 @@ import Foundation
 import SwiftData
 
 @Model
-fianl class FlowTask {
+final class FlowTask {
     var id: UUID
     var name: String 
     var category: Category?
