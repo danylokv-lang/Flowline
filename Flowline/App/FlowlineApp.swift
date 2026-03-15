@@ -1,9 +1,7 @@
-//
-//  FlowlineApp.swift
-//  Flowline
-//
-//  Created by Danylo Kovalenko on 15.03.26.
-//
+/*
+    Flowline
+    Created by Danylo Kov: 15/03/26
+*/  
 
 import SwiftUI
 import SwiftData
@@ -12,7 +10,7 @@ import SwiftData
 struct FlowlineApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            FlowTask.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
