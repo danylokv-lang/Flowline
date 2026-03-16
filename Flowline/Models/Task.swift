@@ -15,19 +15,21 @@ import SwiftData
 
 @Model
 final class FlowTask {
-    var id: UUID
     var name: String 
     var category: Category?
     var priority: Priority?
     var bulletPoints: [String]
     var taskDescription: String?
     var deadline: Date?
-
+    var estimatedDuration: TimeInterval?
+    var isCompleted: Bool
+    var createdAt: Date
 
     init(name: String) {
-        self.id = UUID()
         self.name = name
         self.bulletPoints = []
+        self.isCompleted = false
+        self.createdAt = Date()
     }
 }
 

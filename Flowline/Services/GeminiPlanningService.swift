@@ -1,0 +1,99 @@
+import Foundation
+
+final class GeminiPlanningService: AIPlanning {
+    private let apiKey: String
+    private let session: URLSession
+    private let model: String
+    private let systemPrompt: String
+
+    init(
+        apiKey: String,
+        model: String = "gemini-2.5-flash",
+        systemPrompt: String = "You are Flowline, an AI daily planning assistant. Help users organize their day by asking about their tasks, priorities, and available time. Be concise, friendly, and practical. When you have enough information, create a clear time-blocked schedule. Also add time for small breaks",
+        session: URLSession = .shared
+    ) {
+        self.apiKey = apiKey
+        self.model = model
+        self.systemPrompt = systemPrompt
+        self.session = session
+    }
+
+    func sendMessage(
+        history: [(role: String, content: String)],
+        newMessage: String
+    ) async throws -> String {
+        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Build contents array from history + new message
+        var contents: [[String: Any]] = history.map { message in
+            [
+                "role": message.role == "assistant" ? "model" : "user",
+                "parts": [["text": message.content]]
+            ]
+        }
+        contents.append([
+            "role": "user",
+            "parts": [["text": newMessage]]
+        ])
+
+        let body: [String: Any] = [
+            "systemInstruction": ["parts": [["text": systemPrompt]]],
+            "contents": contents
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await session.data(for: request)
+
+        // Retry once after delay if rate limited
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 429 {
+            try await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 5_000_000_000) // wait 5 seconds
+            let (retryData, retryResponse) = try await session.data(for: request)
+            guard let retryHttp = retryResponse as? HTTPURLResponse,
+                  (200...299).contains(retryHttp.statusCode) else {
+                let code = (retryResponse as? HTTPURLResponse)?.statusCode ?? -1
+                print("API Error body:", String(data: retryData, encoding: .utf8) ?? "no body")
+                throw GeminiError.requestFailed(statusCode: code)
+            }
+            return try parseResponse(retryData)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            print("API Error body:", String(data: data, encoding: .utf8) ?? "no body")
+            throw GeminiError.requestFailed(statusCode: statusCode)
+        }
+
+        return try parseResponse(data)
+    }
+
+    private func parseResponse(_ data: Data) throws -> String {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let candidates = json["candidates"] as? [[String: Any]],
+              let first = candidates.first,
+              let content = first["content"] as? [String: Any],
+              let parts = content["parts"] as? [[String: Any]],
+              let text = parts.first?["text"] as? String else {
+            throw GeminiError.invalidResponse
+        }
+        return text
+    }
+}
+
+enum GeminiError: LocalizedError {
+    case requestFailed(statusCode: Int)
+    case invalidResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .requestFailed(let code):
+            return "Gemini API request failed with status \(code)"
+        case .invalidResponse:
+            return "Could not parse Gemini response"
+        }
+    }
+}
