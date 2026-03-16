@@ -12,7 +12,8 @@ struct FlowlineApp: App {
         let schema = Schema([
             FlowTask.self,
             ScheduleBlock.self,
-            DayPlan.self
+            DayPlan.self,
+            UserProfile.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -23,9 +24,15 @@ struct FlowlineApp: App {
         }
     }()
 
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
     var body: some Scene {
         WindowGroup {
-            PlanningChatView()
+            if hasCompletedOnboarding {
+                MainTabView()
+            } else {
+                OnboardingView()
+            }
         }
         .modelContainer(sharedModelContainer)
     }

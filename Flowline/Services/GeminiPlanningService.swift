@@ -4,7 +4,7 @@ final class GeminiPlanningService: AIPlanning {
     private let apiKey: String
     private let session: URLSession
     private let model: String
-    private let systemPrompt: String
+    private(set) var systemPrompt: String
 
     init(
         apiKey: String,
@@ -16,6 +16,33 @@ final class GeminiPlanningService: AIPlanning {
         self.model = model
         self.systemPrompt = systemPrompt
         self.session = session
+    }
+
+    func updateSystemPrompt(from profile: UserProfile) {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+
+        var prompt = """
+You are Flowline, an AI daily planning assistant. Help users organize their day by asking about their tasks, 
+    priorities, and available time. Be concise, friendly, and practical. When you have enough information, create a 
+    clear time-blocked schedule. Also add time for small breaks.
+
+User profile:
+- Name: \(profile.name)
+- Wakes up at \(formatter.string(from: profile.wakeTime))
+- Goes to sleep at \(formatter.string(from: profile.sleepTime))
+"""
+
+        if profile.hasWorkHours, let start = profile.workStartTime, let end = profile.workEndTime {
+            prompt += "- Has fixed hours from \(formatter.string(from: start)) to \(formatter.string(from: end))\n"
+        }
+
+        if !profile.bio.isEmpty {
+            prompt += "- About them: \(profile.bio)\n"
+        }
+
+        prompt += "\nUse this information to create personalized schedules."
+        self.systemPrompt = prompt
     }
 
     func sendMessage(

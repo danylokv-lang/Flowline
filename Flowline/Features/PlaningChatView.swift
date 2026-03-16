@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import SwiftData
 
 struct Message: Identifiable {
     let id = UUID()
@@ -50,10 +51,11 @@ struct ShimmerModifier: ViewModifier {
 }
 
 struct PlanningChatView: View {
+    @Query private var profiles: [UserProfile]
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
     @State private var isLoading: Bool = false
-    private let aiService: AIPlanning = GeminiPlanningService(apiKey: Config.geminiAPIKey)
+    private let aiService = GeminiPlanningService(apiKey: Config.geminiAPIKey)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -116,6 +118,16 @@ struct PlanningChatView: View {
         }
         .background(FlowLineTheme.mainBg)
         .animation(.easeOut(duration: 0.3), value: messages.isEmpty)
+        .onAppear {
+            if let profile = profiles.first {
+                aiService.updateSystemPrompt(from: profile)
+            }
+        }
+        .onChange(of: profiles.count) {
+            if let profile = profiles.first {
+                aiService.updateSystemPrompt(from: profile)
+            }
+        }
     }
 
     // MARK: - Chat Bubble
