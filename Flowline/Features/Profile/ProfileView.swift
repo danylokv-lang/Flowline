@@ -7,6 +7,7 @@ struct ProfileView: View {
     @State private var selectedProfileID: PersistentIdentifier?
     @State private var showDeleteConfirm = false
     @State private var profileToDelete: UserProfile?
+    @State private var showNewProfile = false
 
     var body: some View {
         ZStack {
@@ -35,6 +36,22 @@ struct ProfileView: View {
                         .padding(.horizontal)
                     }
                 }
+
+                Button {
+                    showNewProfile = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("New Profile")
+                    }
+                    .bold()
+                    .foregroundColor(FlowLineTheme.mainBg)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 12)
+                    .background(FlowLineTheme.accent)
+                    .cornerRadius(12)
+                }
+                .padding(.bottom, 20)
             }
             .padding(.top, 20)
         }
@@ -50,6 +67,9 @@ struct ProfileView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This profile will be permanently removed.")
+        }
+        .sheet(isPresented: $showNewProfile) {
+            OnboardingView(isInitialOnboarding: false)
         }
         .onAppear {
             // Auto-select first profile if none selected

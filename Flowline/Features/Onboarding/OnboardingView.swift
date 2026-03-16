@@ -3,6 +3,8 @@ import SwiftData
 
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    var isInitialOnboarding: Bool = true
     @State private var currentStep = 0
 
     // Step 1: Name
@@ -95,7 +97,7 @@ struct OnboardingView: View {
     // MARK: - Step 1: Name
     private var nameStep: some View {
         VStack(spacing: 16) {
-            Text("What's your name?")
+            Text("What's profile name?")
                 .font(.title)
                 .bold()
                 .foregroundColor(FlowLineTheme.mainTxt)
@@ -104,7 +106,7 @@ struct OnboardingView: View {
                 .font(.body)
                 .foregroundColor(FlowLineTheme.secondTxt)
 
-            TextField("Your name", text: $name)
+            TextField("Profile name", text: $name)
                 .textFieldStyle(.plain)
                 .padding(14)
                 .background(.regularMaterial)
@@ -238,7 +240,11 @@ struct OnboardingView: View {
             bio: bio.trimmingCharacters(in: .whitespaces)
         )
         modelContext.insert(profile)
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        if isInitialOnboarding {
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        } else {
+            dismiss()
+        }
     }
 }
 
