@@ -131,13 +131,33 @@ struct PlanningChatView: View {
 
             // Input bar
             HStack(spacing: 12) {
-                TextField("Dump your tasks here...", text: $inputText)
-                    .textFieldStyle(.plain)
-                    .padding(12)
-                    .background(.regularMaterial)
-                    .cornerRadius(12)
-                    .foregroundColor(FlowLineTheme.mainTxt)
-                    .onSubmit { sendMessage() }
+                ZStack(alignment: .topLeading) {
+                    if inputText.isEmpty {
+                        Text("Dump your tasks here...")
+                            .foregroundColor(FlowLineTheme.secondTxt.opacity(0.6))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
+                    TextEditor(text: $inputText)
+                        .scrollContentBackground(.hidden)
+                        .background(.clear)
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                        .frame(minHeight: 36, maxHeight: 120)
+                        .onKeyPress(.return, phases: .down) { press in
+                            if press.modifiers.contains(.shift) {
+                                return .ignored
+                            }
+                            let trimmed = inputText.trimmingCharacters(in: .whitespaces)
+                            guard !trimmed.isEmpty, !isLoading, !isSaving else { return .handled }
+                            sendMessage()
+                            return .handled
+                        }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(.regularMaterial)
+                .cornerRadius(12)
 
                 if hasPlanInChat && !isLoading && !isSaving {
                     Button {
@@ -237,6 +257,7 @@ struct PlanningChatView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(message.content)
                             .foregroundColor(FlowLineTheme.secondTxt)
+                            .textSelection(.enabled)
 
                         Button {
                             selectedTab = 1
@@ -270,6 +291,7 @@ struct PlanningChatView: View {
                                 : FlowLineTheme.secondBg.opacity(0.3)
                         )
                         .cornerRadius(16)
+                        .textSelection(.enabled)
                 }
             }
 

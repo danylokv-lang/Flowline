@@ -23,9 +23,14 @@ final class ClaudePlanningService: AIPlanning {
         formatter.timeStyle = .short
 
         var prompt = """
-You are Flowline, an AI daily planning assistant. Help users organize their day by asking about their tasks, \
-priorities, and available time. Be concise, friendly, and practical. When you have enough information, create a \
-clear time-blocked schedule. Also add time for small breaks.
+You are Flowline, a sharp AI daily planner. Your job: build a time-blocked schedule fast.
+
+How to handle conversations:
+- On the user's FIRST message: ask them to list their tasks and any fixed time blocks they have. ONE short message, nothing else.
+- After they reply with tasks: create the full schedule immediately. Don't ask follow-up questions unless a critical constraint is truly missing.
+- If asked to plan a full week: spread tasks logically across multiple days.
+- Be decisive. If info is vague, make a reasonable assumption and note it briefly in the summary.
+- Keep responses short. No long explanations, no filler.
 
 User profile:
 - Name: \(profile.name)
@@ -34,20 +39,20 @@ User profile:
 """
 
         if profile.hasWorkHours, let start = profile.workStartTime, let end = profile.workEndTime {
-            prompt += "- Has fixed hours from \(formatter.string(from: start)) to \(formatter.string(from: end))\n"
+            prompt += "- Fixed work hours: \(formatter.string(from: start)) – \(formatter.string(from: end))\n"
         }
 
         if !profile.bio.isEmpty {
             prompt += "- About them: \(profile.bio)\n"
         }
 
-        prompt += "\nUse this information to create personalized schedules."
+        prompt += "\nRespect the user's wake/sleep times when scheduling. Add short breaks between long tasks."
 
         if let calendarContext {
-            prompt += "\n\nCurrent calendar:\n\(calendarContext)\nYou can suggest changes to existing events or add new ones."
+            prompt += "\n\nCurrent calendar:\n\(calendarContext)\nBuild around existing events. Suggest changes only if the user asks."
         }
 
-        prompt += "\n\nIMPORTANT: Always respond in the same language the user is currently writing in. If they write in Ukrainian — respond in Ukrainian. If in English — respond in English. Adapt every message."
+        prompt += "\n\nIMPORTANT: Always respond in the same language the user is writing in. Ukrainian → Ukrainian, English → English."
 
         self.systemPrompt = prompt
     }
@@ -84,6 +89,22 @@ User profile:
         dateFormatter.dateStyle = .full
         let dateString = dateFormatter.string(from: date)
 
+        // Build the full week date list so Claude uses correct dates for each block
+        let shortFormatter = DateFormatter()
+        shortFormatter.dateFormat = "EEEE, yyyy-MM-dd"
+        let isoFormatter = DateFormatter()
+        isoFormatter.dateFormat = "yyyy-MM-dd"
+        let cal = Calendar.current
+        let weekday = cal.component(.weekday, from: date)
+        let daysToMonday = (weekday == 1) ? -6 : -(weekday - 2)
+        let monday = cal.startOfDay(for: cal.date(byAdding: .day, value: daysToMonday, to: date)!)
+        var weekDateLines = ""
+        for i in 0..<7 {
+            if let d = cal.date(byAdding: .day, value: i, to: monday) {
+                weekDateLines += "- \(shortFormatter.string(from: d)) (\(isoFormatter.string(from: d)))\n"
+            }
+        }
+
         let planSystemPrompt = systemPrompt + """
 
 You are now in JSON-only mode. You MUST return ONLY a raw JSON object. No markdown. No code fences. No explanation. No text before or after. Just the JSON.
@@ -92,10 +113,15 @@ Exact structure required:
 {"replaceWeek":false,"blocks":[{"title":"Task name","startTime":"07:00","endTime":"08:00","category":"health","date":"yyyy-MM-dd"}],"summary":"One sentence summary"}
 
 Rules:
-- Every block MUST have a "date" field in yyyy-MM-dd format (today is \(dateString))
+- Every block MUST have a "date" field in yyyy-MM-dd format
+- Use the exact dates from the week list below — do NOT invent dates
 - category must be one of: study, work, health, personal
 - Set replaceWeek to true only if user asked to redo the whole week
 - Return ONLY the JSON. If you add any other text, the app will crash.
+
+This week's dates:
+\(weekDateLines.trimmingCharacters(in: .whitespacesAndNewlines))
+Today is \(dateString).
 """
 
         var messages = history.map { msg in
@@ -103,7 +129,7 @@ Rules:
         }
 
         // Ensure last message is from user (Claude API requires alternating roles)
-        let triggerMessage = "Based on our conversation, now generate the JSON plan for \(dateString). Return ONLY the JSON object, no markdown, no explanation, nothing else."
+        let triggerMessage = "Generate the JSON plan now. Use the correct date (yyyy-MM-dd) for each block from the week list. Return ONLY the JSON object, no markdown, no explanation."
         if let last = messages.last, last["role"] == "assistant" {
             messages.append(["role": "user", "content": triggerMessage])
         } else if messages.isEmpty {
