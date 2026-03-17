@@ -47,6 +47,8 @@ User profile:
             prompt += "\n\nCurrent calendar:\n\(calendarContext)\nYou can suggest changes to existing events or add new ones."
         }
 
+        prompt += "\n\nIMPORTANT: Always respond in the same language the user is currently writing in. If they write in Ukrainian — respond in Ukrainian. If in English — respond in English. Adapt every message."
+
         self.systemPrompt = prompt
     }
 
