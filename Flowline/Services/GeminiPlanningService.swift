@@ -18,7 +18,7 @@ final class GeminiPlanningService: AIPlanning {
         self.session = session
     }
 
-    func updateSystemPrompt(from profile: UserProfile) {
+    func updateSystemPrompt(from profile: UserProfile, calendarContext: String? = nil) {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
 
@@ -42,6 +42,11 @@ User profile:
         }
 
         prompt += "\nUse this information to create personalized schedules."
+
+        if let calendarContext {
+            prompt += "\n\nCurrent calendar:\n\(calendarContext)\nYou can suggest changes to existing events or add new ones."
+        }
+
         self.systemPrompt = prompt
     }
 

@@ -53,12 +53,15 @@ struct ShimmerModifier: ViewModifier {
 
 struct PlanningChatView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \ChatMessage.timestamp) private var savedMessages: [ChatMessage]
     @Query private var profiles: [UserProfile]
     @Binding var selectedTab: Int
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
     @State private var isLoading: Bool = false
     @State private var isSaving: Bool = false
+    @State private var didLoadHistory = false
+    @State private var showCalendarBanner = false
     private let aiService = GeminiPlanningService(apiKey: Config.geminiAPIKey)
     private let planSaver = PlanSavingService()
 
@@ -140,14 +143,34 @@ struct PlanningChatView: View {
         }
         .background(FlowLineTheme.mainBg)
         .animation(.easeOut(duration: 0.3), value: messages.isEmpty)
+        .overlay(alignment: .top) {
+            if showCalendarBanner {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Calendar updated \u{2713}")
+                }
+                .font(.subheadline.bold())
+                .foregroundColor(FlowLineTheme.mainBg)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(FlowLineTheme.accent)
+                .cornerRadius(12)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showCalendarBanner)
         .onAppear {
             if let profile = profiles.first {
-                aiService.updateSystemPrompt(from: profile)
+                let ctx = try? planSaver.calendarContext(for: Date(), context: modelContext)
+                aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
             }
+            loadHistory()
         }
         .onChange(of: profiles.count) {
             if let profile = profiles.first {
-                aiService.updateSystemPrompt(from: profile)
+                let ctx = try? planSaver.calendarContext(for: Date(), context: modelContext)
+                aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
             }
         }
     }
@@ -215,14 +238,13 @@ struct PlanningChatView: View {
         let text = inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, !isLoading else { return }
 
-        // Build history from existing messages BEFORE adding the new one
-        let history = messages
-            .filter { !$0.isThinking }
-            .map { msg in
-                (role: msg.role == .user ? "user" : "assistant", content: msg.content)
-            }
+        // Build history from ALL saved messages for AI context
+        let history = savedMessages.map { msg in
+            (role: msg.role, content: msg.content)
+        }
 
         messages.append(Message(role: .user, content: text))
+        persistMessage(role: "user", content: text)
         inputText = ""
         isLoading = true
 
@@ -230,10 +252,33 @@ struct PlanningChatView: View {
         messages.append(Message(role: .assistant, content: "Thinking...", isThinking: true))
 
         _Concurrency.Task {
+            // Refresh calendar context before each request
+            if let profile = profiles.first {
+                let ctx = try? planSaver.calendarContext(for: Date(), context: modelContext)
+                aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
+            }
+
             do {
                 let response = try await aiService.sendMessage(history: history, newMessage: text)
-                if let index = messages.lastIndex(where: { $0.isThinking }) {
-                    messages[index] = Message(role: .assistant, content: response)
+
+                // Try to decode as a plan
+                if let jsonData = response.data(using: .utf8),
+                   let plan = try? JSONDecoder().decode(GeneratedPlan.self, from: jsonData) {
+                    try? planSaver.save(plan: plan, for: Date(), context: modelContext)
+                    if let index = messages.lastIndex(where: { $0.isThinking }) {
+                        messages[index] = Message(role: .assistant, content: plan.summary, isSavedPlan: true)
+                    }
+                    persistMessage(role: "assistant", content: response)
+                    showCalendarBanner = true
+                    _Concurrency.Task {
+                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 3_000_000_000)
+                        showCalendarBanner = false
+                    }
+                } else {
+                    if let index = messages.lastIndex(where: { $0.isThinking }) {
+                        messages[index] = Message(role: .assistant, content: response)
+                    }
+                    persistMessage(role: "assistant", content: response)
                 }
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
@@ -242,6 +287,26 @@ struct PlanningChatView: View {
             }
             isLoading = false
         }
+    }
+
+    // MARK: - Persistence
+
+    private func loadHistory() {
+        guard !didLoadHistory else { return }
+        didLoadHistory = true
+        let recent = savedMessages.suffix(50)
+        messages = recent.map { msg in
+            Message(role: msg.role == "user" ? .user : .assistant, content: msg.content)
+        }
+    }
+
+    private func persistMessage(role: String, content: String) {
+        let chatMsg = ChatMessage(
+            role: role,
+            content: content,
+            sessionDate: Calendar.current.startOfDay(for: Date())
+        )
+        modelContext.insert(chatMsg)
     }
 
     // MARK: - Save Plan
@@ -264,8 +329,8 @@ struct PlanningChatView: View {
 
         _Concurrency.Task {
             do {
-                let plan = try await aiService.generatePlan(for: Date().addingTimeInterval(86400), history: history)
-                try planSaver.save(plan: plan, for: Date().addingTimeInterval(86400), context: modelContext)
+                let plan = try await aiService.generatePlan(for: Date(), history: history)
+                try planSaver.save(plan: plan, for: Date(), context: modelContext)
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(role: .assistant, content: "Plan saved to calendar \u{2713}\n\n\(plan.summary)", isSavedPlan: true)
                 }

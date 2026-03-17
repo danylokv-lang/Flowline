@@ -7,9 +7,9 @@ struct CalendarView: View {
 
     private let calendar = Calendar.current
     private let hourHeight: CGFloat = 60
-    private let startHour = 6
-    private let endHour = 23
-    private let dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private let startHour = 0
+    private let endHour = 24
+    private let dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     private let timeColumnWidth: CGFloat = 44
 
     var body: some View {
@@ -48,9 +48,17 @@ struct CalendarView: View {
 
                 Divider().background(FlowLineTheme.secondTxt.opacity(0.3))
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    timeGrid
-                        .padding(.horizontal, 16)
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        timeGrid
+                            .padding(.horizontal, 16)
+                    }
+                    .onAppear {
+                        let currentHour = calendar.component(.hour, from: Date())
+                        if currentHour >= startHour && currentHour <= endHour {
+                            proxy.scrollTo(currentHour, anchor: .center)
+                        }
+                    }
                 }
             }
         }
@@ -100,6 +108,7 @@ struct CalendarView: View {
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundColor(FlowLineTheme.secondTxt)
                         .offset(y: CGFloat(i) * hourHeight - 6)
+                        .id(startHour + i)
                 }
             }
             .frame(width: timeColumnWidth, height: gridHeight, alignment: .topLeading)
@@ -122,20 +131,41 @@ struct CalendarView: View {
                     ForEach(blocks, id: \.persistentModelID) { block in
                         let top = yPosition(for: block.startTime)
                         let height = blockHeight(start: block.startTime, end: block.endTime)
+                        let color = colorForCategory(block.category)
 
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(colorForCategory(block.category))
-                            .overlay(
+                        ZStack(alignment: .leading) {
+                            // Background
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(color.opacity(0.25))
+
+                            // Left accent strip
+                            HStack(spacing: 0) {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(color.opacity(0.8))
+                                    .frame(width: 3)
+                                Spacer()
+                            }
+
+                            // Content
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(block.title)
-                                    .font(.system(size: 9, weight: .medium))
-                                    .foregroundColor(FlowLineTheme.mainBg)
-                                    .lineLimit(height > 30 ? 3 : 1)
-                                    .padding(3),
-                                alignment: .topLeading
-                            )
-                            .frame(height: max(height, 14))
-                            .padding(.horizontal, 1)
-                            .offset(y: top)
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(FlowLineTheme.mainTxt)
+                                    .lineLimit(height > 40 ? 3 : 1)
+
+                                if height > 40 {
+                                    Text(timeRangeString(start: block.startTime, end: block.endTime))
+                                        .font(.system(size: 8))
+                                        .foregroundColor(FlowLineTheme.secondTxt)
+                                }
+                            }
+                            .padding(.leading, 6)
+                            .padding(.trailing, 2)
+                            .padding(.vertical, 2)
+                        }
+                        .frame(height: max(height, 14))
+                        .padding(.horizontal, 2)
+                        .offset(y: top)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -156,6 +186,12 @@ struct CalendarView: View {
         let month = formatter.string(from: endDate)
         let endDay = calendar.component(.day, from: endDate)
         return "\(startDay)–\(endDay) \(month)"
+    }
+
+    private func timeRangeString(start: Date, end: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "HH:mm"
+        return "\(fmt.string(from: start)) – \(fmt.string(from: end))"
     }
 
     private func blocksForDay(_ day: Date) -> [ScheduleBlock] {

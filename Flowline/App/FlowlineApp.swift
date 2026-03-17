@@ -13,7 +13,8 @@ struct FlowlineApp: App {
             FlowTask.self,
             ScheduleBlock.self,
             DayPlan.self,
-            UserProfile.self
+            UserProfile.self,
+            ChatMessage.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
