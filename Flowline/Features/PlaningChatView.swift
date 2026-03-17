@@ -7,6 +7,7 @@ struct Message: Identifiable {
     let role: Role
     let content: String
     var isThinking: Bool = false
+    var isSavedPlan: Bool = false
 
     enum Role {
         case user, assistant
@@ -51,11 +52,15 @@ struct ShimmerModifier: ViewModifier {
 }
 
 struct PlanningChatView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var profiles: [UserProfile]
+    @Binding var selectedTab: Int
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
     @State private var isLoading: Bool = false
+    @State private var isSaving: Bool = false
     private let aiService = GeminiPlanningService(apiKey: Config.geminiAPIKey)
+    private let planSaver = PlanSavingService()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -103,6 +108,23 @@ struct PlanningChatView: View {
                     .foregroundColor(FlowLineTheme.mainTxt)
                     .onSubmit { sendMessage() }
 
+                if hasPlanInChat && !isLoading && !isSaving {
+                    Button {
+                        savePlanToCalendar()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar.badge.plus")
+                            Text("Save")
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundColor(FlowLineTheme.mainBg)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(FlowLineTheme.accent)
+                        .cornerRadius(10)
+                    }
+                }
+
                 Button {
                     sendMessage()
                 } label: {
@@ -110,7 +132,7 @@ struct PlanningChatView: View {
                         .font(.system(size: 24))
                         .foregroundColor(FlowLineTheme.accent)
                 }
-                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading)
+                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving)
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
@@ -144,6 +166,29 @@ struct PlanningChatView: View {
                         .background(FlowLineTheme.secondBg.opacity(0.3))
                         .cornerRadius(16)
                         .modifier(ShimmerModifier())
+                } else if message.isSavedPlan {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(message.content)
+                            .foregroundColor(FlowLineTheme.secondTxt)
+
+                        Button {
+                            selectedTab = 1
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "calendar")
+                                Text("View Calendar")
+                            }
+                            .font(.subheadline.bold())
+                            .foregroundColor(FlowLineTheme.mainBg)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(FlowLineTheme.accent)
+                            .cornerRadius(10)
+                        }
+                    }
+                    .padding(12)
+                    .background(FlowLineTheme.secondBg.opacity(0.3))
+                    .cornerRadius(16)
                 } else {
                     Text(message.content)
                         .padding(12)
@@ -184,14 +229,13 @@ struct PlanningChatView: View {
         // Show thinking indicator
         messages.append(Message(role: .assistant, content: "Thinking...", isThinking: true))
 
-        Task {
+        _Concurrency.Task {
             do {
                 let response = try await aiService.sendMessage(history: history, newMessage: text)
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(role: .assistant, content: response)
                 }
             } catch {
-                // Replace thinking message with error
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(role: .assistant, content: "Something went wrong: \(error.localizedDescription)")
                 }
@@ -199,8 +243,42 @@ struct PlanningChatView: View {
             isLoading = false
         }
     }
+
+    // MARK: - Save Plan
+
+    private var hasPlanInChat: Bool {
+        messages.contains { !$0.isThinking && !$0.isSavedPlan && $0.role == .assistant && $0.content.count > 200 }
+    }
+
+    private func savePlanToCalendar() {
+        guard !isSaving else { return }
+        isSaving = true
+
+        messages.append(Message(role: .assistant, content: "Saving to calendar...", isThinking: true))
+
+        let history = messages
+            .filter { !$0.isThinking && !$0.isSavedPlan }
+            .map { msg in
+                (role: msg.role == .user ? "user" : "assistant", content: msg.content)
+            }
+
+        _Concurrency.Task {
+            do {
+                let plan = try await aiService.generatePlan(for: Date().addingTimeInterval(86400), history: history)
+                try planSaver.save(plan: plan, for: Date().addingTimeInterval(86400), context: modelContext)
+                if let index = messages.lastIndex(where: { $0.isThinking }) {
+                    messages[index] = Message(role: .assistant, content: "Plan saved to calendar \u{2713}\n\n\(plan.summary)", isSavedPlan: true)
+                }
+            } catch {
+                if let index = messages.lastIndex(where: { $0.isThinking }) {
+                    messages[index] = Message(role: .assistant, content: "Failed to save plan: \(error.localizedDescription)")
+                }
+            }
+            isSaving = false
+        }
+    }
 }
 
 #Preview {
-    PlanningChatView()
+    PlanningChatView(selectedTab: .constant(0))
 }

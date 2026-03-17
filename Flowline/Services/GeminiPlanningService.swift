@@ -98,6 +98,92 @@ User profile:
         return try parseResponse(data)
     }
 
+    func generatePlan(
+        for date: Date,
+        history: [(role: String, content: String)]
+    ) async throws -> GeneratedPlan {
+        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .full
+        let dateString = dateFormatter.string(from: date)
+
+        let contents: [[String: Any]] = history.map { message in
+            [
+                "role": message.role == "assistant" ? "model" : "user",
+                "parts": [["text": message.content]]
+            ]
+        }
+
+        let responseSchema: [String: Any] = [
+            "type": "OBJECT",
+            "properties": [
+                "blocks": [
+                    "type": "ARRAY",
+                    "items": [
+                        "type": "OBJECT",
+                        "properties": [
+                            "title": ["type": "STRING"],
+                            "startTime": ["type": "STRING", "description": "HH:mm format"],
+                            "endTime": ["type": "STRING", "description": "HH:mm format"],
+                            "category": ["type": "STRING", "enum": ["study", "work", "health", "personal"]]
+                        ],
+                        "required": ["title", "startTime", "endTime", "category"]
+                    ]
+                ],
+                "summary": ["type": "STRING"]
+            ],
+            "required": ["blocks", "summary"]
+        ]
+
+        let planPrompt = systemPrompt + "\nWhen creating a plan return valid JSON matching the schema. For conversation return normal text.\nCreate a plan for: \(dateString)."
+
+        let body: [String: Any] = [
+            "systemInstruction": ["parts": [["text": planPrompt]]],
+            "contents": contents,
+            "generationConfig": [
+                "responseMimeType": "application/json",
+                "responseSchema": responseSchema
+            ]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await session.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 429 {
+            try await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 5_000_000_000)
+            let (retryData, retryResponse) = try await session.data(for: request)
+            guard let retryHttp = retryResponse as? HTTPURLResponse,
+                  (200...299).contains(retryHttp.statusCode) else {
+                let code = (retryResponse as? HTTPURLResponse)?.statusCode ?? -1
+                print("API Error body:", String(data: retryData, encoding: .utf8) ?? "no body")
+                throw GeminiError.requestFailed(statusCode: code)
+            }
+            return try parsePlanResponse(retryData)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            print("API Error body:", String(data: data, encoding: .utf8) ?? "no body")
+            throw GeminiError.requestFailed(statusCode: statusCode)
+        }
+
+        return try parsePlanResponse(data)
+    }
+
+    private func parsePlanResponse(_ data: Data) throws -> GeneratedPlan {
+        let text = try parseResponse(data)
+        guard let jsonData = text.data(using: .utf8) else {
+            throw GeminiError.invalidResponse
+        }
+        return try JSONDecoder().decode(GeneratedPlan.self, from: jsonData)
+    }
+
     private func parseResponse(_ data: Data) throws -> String {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let candidates = json["candidates"] as? [[String: Any]],
@@ -109,6 +195,18 @@ User profile:
         }
         return text
     }
+}
+
+struct PlanBlock: Codable {
+    let title: String
+    let startTime: String
+    let endTime: String
+    let category: String
+}
+
+struct GeneratedPlan: Codable {
+    let blocks: [PlanBlock]
+    let summary: String
 }
 
 enum GeminiError: LocalizedError {

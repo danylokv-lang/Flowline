@@ -7,19 +7,20 @@ enum CheckInResult: String, Codable {
 
 @Model
 final class ScheduleBlock {
-    @Relationship var task: FlowTask
+    var title: String
+    var category: Category?
     var startTime: Date
     var endTime: Date
-    var isProtected: Bool
     var isCompleted: Bool
     var checkInResult: CheckInResult?
     var createdAt: Date
+    @Relationship var task: FlowTask?
 
-    init(task: FlowTask, startTime: Date, endTime: Date) {
-        self.task = task
+    init(title: String, category: Category? = nil, startTime: Date, endTime: Date) {
+        self.title = title
+        self.category = category
         self.startTime = startTime
         self.endTime = endTime
-        self.isProtected = false
         self.isCompleted = false
         self.createdAt = Date()
     }

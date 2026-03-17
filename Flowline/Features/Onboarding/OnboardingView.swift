@@ -97,7 +97,7 @@ struct OnboardingView: View {
     // MARK: - Step 1: Name
     private var nameStep: some View {
         VStack(spacing: 16) {
-            Text("What's profile name?")
+            Text("What's profilea name?")
                 .font(.title)
                 .bold()
                 .foregroundColor(FlowLineTheme.mainTxt)
