@@ -135,12 +135,14 @@ User profile:
                             "title": ["type": "STRING"],
                             "startTime": ["type": "STRING", "description": "HH:mm format"],
                             "endTime": ["type": "STRING", "description": "HH:mm format"],
-                            "category": ["type": "STRING", "enum": ["study", "work", "health", "personal"]]
+                            "category": ["type": "STRING", "enum": ["study", "work", "health", "personal"]],
+                            "date": ["type": "STRING", "description": "yyyy-MM-dd format, required for multi-day plans"]
                         ],
                         "required": ["title", "startTime", "endTime", "category"]
                     ]
                 ],
-                "summary": ["type": "STRING"]
+                "summary": ["type": "STRING"],
+                "replaceWeek": ["type": "BOOLEAN", "description": "true if this plan replaces the entire week"]
             ],
             "required": ["blocks", "summary"]
         ]
@@ -207,11 +209,13 @@ struct PlanBlock: Codable {
     let startTime: String
     let endTime: String
     let category: String
+    let date: String?
 }
 
 struct GeneratedPlan: Codable {
     let blocks: [PlanBlock]
     let summary: String
+    let replaceWeek: Bool?
 }
 
 enum GeminiError: LocalizedError {

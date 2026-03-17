@@ -87,7 +87,8 @@ User profile:
         let planSystemPrompt = systemPrompt + """
 
 When creating a plan, return ONLY valid JSON with this exact structure (no markdown, no explanation):
-{"blocks":[{"title":"string","startTime":"HH:mm","endTime":"HH:mm","category":"study|work|health|personal"}],"summary":"string"}
+{"replaceWeek":false,"blocks":[{"title":"string","startTime":"HH:mm","endTime":"HH:mm","category":"study|work|health|personal","date":"yyyy-MM-dd"}],"summary":"string"}
+Each block must have a "date" field in yyyy-MM-dd format. Set "replaceWeek":true only if the user asks to redo the entire week.
 Create a plan for: \(dateString).
 """
 
