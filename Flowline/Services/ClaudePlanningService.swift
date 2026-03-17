@@ -98,13 +98,25 @@ Create a plan for: \(dateString).
 
         let body: [String: Any] = [
             "model": model,
-            "max_tokens": 2048,
+            "max_tokens": 4096,
             "system": planSystemPrompt,
             "messages": messages
         ]
 
         let data = try await performRequest(body: body)
-        let text = try parseText(from: data)
+        var text = try parseText(from: data)
+
+        // Strip markdown code fences if present
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.hasPrefix("```json") {
+            text = String(text.dropFirst(7))
+        } else if text.hasPrefix("```") {
+            text = String(text.dropFirst(3))
+        }
+        if text.hasSuffix("```") {
+            text = String(text.dropLast(3))
+        }
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard let jsonData = text.data(using: .utf8) else {
             throw ClaudeError.invalidResponse

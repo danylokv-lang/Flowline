@@ -59,33 +59,46 @@ struct PlanSavingService {
         try context.save()
     }
 
-    func calendarContext(for date: Date, context: ModelContext) throws -> String {
+    func calendarContext(forWeekOf date: Date, context: ModelContext) throws -> String {
         let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let weekday = calendar.component(.weekday, from: date)
+        let daysToMonday = (weekday == 1) ? -6 : -(weekday - 2)
+        let monday = calendar.startOfDay(for: calendar.date(byAdding: .day, value: daysToMonday, to: date)!)
+        let nextMonday = calendar.date(byAdding: .day, value: 7, to: monday)!
 
         let descriptor = FetchDescriptor<DayPlan>(
-            predicate: #Predicate { $0.date >= startOfDay && $0.date < endOfDay }
+            predicate: #Predicate { $0.date >= monday && $0.date < nextMonday }
         )
         let plans = try context.fetch(descriptor)
 
-        guard let plan = plans.first, !plan.blocks.isEmpty else {
-            let dayFormatter = DateFormatter()
-            dayFormatter.dateFormat = "EEEE MMMM d"
-            return "\(dayFormatter.string(from: date)): No schedule yet."
-        }
-
         let dayFormatter = DateFormatter()
         dayFormatter.dateFormat = "EEEE MMMM d"
-
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
 
-        let sorted = plan.blocks.sorted { $0.startTime < $1.startTime }
-        let items = sorted.map { block in
-            "\(block.title) \(timeFormatter.string(from: block.startTime))-\(timeFormatter.string(from: block.endTime))"
+        var lines: [String] = []
+        for offset in 0..<7 {
+            let day = calendar.date(byAdding: .day, value: offset, to: monday)!
+            let startOfDay = calendar.startOfDay(for: day)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+            let dayPlan = plans.first { plan in
+                let planDay = calendar.startOfDay(for: plan.date)
+                return planDay >= startOfDay && planDay < endOfDay
+            }
+
+            let dayLabel = dayFormatter.string(from: day)
+            if let plan = dayPlan, !plan.blocks.isEmpty {
+                let sorted = plan.blocks.sorted { $0.startTime < $1.startTime }
+                let items = sorted.map { block in
+                    "\(block.title) \(timeFormatter.string(from: block.startTime))-\(timeFormatter.string(from: block.endTime))"
+                }
+                lines.append("\(dayLabel): \(items.joined(separator: ", "))")
+            } else {
+                lines.append("\(dayLabel): No schedule")
+            }
         }
 
-        return "\(dayFormatter.string(from: date)): \(items.joined(separator: ", "))"
+        return lines.joined(separator: "\n")
     }
 }

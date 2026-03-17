@@ -162,14 +162,14 @@ struct PlanningChatView: View {
         .animation(.easeInOut(duration: 0.3), value: showCalendarBanner)
         .onAppear {
             if let profile = profiles.first {
-                let ctx = try? planSaver.calendarContext(for: Date(), context: modelContext)
+                let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
                 aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
             }
             loadHistory()
         }
         .onChange(of: profiles.count) {
             if let profile = profiles.first {
-                let ctx = try? planSaver.calendarContext(for: Date(), context: modelContext)
+                let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
                 aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
             }
         }
@@ -254,7 +254,7 @@ struct PlanningChatView: View {
         _Concurrency.Task {
             // Refresh calendar context before each request
             if let profile = profiles.first {
-                let ctx = try? planSaver.calendarContext(for: Date(), context: modelContext)
+                let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
                 aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
             }
 
