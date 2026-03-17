@@ -86,17 +86,31 @@ User profile:
 
         let planSystemPrompt = systemPrompt + """
 
-When creating a plan, return ONLY valid JSON with this exact structure (no markdown, no explanation):
-{"replaceWeek":false,"blocks":[{"title":"string","startTime":"HH:mm","endTime":"HH:mm","category":"study|work|health|personal","date":"yyyy-MM-dd"}],"summary":"string"}
-Each block must have a "date" field in yyyy-MM-dd format. Set "replaceWeek":true only if the user asks to redo the entire week.
-Create a plan for: \(dateString).
+You are now in JSON-only mode. You MUST return ONLY a raw JSON object. No markdown. No code fences. No explanation. No text before or after. Just the JSON.
+
+Exact structure required:
+{"replaceWeek":false,"blocks":[{"title":"Task name","startTime":"07:00","endTime":"08:00","category":"health","date":"yyyy-MM-dd"}],"summary":"One sentence summary"}
+
+Rules:
+- Every block MUST have a "date" field in yyyy-MM-dd format (today is \(dateString))
+- category must be one of: study, work, health, personal
+- Set replaceWeek to true only if user asked to redo the whole week
+- Return ONLY the JSON. If you add any other text, the app will crash.
 """
 
         var messages = history.map { msg in
             ["role": msg.role, "content": msg.content]
         }
-        if messages.isEmpty {
-            messages.append(["role": "user", "content": "Create a plan for \(dateString)"])
+
+        // Ensure last message is from user (Claude API requires alternating roles)
+        let triggerMessage = "Based on our conversation, now generate the JSON plan for \(dateString). Return ONLY the JSON object, no markdown, no explanation, nothing else."
+        if let last = messages.last, last["role"] == "assistant" {
+            messages.append(["role": "user", "content": triggerMessage])
+        } else if messages.isEmpty {
+            messages.append(["role": "user", "content": "Create a plan for \(dateString). Return ONLY the JSON object."])
+        } else {
+            // Last message is already user — replace it with trigger
+            messages[messages.count - 1] = ["role": "user", "content": triggerMessage]
         }
 
         let body: [String: Any] = [

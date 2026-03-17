@@ -62,11 +62,39 @@ struct PlanningChatView: View {
     @State private var isSaving: Bool = false
     @State private var didLoadHistory = false
     @State private var showCalendarBanner = false
+    @State private var showSidebar = false
+    @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
+    private var currentSessionDate: Date { Date() }
     private let aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
     private let planSaver = PlanSavingService()
 
     var body: some View {
+        ZStack(alignment: .leading) {
         VStack(spacing: 0) {
+            // Header
+            HStack {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showSidebar.toggle()
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.title2)
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                }
+                Spacer()
+                Text("Flowline")
+                    .font(.headline)
+                    .foregroundColor(FlowLineTheme.mainTxt)
+                Spacer()
+                Image(systemName: "line.3.horizontal")
+                    .font(.title2)
+                    .opacity(0)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            .background(FlowLineTheme.mainBg)
+
             // Chat area or welcome screen
             if messages.isEmpty {
                 Spacer()
@@ -173,6 +201,22 @@ struct PlanningChatView: View {
                 aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
             }
         }
+
+            // Sidebar overlay
+            if showSidebar {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showSidebar = false
+                        }
+                    }
+
+                sidebarView
+                    .transition(.move(edge: .leading))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: showSidebar)
     }
 
     // MARK: - Chat Bubble
@@ -294,8 +338,8 @@ struct PlanningChatView: View {
     private func loadHistory() {
         guard !didLoadHistory else { return }
         didLoadHistory = true
-        let recent = savedMessages.suffix(50)
-        messages = recent.map { msg in
+        let sessionMsgs = savedMessages.filter { $0.sessionID == currentSessionID }
+        messages = sessionMsgs.suffix(50).map { msg in
             Message(role: msg.role == "user" ? .user : .assistant, content: msg.content)
         }
     }
@@ -304,7 +348,8 @@ struct PlanningChatView: View {
         let chatMsg = ChatMessage(
             role: role,
             content: content,
-            sessionDate: Calendar.current.startOfDay(for: Date())
+            sessionDate: Calendar.current.startOfDay(for: Date()),
+            sessionID: currentSessionID
         )
         modelContext.insert(chatMsg)
     }
@@ -341,6 +386,107 @@ struct PlanningChatView: View {
             }
             isSaving = false
         }
+    }
+
+    // MARK: - Sidebar
+
+    private var sessions: [(id: String, date: Date, preview: String)] {
+        let grouped = Dictionary(grouping: savedMessages) { $0.sessionID }
+        return grouped.keys.compactMap { id in
+            let msgs = (grouped[id] ?? []).sorted { $0.timestamp < $1.timestamp }
+            guard let first = msgs.first else { return nil }
+            let preview = msgs.first(where: { $0.role == "user" })?.content ?? "New conversation"
+            return (id: id, date: first.timestamp, preview: preview)
+        }.sorted { $0.date > $1.date }
+    }
+
+    private func loadSession(id: String) {
+        let sessionMsgs = savedMessages
+            .filter { $0.sessionID == id }
+            .sorted { $0.timestamp < $1.timestamp }
+        messages = sessionMsgs.map { msg in
+            Message(role: msg.role == "user" ? .user : .assistant, content: msg.content)
+        }
+    }
+
+    private func deleteSession(id: String) {
+        let toDelete = savedMessages.filter { $0.sessionID == id }
+        toDelete.forEach { modelContext.delete($0) }
+        if id == currentSessionID {
+            currentSessionID = UUID().uuidString
+            messages = []
+            didLoadHistory = false
+        }
+    }
+
+    @ViewBuilder
+    private var sidebarView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                currentSessionID = UUID().uuidString
+                messages = []
+                didLoadHistory = false
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showSidebar = false
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "plus.bubble")
+                    Text("New Chat")
+                }
+                .font(.headline)
+                .foregroundColor(FlowLineTheme.mainTxt)
+                .padding()
+            }
+
+            Divider().background(FlowLineTheme.mainTxt.opacity(0.2))
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(sessions, id: \.id) { session in
+                        HStack(spacing: 0) {
+                            Button {
+                                currentSessionID = session.id
+                                didLoadHistory = false
+                                loadSession(id: session.id)
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    showSidebar = false
+                                }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(session.date, style: .date)
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(FlowLineTheme.mainTxt)
+                                    Text(session.preview)
+                                        .font(.caption)
+                                        .foregroundColor(FlowLineTheme.secondTxt)
+                                        .lineLimit(2)
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            Button {
+                                deleteSession(id: session.id)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.6))
+                                    .padding(.trailing, 12)
+                            }
+                        }
+                        .background(
+                            session.id == currentSessionID
+                                ? FlowLineTheme.mainBg.opacity(0.3)
+                                : Color.clear
+                        )
+                    }
+                }
+            }
+        }
+        .frame(width: 280)
+        .background(FlowLineTheme.secondBg)
     }
 }
 
