@@ -62,7 +62,7 @@ struct PlanningChatView: View {
     @State private var isSaving: Bool = false
     @State private var didLoadHistory = false
     @State private var showCalendarBanner = false
-    private let aiService = GeminiPlanningService(apiKey: Config.geminiAPIKey)
+    private let aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
     private let planSaver = PlanSavingService()
 
     var body: some View {
