@@ -1,6 +1,7 @@
 # --- Sensitive files ---
 # API keys and secrets
 Flowline/App/Config.swift
+Plan.md
 
 # --- Xcode ---
 *.xcuserstate
@@ -41,3 +42,5 @@ Pods/
 *~
 .idea/
 .vscode/
+
+
