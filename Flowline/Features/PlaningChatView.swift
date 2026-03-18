@@ -209,18 +209,14 @@ struct PlanningChatView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: showCalendarBanner)
         .onAppear {
-            if let profile = profiles.first {
-                let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
-                aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
-            }
+            refreshSystemPrompt()
             loadHistory()
         }
-        .onChange(of: profiles.count) {
-            if let profile = profiles.first {
-                let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
-                aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
-            }
-        }
+        .onChange(of: profiles.first?.name) { refreshSystemPrompt() }
+        .onChange(of: profiles.first?.bio) { refreshSystemPrompt() }
+        .onChange(of: profiles.first?.wakeTime) { refreshSystemPrompt() }
+        .onChange(of: profiles.first?.sleepTime) { refreshSystemPrompt() }
+        .onChange(of: profiles.first?.hasWorkHours) { refreshSystemPrompt() }
 
             // Sidebar overlay
             if showSidebar {
@@ -299,10 +295,21 @@ struct PlanningChatView: View {
         }
     }
 
+    // MARK: - Helpers
+
+    private func refreshSystemPrompt() {
+        guard let profile = profiles.first else { return }
+        let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
+        aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
+    }
+
     // MARK: - Send
     private func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, !isLoading else { return }
+
+        // Refresh prompt with latest profile + calendar + current time BEFORE sending
+        refreshSystemPrompt()
 
         // Build history from ALL saved messages for AI context
         let history = savedMessages.map { msg in
@@ -318,12 +325,6 @@ struct PlanningChatView: View {
         messages.append(Message(role: .assistant, content: "Thinking...", isThinking: true))
 
         _Concurrency.Task {
-            // Refresh calendar context before each request
-            if let profile = profiles.first {
-                let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
-                aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
-            }
-
             do {
                 let response = try await aiService.sendMessage(history: history, newMessage: text)
 
