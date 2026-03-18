@@ -56,6 +56,7 @@ struct PlanningChatView: View {
     @State private var didLoadHistory = false
     @State private var showCalendarBanner = false
     @State private var showSidebar = false
+    @State private var editorHeight: CGFloat = 17
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @StateObject private var aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
     private let planSaver = PlanSavingService()
@@ -168,26 +169,21 @@ struct PlanningChatView: View {
                                 Text("What's on your plate today...")
                                     .font(.system(size: 14))
                                     .foregroundColor(FlowLineTheme.secondTxt.opacity(0.4))
-                                    .padding(.horizontal, 5)
-                                    .padding(.top, 7)
                                     .allowsHitTesting(false)
                             }
-                            TextEditor(text: $inputText)
-                                .scrollContentBackground(.hidden)
-                                .background(.clear)
-                                .foregroundColor(FlowLineTheme.mainTxt)
-                                .font(.system(size: 14))
-                                .frame(minHeight: 32, maxHeight: 110)
-                                .onKeyPress(.return, phases: .down) { press in
-                                    if press.modifiers.contains(.shift) { return .ignored }
-                                    let trimmed = inputText.trimmingCharacters(in: .whitespaces)
-                                    guard !trimmed.isEmpty, !isLoading, !isSaving else { return .handled }
-                                    sendMessage()
-                                    return .handled
-                                }
+                            GrowingTextEditor(
+                                text: $inputText,
+                                height: $editorHeight,
+                                maxHeight: 110
+                            ) {
+                                let trimmed = inputText.trimmingCharacters(in: .whitespaces)
+                                guard !trimmed.isEmpty, !isLoading, !isSaving else { return }
+                                sendMessage()
+                            }
+                            .frame(height: editorHeight)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
                         .background(FlowLineTheme.secondBg.opacity(0.25))
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(
@@ -218,7 +214,7 @@ struct PlanningChatView: View {
                         .padding(.bottom, 2)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 6)
                 }
                 .background(FlowLineTheme.mainBg)
             }
@@ -386,6 +382,7 @@ struct PlanningChatView: View {
         messages.append(Message(role: .user, content: text))
         persistMessage(role: "user", content: text)
         inputText = ""
+        editorHeight = 17
         isLoading = true
         messages.append(Message(role: .assistant, content: "Thinking...", isThinking: true))
 
