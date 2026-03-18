@@ -13,47 +13,76 @@ struct ProfileView: View {
         ZStack {
             FlowLineTheme.mainBg.ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                Text("Profiles")
-                    .font(.largeTitle)
-                    .bold()
-                    .foregroundColor(FlowLineTheme.mainTxt)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
+            VStack(alignment: .leading, spacing: 0) {
+                // ── Header ──────────────────────────────────────────────
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("PROFILES")
+                        .font(.system(size: 11, weight: .heavy))
+                        .tracking(4)
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                    Text("Who's planning today?")
+                        .font(.system(size: 26, weight: .black))
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+
+                Rectangle()
+                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .frame(height: 0.5)
 
                 if profiles.isEmpty {
                     Spacer()
-                    Text("No profiles yet")
-                        .foregroundColor(FlowLineTheme.secondTxt)
+                    VStack(spacing: 8) {
+                        Text("No profiles yet")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                        Text("Add one to get started")
+                            .font(.system(size: 13))
+                            .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                    }
+                    .frame(maxWidth: .infinity)
                     Spacer()
                 } else {
                     ScrollView {
-                        VStack(spacing: 12) {
+                        VStack(spacing: 10) {
                             ForEach(profiles) { profile in
                                 profileCard(profile)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
                     }
                 }
+
+                // ── New Profile Button ────────────────────────────────
+                Rectangle()
+                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .frame(height: 0.5)
 
                 Button {
                     showNewProfile = true
                 } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(FlowLineTheme.accent.opacity(0.15))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(FlowLineTheme.accent)
+                        }
                         Text("New Profile")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(FlowLineTheme.accent)
+                        Spacer()
                     }
-                    .bold()
-                    .foregroundColor(FlowLineTheme.mainBg)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 12)
-                    .background(FlowLineTheme.accent)
-                    .cornerRadius(12)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
                 }
-                .padding(.bottom, 20)
+                .buttonStyle(.plain)
             }
-            .padding(.top, 20)
         }
         .alert("Delete Profile?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -72,72 +101,111 @@ struct ProfileView: View {
             OnboardingView(isInitialOnboarding: false)
         }
         .onAppear {
-            // Auto-select first profile if none selected
             if selectedProfileID == nil, let first = profiles.first {
                 selectedProfileID = first.persistentModelID
             }
         }
     }
 
+    // MARK: - Profile Card
+
     private func profileCard(_ profile: UserProfile) -> some View {
         let isSelected = selectedProfileID == profile.persistentModelID
+        let initials = String(profile.name.prefix(1)).uppercased()
+        let timeFormatter: DateFormatter = {
+            let f = DateFormatter()
+            f.timeStyle = .short
+            return f
+        }()
 
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(profile.name)
-                    .font(.headline)
-                    .foregroundColor(FlowLineTheme.mainTxt)
+        return HStack(spacing: 14) {
+            // Avatar circle
+            ZStack {
+                Circle()
+                    .fill(isSelected ? FlowLineTheme.accent : FlowLineTheme.secondBg.opacity(0.4))
+                    .frame(width: 48, height: 48)
+                Text(initials)
+                    .font(.system(size: 20, weight: .black))
+                    .foregroundColor(isSelected ? FlowLineTheme.mainBg : FlowLineTheme.secondTxt)
+            }
+            .animation(.easeInOut(duration: 0.2), value: isSelected)
 
-                Spacer()
+            // Info
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(profile.name)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                    if isSelected {
+                        Text("ACTIVE")
+                            .font(.system(size: 8, weight: .heavy))
+                            .tracking(1)
+                            .foregroundColor(FlowLineTheme.mainBg)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(FlowLineTheme.accent)
+                            .clipShape(Capsule())
+                    }
+                }
 
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(FlowLineTheme.accent)
+                Text("\(timeFormatter.string(from: profile.wakeTime)) – \(timeFormatter.string(from: profile.sleepTime))")
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+
+                if !profile.bio.isEmpty {
+                    Text(profile.bio)
+                        .font(.system(size: 11))
+                        .foregroundColor(FlowLineTheme.secondTxt.opacity(0.6))
+                        .lineLimit(1)
                 }
             }
 
-            let formatter = DateFormatter()
-            let _ = formatter.timeStyle = .short
-            Text("Wake: \(formatter.string(from: profile.wakeTime)) — Sleep: \(formatter.string(from: profile.sleepTime))")
-                .font(.caption)
-                .foregroundColor(FlowLineTheme.secondTxt)
+            Spacer()
 
-            if !profile.bio.isEmpty {
-                Text(profile.bio)
-                    .font(.caption)
-                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.8))
-                    .lineLimit(2)
-            }
-
-            HStack {
-                Button {
-                    selectedProfileID = profile.persistentModelID
-                } label: {
-                    Text(isSelected ? "Active" : "Select")
-                        .font(.caption)
-                        .foregroundColor(isSelected ? FlowLineTheme.accent : FlowLineTheme.mainTxt)
+            // Actions
+            VStack(spacing: 12) {
+                if !isSelected {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedProfileID = profile.persistentModelID
+                        }
+                    } label: {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 16))
+                            .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
                 }
-
-                Spacer()
 
                 Button {
                     profileToDelete = profile
                     showDeleteConfirm = true
                 } label: {
                     Image(systemName: "trash")
-                        .font(.caption)
-                        .foregroundColor(.red.opacity(0.7))
+                        .font(.system(size: 13))
+                        .foregroundColor(.red.opacity(0.5))
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.top, 4)
         }
         .padding(16)
-        .background(isSelected ? FlowLineTheme.secondBg.opacity(0.5) : FlowLineTheme.secondBg.opacity(0.2))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? FlowLineTheme.accent.opacity(0.5) : .clear, lineWidth: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(FlowLineTheme.secondBg.opacity(isSelected ? 0.25 : 0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(
+                            isSelected ? FlowLineTheme.accent.opacity(0.3) : FlowLineTheme.secondBg.opacity(0.2),
+                            lineWidth: 1
+                        )
+                )
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedProfileID = profile.persistentModelID
+            }
+        }
     }
 }
 

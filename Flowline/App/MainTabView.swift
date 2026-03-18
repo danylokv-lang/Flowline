@@ -7,22 +7,19 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             PlanningChatView(selectedTab: $selectedTab)
                 .tabItem {
-                    Image(systemName: "bubble.left.and.bubble.right")
-                    Text("Plan")
+                    Label("Plan", systemImage: "sparkles")
                 }
                 .tag(0)
 
             CalendarView()
                 .tabItem {
-                    Image(systemName: "calendar")
-                    Text("Calendar")
+                    Label("Week", systemImage: "calendar")
                 }
                 .tag(1)
 
             ProfileView()
                 .tabItem {
-                    Image(systemName: "person.circle")
-                    Text("Profile")
+                    Label("Profile", systemImage: "person.crop.circle")
                 }
                 .tag(2)
         }

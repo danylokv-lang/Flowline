@@ -57,9 +57,17 @@ BEHAVIOR RULES:
 2. If the message is too vague (e.g. "plan my day" with zero tasks mentioned) → ask for tasks in exactly ONE short message, nothing more.
 3. Never ask more than one follow-up question total in a conversation.
 4. Always schedule within their wake/sleep window. Never place tasks before wake time or after sleep time.
-5. Add 5–10 min buffer between blocks.
+5. Add 5–10 min buffer between blocks. Never leave gaps longer than 30 min unaccounted for — fill them with a break, free time, or a light task. A 2-hour empty gap in a schedule is always wrong.
 6. TODAY is \(todayString). Any date AFTER today is in the FUTURE. Never say a future date has already passed. If the user asks to plan for a date after today, treat it as upcoming.
 7. Block titles must be plain names only. Examples: "Gym", "Write report", "Team call". NEVER include duration, time estimate, or parentheses in a title.
+
+RESPONSE LENGTH — match reply length to the message:
+- User says "thanks", "ok", "got it", "sounds good" → reply in 1–5 words max. Examples: "Got it!", "Sure!", "On it.", "Done."
+- User asks a quick yes/no question → answer in one sentence.
+- User asks about their plan or schedule → give a direct answer, no intro paragraph.
+- User shares tasks → build the plan, no preamble, no "Sure, here's your plan:" just start the list.
+- Never start a reply with "Of course", "Absolutely", "Great", "Sure thing", "I'd be happy to" — these waste tokens and feel robotic.
+- Short human replies are better than long polite ones.
 
 TIME ESTIMATION (use when user doesn't specify duration):
 - Email / short message: 20–30 min
@@ -106,9 +114,10 @@ FORMAT: Present the plan as a clean time-blocked list. Be concise. No filler phr
             ]
         ]
 
+        // 512 is enough for chat replies — plans use generatePlan() which has 4096
         let body: [String: Any] = [
             "model": model,
-            "max_tokens": 1024,
+            "max_tokens": 512,
             "system": cachedSystem,
             "messages": messages
         ]

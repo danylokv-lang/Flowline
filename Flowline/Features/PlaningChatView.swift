@@ -16,7 +16,6 @@ struct Message: Identifiable {
 
 struct ShimmerModifier: ViewModifier {
     @State private var phase: CGFloat = 0
-
     private let timer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
 
     func body(content: Content) -> some View {
@@ -24,11 +23,7 @@ struct ShimmerModifier: ViewModifier {
             .overlay(
                 GeometryReader { geo in
                     LinearGradient(
-                        colors: [
-                            .clear,
-                            FlowLineTheme.mainTxt.opacity(0.25),
-                            .clear
-                        ],
+                        colors: [.clear, FlowLineTheme.mainTxt.opacity(0.25), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -44,9 +39,7 @@ struct ShimmerModifier: ViewModifier {
             }
             .onReceive(timer) { _ in
                 phase = 0
-                withAnimation(.linear(duration: 1.5)) {
-                    phase = 1
-                }
+                withAnimation(.linear(duration: 1.5)) { phase = 1 }
             }
     }
 }
@@ -64,251 +57,308 @@ struct PlanningChatView: View {
     @State private var showCalendarBanner = false
     @State private var showSidebar = false
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
-    private var currentSessionDate: Date { Date() }
     @StateObject private var aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
     private let planSaver = PlanSavingService()
 
     var body: some View {
         ZStack(alignment: .leading) {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showSidebar.toggle()
-                    }
-                } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.title2)
-                        .foregroundColor(FlowLineTheme.mainTxt)
-                }
-                Spacer()
-                Text("Flowline")
-                    .font(.headline)
-                    .foregroundColor(FlowLineTheme.mainTxt)
-                Spacer()
-                Image(systemName: "line.3.horizontal")
-                    .font(.title2)
-                    .opacity(0)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-            .background(FlowLineTheme.mainBg)
+            VStack(spacing: 0) {
 
-            // Chat area or welcome screen
-            if messages.isEmpty {
-                Spacer()
-                VStack(spacing: 8) {
-                    Text("Flowline")
-                        .font(.largeTitle)
-                        .bold()
-                        .foregroundColor(FlowLineTheme.mainTxt)
-                    Text("Plan your day with AI")
-                        .font(.title3)
-                        .foregroundColor(FlowLineTheme.secondTxt)
-                }
-                Spacer()
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            ForEach(messages) { message in
-                                chatBubble(message)
-                                    .id(message.id)
-                            }
-                        }
-                        .padding()
-                    }
-                    .onChange(of: messages.count) {
-                        if let last = messages.last {
-                            withAnimation {
-                                proxy.scrollTo(last.id, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Input bar
-            VStack(spacing: 6) {
-                // Save to calendar button — appears above input when plan is ready
-                if hasPlanInChat && !isLoading && !isSaving {
-                    HStack {
-                        Spacer()
-                        Button {
-                            savePlanToCalendar()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "calendar.badge.plus")
-                                Text("Save to Calendar")
-                            }
-                            .font(.subheadline.bold())
-                            .foregroundColor(FlowLineTheme.mainBg)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(FlowLineTheme.accent)
-                            .cornerRadius(10)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
-                HStack(alignment: .bottom, spacing: 10) {
-                    ZStack(alignment: .topLeading) {
-                        if inputText.isEmpty {
-                            Text("Dump your tasks here...")
-                                .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 9)
-                                .allowsHitTesting(false)
-                        }
-                        TextEditor(text: $inputText)
-                            .scrollContentBackground(.hidden)
-                            .background(.clear)
-                            .foregroundColor(FlowLineTheme.mainTxt)
-                            .frame(minHeight: 38, maxHeight: 120)
-                            .onKeyPress(.return, phases: .down) { press in
-                                if press.modifiers.contains(.shift) {
-                                    return .ignored
-                                }
-                                let trimmed = inputText.trimmingCharacters(in: .whitespaces)
-                                guard !trimmed.isEmpty, !isLoading, !isSaving else { return .handled }
-                                sendMessage()
-                                return .handled
-                            }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(FlowLineTheme.secondBg.opacity(0.5))
-                    .cornerRadius(14)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(FlowLineTheme.secondTxt.opacity(0.2), lineWidth: 1)
-                    )
-
+                // ── Header ──────────────────────────────────────────────
+                HStack(alignment: .center) {
                     Button {
-                        sendMessage()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showSidebar.toggle()
+                        }
                     } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(
-                                inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving
-                                    ? FlowLineTheme.secondTxt.opacity(0.3)
-                                    : FlowLineTheme.accent
-                            )
+                        VStack(spacing: 4) {
+                            ForEach(0..<3, id: \.self) { i in
+                                Capsule()
+                                    .fill(FlowLineTheme.secondTxt)
+                                    .frame(width: i == 1 ? 14 : 20, height: 1.5)
+                            }
+                        }
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                     }
-                    .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving)
-                    .padding(.bottom, 3)
-                }
-                .padding(.horizontal)
-            }
-            .padding(.vertical, 10)
-            .background(FlowLineTheme.mainBg)
-        }
-        .background(FlowLineTheme.mainBg)
-        .animation(.easeOut(duration: 0.3), value: messages.isEmpty)
-        .overlay(alignment: .top) {
-            if showCalendarBanner {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Calendar updated \u{2713}")
-                }
-                .font(.subheadline.bold())
-                .foregroundColor(FlowLineTheme.mainBg)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(FlowLineTheme.accent)
-                .cornerRadius(12)
-                .padding(.top, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .animation(.easeInOut(duration: 0.3), value: showCalendarBanner)
-        .onAppear {
-            refreshSystemPrompt()
-            loadHistory()
-        }
-        .onChange(of: profiles.first?.name) { refreshSystemPrompt() }
-        .onChange(of: profiles.first?.bio) { refreshSystemPrompt() }
-        .onChange(of: profiles.first?.wakeTime) { refreshSystemPrompt() }
-        .onChange(of: profiles.first?.sleepTime) { refreshSystemPrompt() }
-        .onChange(of: profiles.first?.hasWorkHours) { refreshSystemPrompt() }
+                    .buttonStyle(.plain)
 
-            // Sidebar overlay
+                    Spacer()
+
+                    Text("FLOWLINE")
+                        .font(.system(size: 12, weight: .heavy))
+                        .tracking(6)
+                        .foregroundColor(FlowLineTheme.mainTxt)
+
+                    Spacer()
+
+                    // Session dot indicator
+                    Circle()
+                        .fill(isLoading ? FlowLineTheme.accent : FlowLineTheme.secondTxt.opacity(0.3))
+                        .frame(width: 8, height: 8)
+                        .animation(.easeInOut(duration: 0.3), value: isLoading)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(FlowLineTheme.mainBg)
+
+                Rectangle()
+                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .frame(height: 0.5)
+
+                // ── Chat area ────────────────────────────────────────────
+                if messages.isEmpty {
+                    Spacer()
+                    emptyState
+                    Spacer()
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 16) {
+                                ForEach(messages) { message in
+                                    chatBubble(message)
+                                        .id(message.id)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                        }
+                        .onChange(of: messages.count) {
+                            if let last = messages.last {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    proxy.scrollTo(last.id, anchor: .bottom)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── Input bar ────────────────────────────────────────────
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(FlowLineTheme.secondBg.opacity(0.3))
+                        .frame(height: 0.5)
+
+                    if hasPlanInChat && !isLoading && !isSaving {
+                        HStack {
+                            Spacer()
+                            Button { savePlanToCalendar() } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "calendar.badge.plus")
+                                        .font(.system(size: 12, weight: .bold))
+                                    Text("Save to Calendar")
+                                        .font(.system(size: 12, weight: .bold))
+                                }
+                                .foregroundColor(FlowLineTheme.mainBg)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 7)
+                                .background(FlowLineTheme.accent)
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+
+                    HStack(alignment: .bottom, spacing: 10) {
+                        ZStack(alignment: .topLeading) {
+                            if inputText.isEmpty {
+                                Text("What's on your plate today...")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.4))
+                                    .padding(.horizontal, 5)
+                                    .padding(.top, 7)
+                                    .allowsHitTesting(false)
+                            }
+                            TextEditor(text: $inputText)
+                                .scrollContentBackground(.hidden)
+                                .background(.clear)
+                                .foregroundColor(FlowLineTheme.mainTxt)
+                                .font(.system(size: 14))
+                                .frame(minHeight: 32, maxHeight: 110)
+                                .onKeyPress(.return, phases: .down) { press in
+                                    if press.modifiers.contains(.shift) { return .ignored }
+                                    let trimmed = inputText.trimmingCharacters(in: .whitespaces)
+                                    guard !trimmed.isEmpty, !isLoading, !isSaving else { return .handled }
+                                    sendMessage()
+                                    return .handled
+                                }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 2)
+                        .background(FlowLineTheme.secondBg.opacity(0.25))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(FlowLineTheme.secondBg.opacity(0.5), lineWidth: 1)
+                        )
+
+                        Button { sendMessage() } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving
+                                            ? FlowLineTheme.secondBg.opacity(0.3)
+                                            : FlowLineTheme.accent
+                                    )
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "arrow.up")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(
+                                        inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving
+                                            ? FlowLineTheme.secondTxt.opacity(0.3)
+                                            : FlowLineTheme.mainBg
+                                    )
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving)
+                        .padding(.bottom, 2)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                .background(FlowLineTheme.mainBg)
+            }
+            .background(FlowLineTheme.mainBg)
+            .animation(.easeOut(duration: 0.25), value: messages.isEmpty)
+            .overlay(alignment: .top) {
+                if showCalendarBanner {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Saved to Calendar")
+                    }
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(FlowLineTheme.mainBg)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(FlowLineTheme.accent)
+                    .clipShape(Capsule())
+                    .padding(.top, 10)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: showCalendarBanner)
+            .onAppear {
+                refreshSystemPrompt()
+                loadHistory()
+            }
+            .onChange(of: profiles.first?.name) { refreshSystemPrompt() }
+            .onChange(of: profiles.first?.bio) { refreshSystemPrompt() }
+            .onChange(of: profiles.first?.wakeTime) { refreshSystemPrompt() }
+            .onChange(of: profiles.first?.sleepTime) { refreshSystemPrompt() }
+            .onChange(of: profiles.first?.hasWorkHours) { refreshSystemPrompt() }
+
+            // ── Sidebar ──────────────────────────────────────────────
             if showSidebar {
-                Color.black.opacity(0.4)
+                Color.black.opacity(0.5)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.25)) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             showSidebar = false
                         }
                     }
-
                 sidebarView
                     .transition(.move(edge: .leading))
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: showSidebar)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showSidebar)
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("FL")
+                .font(.system(size: 72, weight: .black))
+                .foregroundColor(FlowLineTheme.secondBg.opacity(0.4))
+                .tracking(-2)
+
+            VStack(spacing: 4) {
+                Text("What's on your mind?")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+                Text("Dump your tasks — I'll plan it.")
+                    .font(.system(size: 14))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+            }
+        }
     }
 
     // MARK: - Chat Bubble
+
     @ViewBuilder
     private func chatBubble(_ message: Message) -> some View {
-        HStack {
-            if message.role == .user { Spacer() }
-
-            Group {
-                if message.isThinking {
-                    Text(message.content)
-                        .padding(12)
-                        .foregroundColor(FlowLineTheme.secondTxt)
-                        .background(FlowLineTheme.secondBg.opacity(0.3))
-                        .cornerRadius(16)
-                        .modifier(ShimmerModifier())
-                } else if message.isSavedPlan {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(message.content)
-                            .foregroundColor(FlowLineTheme.secondTxt)
-                            .textSelection(.enabled)
-
-                        Button {
-                            selectedTab = 1
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "calendar")
-                                Text("View Calendar")
-                            }
-                            .font(.subheadline.bold())
-                            .foregroundColor(FlowLineTheme.mainBg)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(FlowLineTheme.accent)
-                            .cornerRadius(10)
-                        }
-                    }
-                    .padding(12)
-                    .background(FlowLineTheme.secondBg.opacity(0.3))
-                    .cornerRadius(16)
-                } else {
-                    Text(message.content)
-                        .padding(12)
-                        .foregroundColor(
-                            message.role == .user
-                                ? FlowLineTheme.mainTxt
-                                : FlowLineTheme.secondTxt
-                        )
-                        .background(
-                            message.role == .user
-                                ? FlowLineTheme.secondBg
-                                : FlowLineTheme.secondBg.opacity(0.3)
-                        )
-                        .cornerRadius(16)
-                        .textSelection(.enabled)
-                }
+        if message.role == .user {
+            // User: right-aligned pill
+            HStack {
+                Spacer(minLength: 64)
+                Text(message.content)
+                    .font(.system(size: 14))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .foregroundColor(FlowLineTheme.mainTxt)
+                    .background(FlowLineTheme.secondBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .textSelection(.enabled)
             }
-
-            if message.role == .assistant { Spacer() }
+        } else if message.isThinking {
+            // Thinking: left border + shimmer
+            HStack(alignment: .top, spacing: 12) {
+                Capsule()
+                    .fill(FlowLineTheme.accent.opacity(0.4))
+                    .frame(width: 2)
+                Text(message.content)
+                    .font(.system(size: 14))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+                    .modifier(ShimmerModifier())
+                Spacer(minLength: 40)
+            }
+        } else if message.isSavedPlan {
+            // Saved plan: solid accent border + view calendar button
+            HStack(alignment: .top, spacing: 12) {
+                Capsule()
+                    .fill(FlowLineTheme.accent)
+                    .frame(width: 2)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(message.content)
+                        .font(.system(size: 14))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                        .textSelection(.enabled)
+                    Button {
+                        selectedTab = 1
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("View Calendar")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .foregroundColor(FlowLineTheme.mainBg)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(FlowLineTheme.accent)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer(minLength: 40)
+            }
+        } else {
+            // AI: editorial left-border, no background
+            HStack(alignment: .top, spacing: 12) {
+                Capsule()
+                    .fill(FlowLineTheme.secondBg)
+                    .frame(width: 2)
+                Text(message.content)
+                    .font(.system(size: 14))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer(minLength: 40)
+            }
         }
     }
 
@@ -321,14 +371,13 @@ struct PlanningChatView: View {
     }
 
     // MARK: - Send
+
     private func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, !isLoading else { return }
 
-        // Refresh prompt with latest profile + calendar + current time BEFORE sending
         refreshSystemPrompt()
 
-        // Build history from current session only — prevents profile bleed across sessions
         let history = savedMessages
             .filter { $0.sessionID == currentSessionID }
             .sorted { $0.timestamp < $1.timestamp }
@@ -338,15 +387,11 @@ struct PlanningChatView: View {
         persistMessage(role: "user", content: text)
         inputText = ""
         isLoading = true
-
-        // Show thinking indicator
         messages.append(Message(role: .assistant, content: "Thinking...", isThinking: true))
 
         _Concurrency.Task {
             do {
                 let response = try await aiService.sendMessage(history: history, newMessage: text)
-
-                // Try to decode as a plan
                 if let jsonData = response.data(using: .utf8),
                    let plan = try? JSONDecoder().decode(GeneratedPlan.self, from: jsonData) {
                     try? planSaver.save(plan: plan, for: Date(), context: modelContext)
@@ -367,7 +412,7 @@ struct PlanningChatView: View {
                 }
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
-                    messages[index] = Message(role: .assistant, content: "Something went wrong: \(error.localizedDescription)")
+                    messages[index] = Message(role: .assistant, content: "Error: \(error.localizedDescription)")
                 }
             }
             isLoading = false
@@ -404,25 +449,26 @@ struct PlanningChatView: View {
     private func savePlanToCalendar() {
         guard !isSaving else { return }
         isSaving = true
-
         messages.append(Message(role: .assistant, content: "Saving to calendar...", isThinking: true))
 
         let history = messages
             .filter { !$0.isThinking && !$0.isSavedPlan }
-            .map { msg in
-                (role: msg.role == .user ? "user" : "assistant", content: msg.content)
-            }
+            .map { msg in (role: msg.role == .user ? "user" : "assistant", content: msg.content) }
 
         _Concurrency.Task {
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
-                    messages[index] = Message(role: .assistant, content: "Plan saved to calendar \u{2713}\n\n\(plan.summary)", isSavedPlan: true)
+                    messages[index] = Message(
+                        role: .assistant,
+                        content: "Plan saved \u{2713}\n\n\(plan.summary)",
+                        isSavedPlan: true
+                    )
                 }
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
-                    messages[index] = Message(role: .assistant, content: "Failed to save plan: \(error.localizedDescription)")
+                    messages[index] = Message(role: .assistant, content: "Failed: \(error.localizedDescription)")
                 }
             }
             isSaving = false
@@ -463,71 +509,96 @@ struct PlanningChatView: View {
     @ViewBuilder
     private var sidebarView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button {
-                currentSessionID = UUID().uuidString
-                messages = []
-                didLoadHistory = false
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    showSidebar = false
+            // Header
+            HStack {
+                Text("CHATS")
+                    .font(.system(size: 10, weight: .heavy))
+                    .tracking(4)
+                    .foregroundColor(FlowLineTheme.secondTxt)
+                Spacer()
+                Button {
+                    currentSessionID = UUID().uuidString
+                    messages = []
+                    didLoadHistory = false
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showSidebar = false
+                    }
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(FlowLineTheme.accent)
                 }
-            } label: {
-                HStack {
-                    Image(systemName: "plus.bubble")
-                    Text("New Chat")
-                }
-                .font(.headline)
-                .foregroundColor(FlowLineTheme.mainTxt)
-                .padding()
+                .buttonStyle(.plain)
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 14)
 
-            Divider().background(FlowLineTheme.mainTxt.opacity(0.2))
+            Rectangle()
+                .fill(FlowLineTheme.secondBg.opacity(0.3))
+                .frame(height: 0.5)
 
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
+                LazyVStack(alignment: .leading, spacing: 2) {
                     ForEach(sessions, id: \.id) { session in
                         HStack(spacing: 0) {
                             Button {
                                 currentSessionID = session.id
                                 didLoadHistory = false
                                 loadSession(id: session.id)
-                                withAnimation(.easeInOut(duration: 0.25)) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                     showSidebar = false
                                 }
                             } label: {
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 3) {
                                     Text(session.date, style: .date)
-                                        .font(.subheadline.bold())
-                                        .foregroundColor(FlowLineTheme.mainTxt)
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(
+                                            session.id == currentSessionID
+                                                ? FlowLineTheme.accent
+                                                : FlowLineTheme.mainTxt
+                                        )
                                     Text(session.preview)
-                                        .font(.caption)
+                                        .font(.system(size: 12))
                                         .foregroundColor(FlowLineTheme.secondTxt)
                                         .lineLimit(2)
                                 }
-                                .padding(.horizontal)
+                                .padding(.horizontal, 20)
                                 .padding(.vertical, 10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            .buttonStyle(.plain)
 
-                            Button {
-                                deleteSession(id: session.id)
-                            } label: {
-                                Image(systemName: "trash")
-                                    .font(.caption)
-                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.6))
-                                    .padding(.trailing, 12)
+                            Button { deleteSession(id: session.id) } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.4))
+                                    .padding(.trailing, 16)
                             }
+                            .buttonStyle(.plain)
                         }
                         .background(
                             session.id == currentSessionID
-                                ? FlowLineTheme.mainBg.opacity(0.3)
+                                ? FlowLineTheme.secondBg.opacity(0.15)
                                 : Color.clear
                         )
                     }
                 }
+                .padding(.top, 6)
             }
         }
-        .frame(width: 280)
-        .background(FlowLineTheme.secondBg)
+        .frame(width: 260)
+        .background(
+            ZStack {
+                FlowLineTheme.mainBg
+                FlowLineTheme.secondBg.opacity(0.1)
+            }
+        )
+        .overlay(alignment: .trailing) {
+            Rectangle()
+                .fill(FlowLineTheme.secondBg.opacity(0.3))
+                .frame(width: 0.5)
+        }
     }
 }
 
