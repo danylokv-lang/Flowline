@@ -17,9 +17,9 @@ struct MainTabView: View {
                 }
                 .tag(1)
 
-            ProfileView()
+            FocusTimerView()
                 .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle")
+                    Label("Focus", systemImage: "timer")
                 }
                 .tag(2)
         }
