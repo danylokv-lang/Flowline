@@ -11,6 +11,7 @@ struct PlanSavingService {
         timeFormatter.dateFormat = "HH:mm"
 
         let replaceWeek = plan.replaceWeek ?? false
+        let mergeWithExisting = plan.mergeWithExisting ?? false
 
         // Fetch all plans once
         let allPlans = try context.fetch(FetchDescriptor<DayPlan>())
@@ -59,13 +60,19 @@ struct PlanSavingService {
 
             let dayPlan: DayPlan
             if let found = existing.first {
-                for block in found.blocks {
-                    context.delete(block)
+                if mergeWithExisting {
+                    // Keep existing blocks, just append new ones
+                    dayPlan = found
+                } else {
+                    // Replace all blocks for this day
+                    for block in found.blocks {
+                        context.delete(block)
+                    }
+                    found.blocks = []
+                    found.status = .planned
+                    found.aiNotes = plan.summary
+                    dayPlan = found
                 }
-                found.blocks = []
-                found.status = .planned
-                found.aiNotes = plan.summary
-                dayPlan = found
             } else {
                 dayPlan = DayPlan(date: startOfDay)
                 dayPlan.aiNotes = plan.summary

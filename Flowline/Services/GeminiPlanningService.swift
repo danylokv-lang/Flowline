@@ -216,6 +216,7 @@ struct GeneratedPlan: Codable {
     let blocks: [PlanBlock]
     let summary: String
     let replaceWeek: Bool?
+    let mergeWithExisting: Bool?
 }
 
 enum GeminiError: LocalizedError {

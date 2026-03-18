@@ -1,6 +1,7 @@
 import Foundation
+import Combine
 
-final class ClaudePlanningService: AIPlanning {
+final class ClaudePlanningService: AIPlanning, ObservableObject {
     private let apiKey: String
     private let session: URLSession
     private let model: String
@@ -57,6 +58,8 @@ BEHAVIOR RULES:
 3. Never ask more than one follow-up question total in a conversation.
 4. Always schedule within their wake/sleep window. Never place tasks before wake time or after sleep time.
 5. Add 5–10 min buffer between blocks.
+6. TODAY is \(todayString). Any date AFTER today is in the FUTURE. Never say a future date has already passed. If the user asks to plan for a date after today, treat it as upcoming.
+7. Block titles must be plain names only. Examples: "Gym", "Write report", "Team call". NEVER include duration, time estimate, or parentheses in a title.
 
 TIME ESTIMATION (use when user doesn't specify duration):
 - Email / short message: 20–30 min
@@ -68,7 +71,7 @@ TIME ESTIMATION (use when user doesn't specify duration):
 - Exercise / gym: 45–60 min
 - Admin / planning tasks: 20–30 min
 - Creative work (design, brainstorm): 60 min
-When unsure, pick the middle estimate and mention it briefly.
+When unsure, pick the middle estimate. Never put the estimate in the title.
 
 FORMAT: Present the plan as a clean time-blocked list. Be concise. No filler phrases.
 """
@@ -88,15 +91,25 @@ FORMAT: Present the plan as a clean time-blocked list. Be concise. No filler phr
         history: [(role: String, content: String)],
         newMessage: String
     ) async throws -> String {
-        var messages = history.map { msg in
+        // Trim to last 10 messages to reduce token cost
+        var messages = history.suffix(10).map { msg in
             ["role": msg.role, "content": msg.content]
         }
         messages.append(["role": "user", "content": newMessage])
 
+        // Cached system prompt — saves ~90% on system prompt tokens after first call
+        let cachedSystem: [[String: Any]] = [
+            [
+                "type": "text",
+                "text": systemPrompt,
+                "cache_control": ["type": "ephemeral"]
+            ]
+        ]
+
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 1024,
-            "system": systemPrompt,
+            "system": cachedSystem,
             "messages": messages
         ]
 
@@ -130,18 +143,21 @@ FORMAT: Present the plan as a clean time-blocked list. Be concise. No filler phr
             }
         }
 
-        let planSystemPrompt = systemPrompt + """
+        let jsonInstructions = """
 
 You are now in JSON-only mode. You MUST return ONLY a raw JSON object. No markdown. No code fences. No explanation. No text before or after. Just the JSON.
 
 Exact structure required:
-{"replaceWeek":false,"blocks":[{"title":"Task name","startTime":"07:00","endTime":"08:00","category":"health","date":"yyyy-MM-dd"}],"summary":"One sentence summary"}
+{"replaceWeek":false,"mergeWithExisting":false,"blocks":[{"title":"Task name","startTime":"07:00","endTime":"08:00","category":"health","date":"yyyy-MM-dd"}],"summary":"One sentence summary"}
 
 Rules:
 - Every block MUST have a "date" field in yyyy-MM-dd format
 - Use the exact dates from the week list below — do NOT invent dates
 - category must be one of: study, work, health, personal
-- Set replaceWeek to true only if user asked to redo the whole week
+- Block titles must be plain names only. NO duration or parentheses. Write "Gym" not "Gym (1.5h)".
+- Set replaceWeek to true ONLY if user explicitly says "redo", "replace", "delete and redo", or "start over my week". Default is ALWAYS false.
+- Set mergeWithExisting to true when user says "add", "also add", "include", or wants ONE task added to an existing day without changing other blocks. Default is false.
+- A "week plan" means ALL 7 days: Monday through Sunday. Never generate only 5 days for a week plan.
 - Return ONLY the JSON. If you add any other text, the app will crash.
 
 This week's dates:
@@ -149,7 +165,22 @@ This week's dates:
 Today is \(dateString).
 """
 
-        var messages = history.map { msg in
+        // Block 1: static system prompt — cached (saves tokens on repeated saves)
+        // Block 2: dynamic JSON instructions with dates — not cached (changes every call)
+        let planSystem: [[String: Any]] = [
+            [
+                "type": "text",
+                "text": systemPrompt,
+                "cache_control": ["type": "ephemeral"]
+            ],
+            [
+                "type": "text",
+                "text": jsonInstructions
+            ]
+        ]
+
+        // Trim to last 10 messages to reduce token cost
+        var messages = history.suffix(10).map { msg in
             ["role": msg.role, "content": msg.content]
         }
 
@@ -167,7 +198,7 @@ Today is \(dateString).
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 4096,
-            "system": planSystemPrompt,
+            "system": planSystem,
             "messages": messages
         ]
 
@@ -202,6 +233,7 @@ Today is \(dateString).
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.setValue("prompt-caching-2024-07-31", forHTTPHeaderField: "anthropic-beta")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.data(for: request)

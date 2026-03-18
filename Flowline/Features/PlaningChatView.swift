@@ -65,7 +65,7 @@ struct PlanningChatView: View {
     @State private var showSidebar = false
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     private var currentSessionDate: Date { Date() }
-    private let aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
+    @StateObject private var aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
     private let planSaver = PlanSavingService()
 
     var body: some View {
@@ -130,62 +130,79 @@ struct PlanningChatView: View {
             }
 
             // Input bar
-            HStack(spacing: 12) {
-                ZStack(alignment: .topLeading) {
-                    if inputText.isEmpty {
-                        Text("Dump your tasks here...")
-                            .foregroundColor(FlowLineTheme.secondTxt.opacity(0.6))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 8)
-                            .allowsHitTesting(false)
-                    }
-                    TextEditor(text: $inputText)
-                        .scrollContentBackground(.hidden)
-                        .background(.clear)
-                        .foregroundColor(FlowLineTheme.mainTxt)
-                        .frame(minHeight: 36, maxHeight: 120)
-                        .onKeyPress(.return, phases: .down) { press in
-                            if press.modifiers.contains(.shift) {
-                                return .ignored
-                            }
-                            let trimmed = inputText.trimmingCharacters(in: .whitespaces)
-                            guard !trimmed.isEmpty, !isLoading, !isSaving else { return .handled }
-                            sendMessage()
-                            return .handled
-                        }
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(.regularMaterial)
-                .cornerRadius(12)
-
+            VStack(spacing: 6) {
+                // Save to calendar button — appears above input when plan is ready
                 if hasPlanInChat && !isLoading && !isSaving {
-                    Button {
-                        savePlanToCalendar()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "calendar.badge.plus")
-                            Text("Save")
+                    HStack {
+                        Spacer()
+                        Button {
+                            savePlanToCalendar()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "calendar.badge.plus")
+                                Text("Save to Calendar")
+                            }
+                            .font(.subheadline.bold())
+                            .foregroundColor(FlowLineTheme.mainBg)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(FlowLineTheme.accent)
+                            .cornerRadius(10)
                         }
-                        .font(.subheadline.bold())
-                        .foregroundColor(FlowLineTheme.mainBg)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(FlowLineTheme.accent)
-                        .cornerRadius(10)
                     }
+                    .padding(.horizontal)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
-                Button {
-                    sendMessage()
-                } label: {
-                    Image(systemName: "arrowshape.turn.up.right.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(FlowLineTheme.accent)
+                HStack(alignment: .bottom, spacing: 10) {
+                    ZStack(alignment: .topLeading) {
+                        if inputText.isEmpty {
+                            Text("Dump your tasks here...")
+                                .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 9)
+                                .allowsHitTesting(false)
+                        }
+                        TextEditor(text: $inputText)
+                            .scrollContentBackground(.hidden)
+                            .background(.clear)
+                            .foregroundColor(FlowLineTheme.mainTxt)
+                            .frame(minHeight: 38, maxHeight: 120)
+                            .onKeyPress(.return, phases: .down) { press in
+                                if press.modifiers.contains(.shift) {
+                                    return .ignored
+                                }
+                                let trimmed = inputText.trimmingCharacters(in: .whitespaces)
+                                guard !trimmed.isEmpty, !isLoading, !isSaving else { return .handled }
+                                sendMessage()
+                                return .handled
+                            }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(FlowLineTheme.secondBg.opacity(0.5))
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(FlowLineTheme.secondTxt.opacity(0.2), lineWidth: 1)
+                    )
+
+                    Button {
+                        sendMessage()
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(
+                                inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving
+                                    ? FlowLineTheme.secondTxt.opacity(0.3)
+                                    : FlowLineTheme.accent
+                            )
+                    }
+                    .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving)
+                    .padding(.bottom, 3)
                 }
-                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving)
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
             .padding(.vertical, 10)
             .background(FlowLineTheme.mainBg)
         }
@@ -311,10 +328,11 @@ struct PlanningChatView: View {
         // Refresh prompt with latest profile + calendar + current time BEFORE sending
         refreshSystemPrompt()
 
-        // Build history from ALL saved messages for AI context
-        let history = savedMessages.map { msg in
-            (role: msg.role, content: msg.content)
-        }
+        // Build history from current session only — prevents profile bleed across sessions
+        let history = savedMessages
+            .filter { $0.sessionID == currentSessionID }
+            .sorted { $0.timestamp < $1.timestamp }
+            .map { msg in (role: msg.role, content: msg.content) }
 
         messages.append(Message(role: .user, content: text))
         persistMessage(role: "user", content: text)

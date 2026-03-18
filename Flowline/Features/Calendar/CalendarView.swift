@@ -27,7 +27,7 @@ struct CalendarView: View {
                     Text("")
                         .frame(width: timeColumnWidth)
 
-                    ForEach(0..<6, id: \.self) { i in
+                    ForEach(0..<7, id: \.self) { i in
                         let day = calendar.date(byAdding: .day, value: i, to: currentWeekStart)!
                         let dayNum = calendar.component(.day, from: day)
                         let isToday = calendar.isDateInToday(day)
@@ -114,7 +114,7 @@ struct CalendarView: View {
             .frame(width: timeColumnWidth, height: gridHeight, alignment: .topLeading)
 
             // Day columns
-            ForEach([0, 1, 2, 3, 4, 5], id: \.self) { (dayIndex: Int) in
+            ForEach(Array(0..<7), id: \.self) { (dayIndex: Int) in
                 let day = calendar.date(byAdding: .day, value: dayIndex, to: currentWeekStart)!
                 let blocks = blocksForDay(day)
 
@@ -179,7 +179,7 @@ struct CalendarView: View {
     // MARK: - Helpers
 
     private var weekRangeString: String {
-        let endDate = calendar.date(byAdding: .day, value: 5, to: currentWeekStart)!
+        let endDate = calendar.date(byAdding: .day, value: 6, to: currentWeekStart)!
         let startDay = calendar.component(.day, from: currentWeekStart)
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM"
