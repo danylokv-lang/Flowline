@@ -31,7 +31,7 @@ struct FocusTimerView: View {
                 .padding(.bottom, 16)
 
                 Rectangle()
-                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .fill(FlowLineTheme.borderHi)
                     .frame(height: 0.5)
 
                 ScrollView(showsIndicators: false) {
@@ -90,7 +90,7 @@ struct FocusTimerView: View {
         return VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .stroke(FlowLineTheme.secondBg.opacity(0.3), lineWidth: 10)
+                    .stroke(FlowLineTheme.borderHi, lineWidth: 10)
                     .frame(width: 215, height: 215)
 
                 Circle()
@@ -128,7 +128,7 @@ struct FocusTimerView: View {
                 Button { timerManager.stop() } label: {
                     ZStack {
                         Circle()
-                            .fill(FlowLineTheme.secondBg.opacity(0.3))
+                            .fill(FlowLineTheme.borderHi)
                             .frame(width: 52, height: 52)
                         Image(systemName: "stop.fill")
                             .font(.system(size: 18))
@@ -146,7 +146,7 @@ struct FocusTimerView: View {
                     Circle()
                         .fill(timerManager.selectedBlock != nil
                               ? FlowLineTheme.accent
-                              : FlowLineTheme.secondBg.opacity(0.2))
+                              : FlowLineTheme.border)
                         .frame(width: 68, height: 68)
                     Image(systemName: timerManager.isRunning ? "pause.fill" : "play.fill")
                         .font(.system(size: 24))
@@ -162,7 +162,7 @@ struct FocusTimerView: View {
                 Button { timerManager.reset() } label: {
                     ZStack {
                         Circle()
-                            .fill(FlowLineTheme.secondBg.opacity(0.3))
+                            .fill(FlowLineTheme.borderHi)
                             .frame(width: 52, height: 52)
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 18))
@@ -215,8 +215,8 @@ struct FocusTimerView: View {
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(isSelected
-                          ? FlowLineTheme.secondBg.opacity(0.25)
-                          : FlowLineTheme.secondBg.opacity(0.08))
+                          ? FlowLineTheme.tertiaryBg
+                          : FlowLineTheme.tertiaryBg)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(isSelected ? color.opacity(0.3) : Color.clear, lineWidth: 1)

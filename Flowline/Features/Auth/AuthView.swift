@@ -43,7 +43,7 @@ struct AuthView: View {
                     modeTab("Sign In", tab: .login)
                     modeTab("Create Account", tab: .register)
                 }
-                .background(FlowLineTheme.secondBg.opacity(0.4))
+                .background(FlowLineTheme.tertiaryBg)
                 .clipShape(Capsule())
                 .padding(.horizontal, 48)
                 .padding(.bottom, 28)
@@ -119,7 +119,7 @@ struct AuthView: View {
         Button { withAnimation { mode = tab; errorMessage = nil } } label: {
             Text(label)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(mode == tab ? FlowLineTheme.mainBg : FlowLineTheme.secondTxt)
+                .foregroundColor(mode == tab ? .white : FlowLineTheme.secondTxt)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 20)
                 .background(
@@ -156,10 +156,10 @@ struct AuthView: View {
         .padding(.vertical, 11)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(FlowLineTheme.secondBg.opacity(0.4))
+                .fill(FlowLineTheme.tertiaryBg)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(FlowLineTheme.secondBg.opacity(0.6), lineWidth: 1)
+                        .stroke(FlowLineTheme.borderHi, lineWidth: 1)
                 )
         )
     }

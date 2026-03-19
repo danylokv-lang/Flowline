@@ -109,7 +109,7 @@ struct PlanningChatView: View {
                 .background(FlowLineTheme.mainBg)
 
                 Rectangle()
-                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .fill(FlowLineTheme.border)
                     .frame(height: 0.5)
 
                 // ── Chat area ────────────────────────────────────────────
@@ -142,7 +142,7 @@ struct PlanningChatView: View {
                 // ── Input bar ────────────────────────────────────────────
                 VStack(spacing: 0) {
                     Rectangle()
-                        .fill(FlowLineTheme.secondBg.opacity(0.3))
+                        .fill(FlowLineTheme.border)
                         .frame(height: 0.5)
 
                     if hasPlanInChat && !isLoading && !isSaving {
@@ -155,7 +155,7 @@ struct PlanningChatView: View {
                                     Text("Save to Calendar")
                                         .font(.system(size: 12, weight: .bold))
                                 }
-                                .foregroundColor(FlowLineTheme.mainBg)
+                                .foregroundColor(.white)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 7)
                                 .background(FlowLineTheme.accent)
@@ -189,11 +189,11 @@ struct PlanningChatView: View {
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
-                        .background(FlowLineTheme.secondBg.opacity(0.25))
+                        .background(FlowLineTheme.tertiaryBg)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(FlowLineTheme.secondBg.opacity(0.5), lineWidth: 1)
+                                .stroke(FlowLineTheme.borderHi, lineWidth: 1)
                         )
 
                         Button { sendMessage() } label: {
@@ -201,7 +201,7 @@ struct PlanningChatView: View {
                                 Circle()
                                     .fill(
                                         inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving
-                                            ? FlowLineTheme.secondBg.opacity(0.3)
+                                            ? FlowLineTheme.tertiaryBg
                                             : FlowLineTheme.accent
                                     )
                                     .frame(width: 36, height: 36)
@@ -232,7 +232,7 @@ struct PlanningChatView: View {
                         Text("Saved to Calendar")
                     }
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(FlowLineTheme.mainBg)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(FlowLineTheme.accent)
@@ -278,7 +278,7 @@ struct PlanningChatView: View {
         VStack(spacing: 12) {
             Text("FL")
                 .font(.system(size: 72, weight: .black))
-                .foregroundColor(FlowLineTheme.secondBg.opacity(0.4))
+                .foregroundColor(FlowLineTheme.tertiaryBg.opacity(0.8))
                 .tracking(-2)
 
             VStack(spacing: 4) {
@@ -305,7 +305,7 @@ struct PlanningChatView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .foregroundColor(FlowLineTheme.mainTxt)
-                    .background(FlowLineTheme.secondBg)
+                    .background(FlowLineTheme.tertiaryBg)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .textSelection(.enabled)
             }
@@ -341,7 +341,7 @@ struct PlanningChatView: View {
                             Text("View Calendar")
                                 .font(.system(size: 12, weight: .bold))
                         }
-                        .foregroundColor(FlowLineTheme.mainBg)
+                        .foregroundColor(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(FlowLineTheme.accent)
@@ -376,7 +376,7 @@ struct PlanningChatView: View {
                                 Text("Retry")
                                     .font(.system(size: 12, weight: .bold))
                             }
-                            .foregroundColor(FlowLineTheme.mainBg)
+                            .foregroundColor(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
                             .background(Color.red.opacity(0.6))
@@ -391,7 +391,7 @@ struct PlanningChatView: View {
             // AI: editorial left-border, no background
             HStack(alignment: .top, spacing: 12) {
                 Capsule()
-                    .fill(FlowLineTheme.secondBg)
+                    .fill(FlowLineTheme.borderHi)
                     .frame(width: 2)
                 Text(message.content)
                     .font(.system(size: 14))
@@ -603,7 +603,7 @@ struct PlanningChatView: View {
             .padding(.bottom, 14)
 
             Rectangle()
-                .fill(FlowLineTheme.secondBg.opacity(0.3))
+                .fill(FlowLineTheme.border)
                 .frame(height: 0.5)
 
             ScrollView {
@@ -647,7 +647,7 @@ struct PlanningChatView: View {
                         }
                         .background(
                             session.id == currentSessionID
-                                ? FlowLineTheme.secondBg.opacity(0.15)
+                                ? FlowLineTheme.accentBg
                                 : Color.clear
                         )
                     }
@@ -656,15 +656,10 @@ struct PlanningChatView: View {
             }
         }
         .frame(width: 260)
-        .background(
-            ZStack {
-                FlowLineTheme.mainBg
-                FlowLineTheme.secondBg.opacity(0.1)
-            }
-        )
+        .background(FlowLineTheme.secondBg)
         .overlay(alignment: .trailing) {
             Rectangle()
-                .fill(FlowLineTheme.secondBg.opacity(0.3))
+                .fill(FlowLineTheme.borderHi)
                 .frame(width: 0.5)
         }
     }

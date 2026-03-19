@@ -332,7 +332,7 @@ body {
 }
 .timer-ring { width: 160px; height: 160px; }
 .timer-inner {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -42%);
+  position: absolute; top: 65%; left: 50%; transform: translate(-50%, -42%);
   text-align: center;
 }
 .timer-time {

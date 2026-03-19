@@ -1,18 +1,56 @@
-/* I want a nice astetic 363636 color 
-as main color, and  476072 as second for background 
-My text should be F6F0D7  and 9CAB84 as second color for some explaining 
-Accent colors for icons and buttons should be DDEEDF with glass effect as in new iOS updates 
+/*
+    Flowline Design System
+    Matches the website exactly — same tokens, same palette.
 
-
-
+    Website tokens → App names:
+      --bg        → mainBg      #080810  Deep navy black
+      --bg-s      → secondBg   #0e0e1c  Card / panel surface
+      --bg-t      → tertiaryBg #14142a  Input / elevated surface
+      --txt       → mainTxt    #eeeef5  Primary text
+      --txt2      → secondTxt  #7a7a9a  Secondary / muted text
+      --txt3      → dimTxt     #44445a  Placeholder / disabled
+      --accent    → accent     #6d4cfa  Purple — buttons, links
+      --accent-hi → accentHi   #8b6dff  Lighter purple — hover, glow
+      --border    → border     7% white  Subtle separator
+      --border-hi → borderHi  13% white  Emphasized separator
 */
 
 import SwiftUI
 
 enum FlowLineTheme {
-    static let mainBg = Color(red: 54/255, green: 54/255, blue: 54/255)
-    static let secondBg = Color(red: 71/255, green: 96/255, blue: 114/255)
-    static let mainTxt = Color(red: 246/255, green: 240/255, blue: 215/255)
-    static let secondTxt = Color(red: 156/255, green: 171/255, blue: 132/255)
-    static let accent = Color(red: 221/255, green: 238/255, blue: 223/255)
+
+    // ── Backgrounds ───────────────────────────────────────────────────────
+    static let mainBg      = Color(hex: "#080810")   // deepest bg
+    static let secondBg    = Color(hex: "#0e0e1c")   // panel / card
+    static let tertiaryBg  = Color(hex: "#14142a")   // input field / elevated
+
+    // ── Text ──────────────────────────────────────────────────────────────
+    static let mainTxt     = Color(hex: "#eeeef5")   // primary
+    static let secondTxt   = Color(hex: "#7a7a9a")   // secondary
+    static let dimTxt      = Color(hex: "#44445a")   // placeholder / disabled
+
+    // ── Accent ────────────────────────────────────────────────────────────
+    static let accent      = Color(hex: "#6d4cfa")   // brand purple
+    static let accentHi    = Color(hex: "#8b6dff")   // lighter purple
+
+    // ── Borders ───────────────────────────────────────────────────────────
+    static let border      = Color.white.opacity(0.07)
+    static let borderHi    = Color.white.opacity(0.13)
+
+    // ── Accent tint (for backgrounds behind accent elements) ──────────────
+    static let accentBg    = Color(hex: "#6d4cfa").opacity(0.10)
+}
+
+// MARK: - Color(hex:) initialiser
+
+extension Color {
+    init(hex: String) {
+        let h = hex.trimmingCharacters(in: .init(charactersIn: "#"))
+        var value: UInt64 = 0
+        Scanner(string: h).scanHexInt64(&value)
+        let r = Double((value >> 16) & 0xFF) / 255
+        let g = Double((value >>  8) & 0xFF) / 255
+        let b = Double( value        & 0xFF) / 255
+        self.init(red: r, green: g, blue: b)
+    }
 }

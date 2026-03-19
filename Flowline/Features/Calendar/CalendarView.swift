@@ -46,7 +46,7 @@ struct CalendarView: View {
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(FlowLineTheme.accent)
                                     .frame(width: 32, height: 32)
-                                    .background(FlowLineTheme.secondBg.opacity(0.3))
+                                    .background(FlowLineTheme.borderHi)
                                     .clipShape(Circle())
                             }
                             .buttonStyle(.plain)
@@ -75,7 +75,7 @@ struct CalendarView: View {
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(FlowLineTheme.accent)
                                     .frame(width: 32, height: 32)
-                                    .background(FlowLineTheme.secondBg.opacity(0.3))
+                                    .background(FlowLineTheme.borderHi)
                                     .clipShape(Circle())
                             }
                             .buttonStyle(.plain)
@@ -163,7 +163,7 @@ struct CalendarView: View {
                 .padding(.bottom, 10)
 
                 Rectangle()
-                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .fill(FlowLineTheme.borderHi)
                     .frame(height: 0.5)
 
                 // ── Time Grid ────────────────────────────────────────────

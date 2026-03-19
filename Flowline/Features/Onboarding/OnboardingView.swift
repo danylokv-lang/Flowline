@@ -24,7 +24,7 @@ struct OnboardingView: View {
             // Watermark step number
             Text(String(format: "%02d", currentStep + 1))
                 .font(.system(size: 180, weight: .black))
-                .foregroundColor(FlowLineTheme.secondBg.opacity(0.18))
+                .foregroundColor(FlowLineTheme.tertiaryBg.opacity(0.5))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .padding(.trailing, -20)
                 .padding(.bottom, -30)
@@ -36,7 +36,7 @@ struct OnboardingView: View {
                 HStack(spacing: 6) {
                     ForEach(0..<totalSteps, id: \.self) { i in
                         Capsule()
-                            .fill(i <= currentStep ? FlowLineTheme.accent : FlowLineTheme.secondBg.opacity(0.3))
+                            .fill(i <= currentStep ? FlowLineTheme.accent : FlowLineTheme.borderHi)
                             .frame(height: 3)
                             .animation(.easeInOut(duration: 0.3), value: currentStep)
                     }
@@ -93,7 +93,7 @@ struct OnboardingView: View {
                                     .font(.system(size: 11, weight: .bold))
                             }
                         }
-                        .foregroundColor(FlowLineTheme.mainBg)
+                        .foregroundColor(.white)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
                         .background(
@@ -156,7 +156,7 @@ struct OnboardingView: View {
                 Rectangle()
                     .fill(
                         name.isEmpty
-                            ? FlowLineTheme.secondBg.opacity(0.5)
+                            ? FlowLineTheme.borderHi
                             : FlowLineTheme.accent.opacity(0.7)
                     )
                     .frame(height: 1.5)
@@ -262,7 +262,7 @@ struct OnboardingView: View {
                 Rectangle()
                     .fill(
                         bio.isEmpty
-                            ? FlowLineTheme.secondBg.opacity(0.5)
+                            ? FlowLineTheme.borderHi
                             : FlowLineTheme.accent.opacity(0.7)
                     )
                     .frame(height: 1.5)
@@ -287,7 +287,7 @@ struct OnboardingView: View {
         .padding(.vertical, 4)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(FlowLineTheme.secondBg.opacity(0.3))
+                .fill(FlowLineTheme.border)
                 .frame(height: 0.5)
                 .offset(y: 8)
         }

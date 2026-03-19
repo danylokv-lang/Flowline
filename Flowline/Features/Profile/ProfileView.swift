@@ -29,7 +29,7 @@ struct ProfileView: View {
                 .padding(.bottom, 16)
 
                 Rectangle()
-                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .fill(FlowLineTheme.borderHi)
                     .frame(height: 0.5)
 
                 if profiles.isEmpty {
@@ -58,7 +58,7 @@ struct ProfileView: View {
 
                 // ── New Profile Button ────────────────────────────────
                 Rectangle()
-                    .fill(FlowLineTheme.secondBg.opacity(0.3))
+                    .fill(FlowLineTheme.borderHi)
                     .frame(height: 0.5)
 
                 Button {
@@ -122,7 +122,7 @@ struct ProfileView: View {
             // Avatar circle
             ZStack {
                 Circle()
-                    .fill(isSelected ? FlowLineTheme.accent : FlowLineTheme.secondBg.opacity(0.4))
+                    .fill(isSelected ? FlowLineTheme.accent : FlowLineTheme.tertiaryBg)
                     .frame(width: 48, height: 48)
                 Text(initials)
                     .font(.system(size: 20, weight: .black))
@@ -191,11 +191,11 @@ struct ProfileView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(FlowLineTheme.secondBg.opacity(isSelected ? 0.25 : 0.12))
+                .fill(FlowLineTheme.secondBg.opacity(isSelected ? 0.9 : 0.6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(
-                            isSelected ? FlowLineTheme.accent.opacity(0.3) : FlowLineTheme.secondBg.opacity(0.2),
+                            isSelected ? FlowLineTheme.accent.opacity(0.3) : FlowLineTheme.border,
                             lineWidth: 1
                         )
                 )

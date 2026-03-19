@@ -17,7 +17,7 @@ struct PaywallView: View {
                             .font(.system(size: 12, weight: .bold))
                             .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
                             .frame(width: 28, height: 28)
-                            .background(FlowLineTheme.secondBg.opacity(0.3))
+                            .background(FlowLineTheme.borderHi)
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
@@ -130,7 +130,7 @@ struct PaywallView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 14)
-                        .background(FlowLineTheme.secondBg.opacity(0.25))
+                        .background(FlowLineTheme.tertiaryBg)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(FlowLineTheme.accent.opacity(0.3), lineWidth: 1)

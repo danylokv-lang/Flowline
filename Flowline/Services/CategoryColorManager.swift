@@ -4,11 +4,11 @@ import Combine
 @MainActor
 final class CategoryColorManager: ObservableObject {
 
-    // MARK: - Defaults
-    static let defaultWork     = Color(red: 0.55, green: 0.40, blue: 1.00)
-    static let defaultStudy    = Color(red: 0.20, green: 0.65, blue: 1.00)
-    static let defaultHealth   = Color(red: 0.15, green: 0.85, blue: 0.50)
-    static let defaultPersonal = Color(red: 1.00, green: 0.55, blue: 0.20)
+    // MARK: - Defaults (matches website --work / --study / --health / --personal tokens)
+    static let defaultWork     = Color(hex: "#7c5cf8")   // purple  --work
+    static let defaultStudy    = Color(hex: "#3b9eff")   // blue    --study
+    static let defaultHealth   = Color(hex: "#2ecc71")   // green   --health
+    static let defaultPersonal = Color(hex: "#ff7b45")   // orange  --personal
 
     // MARK: - Published colors
     @Published var workColor: Color

@@ -51,7 +51,7 @@ struct MenuBarFlowlineView: View {
             .padding(.bottom, 10)
 
             Rectangle()
-                .fill(FlowLineTheme.secondBg.opacity(0.3))
+                .fill(FlowLineTheme.borderHi)
                 .frame(height: 0.5)
 
             // ── Content ───────────────────────────────────────────────────
@@ -106,7 +106,7 @@ struct MenuBarFlowlineView: View {
             .padding(.vertical, 12)
 
             if !todayBlocks.isEmpty {
-                Rectangle().fill(FlowLineTheme.secondBg.opacity(0.3)).frame(height: 0.5)
+                Rectangle().fill(FlowLineTheme.borderHi).frame(height: 0.5)
                 VStack(spacing: 2) {
                     Text("TODAY")
                         .font(.system(size: 9, weight: .heavy))
@@ -129,7 +129,7 @@ struct MenuBarFlowlineView: View {
     private var breakIndicator: some View {
         HStack(spacing: 14) {
             ZStack {
-                Circle().stroke(FlowLineTheme.secondBg.opacity(0.3), lineWidth: 4)
+                Circle().stroke(FlowLineTheme.borderHi, lineWidth: 4)
                     .frame(width: 44, height: 44)
                 Circle()
                     .trim(from: 0, to: timerManager.progress)
@@ -151,7 +151,7 @@ struct MenuBarFlowlineView: View {
                 Text("Skip").font(.system(size: 11, weight: .semibold))
                     .foregroundColor(FlowLineTheme.secondTxt)
                     .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(FlowLineTheme.secondBg.opacity(0.3))
+                    .background(FlowLineTheme.borderHi)
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -163,7 +163,7 @@ struct MenuBarFlowlineView: View {
     private func activeBlockRow(_ block: ScheduleBlock) -> some View {
         HStack(spacing: 14) {
             ZStack {
-                Circle().stroke(FlowLineTheme.secondBg.opacity(0.3), lineWidth: 4)
+                Circle().stroke(FlowLineTheme.borderHi, lineWidth: 4)
                     .frame(width: 44, height: 44)
                 Circle()
                     .trim(from: 0, to: timerManager.progress)
@@ -196,7 +196,7 @@ struct MenuBarFlowlineView: View {
                     Image(systemName: "stop.fill")
                         .font(.system(size: 11)).foregroundColor(FlowLineTheme.secondTxt)
                         .frame(width: 28, height: 28)
-                        .background(FlowLineTheme.secondBg.opacity(0.3)).clipShape(Circle())
+                        .background(FlowLineTheme.borderHi).clipShape(Circle())
                 }
                 .buttonStyle(.plain)
             }
@@ -300,7 +300,7 @@ private struct MiniChatView: View {
                     ZStack {
                         Circle()
                             .fill(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isSending
-                                  ? FlowLineTheme.secondBg.opacity(0.3)
+                                  ? FlowLineTheme.borderHi
                                   : FlowLineTheme.accent)
                             .frame(width: 30, height: 30)
                         if isSending {
@@ -432,7 +432,7 @@ private struct MiniTextField: NSViewRepresentable {
         f.placeholderString = placeholder
         f.font = .systemFont(ofSize: 13)
         f.textColor = NSColor(FlowLineTheme.mainTxt)
-        f.backgroundColor = NSColor(FlowLineTheme.secondBg.opacity(0.2))
+        f.backgroundColor = NSColor(FlowLineTheme.border)
         f.isBordered = false
         f.focusRingType = .none
         f.bezelStyle = .roundedBezel
