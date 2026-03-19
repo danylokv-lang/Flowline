@@ -247,38 +247,67 @@ Today is \(dateString).
     // MARK: - Private
 
     private func performRequest(body: [String: Any]) async throws -> Data {
-        let url = URL(string: "https://api.anthropic.com/v1/messages")!
+        // Use proxy in production, direct API in development
+        let endpoint: String
+        var request: URLRequest
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.setValue("prompt-caching-2024-07-31", forHTTPHeaderField: "anthropic-beta")
+        if Config.usesProxy, let proxyURL = Config.proxyURL, let secret = Config.appSecret {
+            endpoint = proxyURL
+            request = URLRequest(url: URL(string: endpoint)!)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "content-type")
+            request.setValue(secret, forHTTPHeaderField: "x-app-secret")
+        } else {
+            endpoint = "https://api.anthropic.com/v1/messages"
+            request = URLRequest(url: URL(string: endpoint)!)
+            request.httpMethod = "POST"
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+            request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+            request.setValue("application/json", forHTTPHeaderField: "content-type")
+            request.setValue("prompt-caching-2024-07-31", forHTTPHeaderField: "anthropic-beta")
+        }
+
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.timeoutInterval = 30
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw ClaudeError.noInternet
+            case .timedOut:
+                throw ClaudeError.timeout
+            default:
+                throw ClaudeError.noInternet
+            }
+        }
 
-        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 429 {
+        guard let http = response as? HTTPURLResponse else {
+            throw ClaudeError.invalidResponse
+        }
+
+        switch http.statusCode {
+        case 200...299:
+            return data
+        case 429:
+            // Rate limited — wait 5s and retry once
             try await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 5_000_000_000)
             let (retryData, retryResponse) = try await session.data(for: request)
             guard let retryHttp = retryResponse as? HTTPURLResponse,
                   (200...299).contains(retryHttp.statusCode) else {
-                let code = (retryResponse as? HTTPURLResponse)?.statusCode ?? -1
-                print("Claude API Error:", String(data: retryData, encoding: .utf8) ?? "no body")
-                throw ClaudeError.requestFailed(statusCode: code)
+                throw ClaudeError.rateLimited
             }
             return retryData
+        case 401, 403:
+            throw ClaudeError.unauthorized
+        case 500...599:
+            throw ClaudeError.serverError
+        default:
+            print("Claude API Error \(http.statusCode):", String(data: data, encoding: .utf8) ?? "")
+            throw ClaudeError.requestFailed(statusCode: http.statusCode)
         }
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            print("Claude API Error:", String(data: data, encoding: .utf8) ?? "no body")
-            throw ClaudeError.requestFailed(statusCode: statusCode)
-        }
-
-        return data
     }
 
     private func parseText(from data: Data) throws -> String {
@@ -295,13 +324,37 @@ Today is \(dateString).
 enum ClaudeError: LocalizedError {
     case requestFailed(statusCode: Int)
     case invalidResponse
+    case noInternet
+    case timeout
+    case rateLimited
+    case unauthorized
+    case serverError
 
+    /// User-friendly message shown in the chat bubble
     var errorDescription: String? {
         switch self {
+        case .noInternet:
+            return "No internet connection. Check your network and try again."
+        case .timeout:
+            return "Request timed out. Try again in a moment."
+        case .rateLimited:
+            return "Too many requests. Wait a few seconds and try again."
+        case .unauthorized:
+            return "API key issue. Contact support."
+        case .serverError:
+            return "AI service is down. Try again in a minute."
         case .requestFailed(let code):
-            return "Claude API request failed with status \(code)"
+            return "Something went wrong (code \(code)). Try again."
         case .invalidResponse:
-            return "Could not parse Claude response"
+            return "Got an unexpected response. Try again."
+        }
+    }
+
+    /// Whether a retry button should be shown
+    var isRetryable: Bool {
+        switch self {
+        case .noInternet, .timeout, .rateLimited, .serverError, .requestFailed: return true
+        case .unauthorized, .invalidResponse: return false
         }
     }
 }

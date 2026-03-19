@@ -10,6 +10,7 @@ import UserNotifications
 @main
 struct FlowlineApp: App {
     @StateObject private var timerManager = FocusTimerManager()
+    @StateObject private var subscriptionManager = SubscriptionManager()
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
     var sharedModelContainer: ModelContainer = {
@@ -18,7 +19,8 @@ struct FlowlineApp: App {
             ScheduleBlock.self,
             DayPlan.self,
             UserProfile.self,
-            ChatMessage.self
+            ChatMessage.self,
+            CapturedTask.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
@@ -33,15 +35,25 @@ struct FlowlineApp: App {
     var body: some Scene {
         // ── Main Window ───────────────────────────────────────────────────
         WindowGroup(id: "main") {
-            if hasCompletedOnboarding {
-                MainTabView()
-                    .environmentObject(timerManager)
-            } else {
-                OnboardingView()
+            ZStack {
+                if hasCompletedOnboarding {
+                    MainTabView()
+                        .environmentObject(timerManager)
+                        .environmentObject(subscriptionManager)
+                } else {
+                    OnboardingView()
+                }
+                // Wire delegate on first render, not on state change
+                appSetup
             }
         }
         .modelContainer(sharedModelContainer)
-        .onChange(of: timerManager.isRunning) { wireDelegate() }
+
+        // ── Settings (Cmd+,) ──────────────────────────────────────────────
+        Settings {
+            SettingsView()
+                .modelContainer(sharedModelContainer)
+        }
 
         // ── Menu Bar Extra ────────────────────────────────────────────────
         MenuBarExtra {
@@ -63,9 +75,14 @@ struct FlowlineApp: App {
 
     init() {}
 
-    // Called after @StateObject is ready
+    // Wire delegate immediately — not dependent on any state change
     private func wireDelegate() {
         appDelegate.timerManager = timerManager
+    }
+
+    private var appSetup: some View {
+        Color.clear
+            .onAppear { wireDelegate() }
     }
 }
 
@@ -78,6 +95,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
+        // timerManager is wired immediately after launch via AppDelegate.shared
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Clean up pending hourly notifications on quit so they reschedule fresh on next launch
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
 
     // Called when user taps a notification action

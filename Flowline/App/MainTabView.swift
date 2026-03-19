@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -24,6 +25,15 @@ struct MainTabView: View {
                 .tag(2)
         }
         .tint(FlowLineTheme.accent)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button { openSettings() } label: {
+                    Image(systemName: "gearshape")
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                }
+                .help("Settings  ⌘,")
+            }
+        }
     }
 }
 

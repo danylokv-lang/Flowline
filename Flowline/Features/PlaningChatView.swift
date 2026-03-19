@@ -8,6 +8,8 @@ struct Message: Identifiable {
     let content: String
     var isThinking: Bool = false
     var isSavedPlan: Bool = false
+    var isError: Bool = false
+    var isRetryable: Bool = false
 
     enum Role {
         case user, assistant
@@ -51,11 +53,14 @@ struct PlanningChatView: View {
     @Binding var selectedTab: Int
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     @State private var isLoading: Bool = false
     @State private var isSaving: Bool = false
     @State private var didLoadHistory = false
     @State private var showCalendarBanner = false
     @State private var showSidebar = false
+    @State private var showPaywall = false
+    @State private var lastFailedMessage: String? = nil
     @State private var editorHeight: CGFloat = 17
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @StateObject private var aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
@@ -246,6 +251,10 @@ struct PlanningChatView: View {
             .onChange(of: profiles.first?.wakeTime) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.sleepTime) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.hasWorkHours) { refreshSystemPrompt() }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView { showPaywall = false }
+                    .environmentObject(subscriptionManager)
+            }
 
             // ── Sidebar ──────────────────────────────────────────────
             if showSidebar {
@@ -342,6 +351,42 @@ struct PlanningChatView: View {
                 }
                 Spacer(minLength: 40)
             }
+        } else if message.isError {
+            // Error bubble with optional retry
+            HStack(alignment: .top, spacing: 12) {
+                Capsule()
+                    .fill(Color.red.opacity(0.5))
+                    .frame(width: 2)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color.red.opacity(0.7))
+                        Text(message.content)
+                            .font(.system(size: 13))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                    }
+                    if message.isRetryable, let failed = lastFailedMessage {
+                        Button {
+                            sendMessage(failed)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text("Retry")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                            .foregroundColor(FlowLineTheme.mainBg)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.red.opacity(0.6))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Spacer(minLength: 40)
+            }
         } else {
             // AI: editorial left-border, no background
             HStack(alignment: .top, spacing: 12) {
@@ -368,9 +413,15 @@ struct PlanningChatView: View {
 
     // MARK: - Send
 
-    private func sendMessage() {
-        let text = inputText.trimmingCharacters(in: .whitespaces)
+    private func sendMessage(_ overrideText: String? = nil) {
+        let text = overrideText ?? inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, !isLoading else { return }
+
+        // ── Subscription check ─────────────────────────────────────────────
+        guard subscriptionManager.consumeMessage() else {
+            showPaywall = true
+            return
+        }
 
         refreshSystemPrompt()
 
@@ -383,6 +434,7 @@ struct PlanningChatView: View {
         persistMessage(role: "user", content: text)
         inputText = ""
         editorHeight = 17
+        lastFailedMessage = nil
         isLoading = true
         messages.append(Message(role: .assistant, content: "Thinking...", isThinking: true))
 
@@ -407,10 +459,29 @@ struct PlanningChatView: View {
                     }
                     persistMessage(role: "assistant", content: response)
                 }
+            } catch let claudeError as ClaudeError {
+                if let index = messages.lastIndex(where: { $0.isThinking }) {
+                    messages.remove(at: index)
+                }
+                // Store for retry
+                if claudeError.isRetryable { lastFailedMessage = text }
+                messages.append(Message(
+                    role: .assistant,
+                    content: claudeError.errorDescription ?? "Something went wrong.",
+                    isError: true,
+                    isRetryable: claudeError.isRetryable
+                ))
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
-                    messages[index] = Message(role: .assistant, content: "Error: \(error.localizedDescription)")
+                    messages.remove(at: index)
                 }
+                lastFailedMessage = text
+                messages.append(Message(
+                    role: .assistant,
+                    content: "Something went wrong. Try again.",
+                    isError: true,
+                    isRetryable: true
+                ))
             }
             isLoading = false
         }

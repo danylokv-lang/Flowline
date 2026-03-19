@@ -8,6 +8,7 @@ struct MenuBarFlowlineView: View {
     @Query private var dayPlans: [DayPlan]
     @Environment(\.modelContext) private var context
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @State private var activeTab: MenuBarTab = .timer
 
     private let calendar = Calendar.current
@@ -21,12 +22,21 @@ struct MenuBarFlowlineView: View {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(FlowLineTheme.mainTxt)
                 Spacer()
+                Button { openSettings() } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 13))
+                        .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+                .help("Settings")
+
                 Button { openWindow(id: "main") } label: {
                     Image(systemName: "arrow.up.right.square")
                         .font(.system(size: 13))
                         .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
                 }
                 .buttonStyle(.plain)
+                .help("Open Flowline")
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
