@@ -58,6 +58,12 @@ struct PlanSavingService {
                 return planDay >= startOfDay && planDay < endOfDay
             }
 
+            // Always delete ALL duplicate DayPlans beyond the first to prevent accumulation
+            for duplicate in existing.dropFirst() {
+                for block in duplicate.blocks { context.delete(block) }
+                context.delete(duplicate)
+            }
+
             let dayPlan: DayPlan
             if let found = existing.first {
                 if mergeWithExisting {
@@ -79,6 +85,15 @@ struct PlanSavingService {
                 context.insert(dayPlan)
             }
 
+            // Parse and deduplicate/merge blocks before saving
+            struct ParsedBlock {
+                var title: String
+                var category: String
+                var startTime: Date
+                var endTime: Date
+            }
+
+            var parsed: [ParsedBlock] = []
             for planBlock in planBlocks {
                 guard let startParsed = timeFormatter.date(from: planBlock.startTime),
                       let endParsed = timeFormatter.date(from: planBlock.endTime) else {
@@ -94,15 +109,34 @@ struct PlanSavingService {
 
                 let startTime = calendar.date(bySettingHour: startHour, minute: startMin, second: 0, of: day)!
                 let endTime = calendar.date(bySettingHour: endHour, minute: endMin, second: 0, of: day)!
+                parsed.append(ParsedBlock(title: planBlock.title, category: planBlock.category,
+                                          startTime: startTime, endTime: endTime))
+            }
 
-                let block = ScheduleBlock(
-                    title: planBlock.title,
-                    category: Category(rawValue: planBlock.category),
-                    startTime: startTime,
-                    endTime: endTime
+            // Sort by start time, then merge adjacent blocks with same title & category
+            parsed.sort { $0.startTime < $1.startTime }
+            var merged: [ParsedBlock] = []
+            for block in parsed {
+                if var last = merged.last,
+                   last.title.lowercased() == block.title.lowercased(),
+                   last.category == block.category,
+                   abs(last.endTime.timeIntervalSince(block.startTime)) <= 5 * 60 { // ≤5 min gap
+                    last.endTime = block.endTime
+                    merged[merged.count - 1] = last
+                } else {
+                    merged.append(block)
+                }
+            }
+
+            for block in merged {
+                let schedBlock = ScheduleBlock(
+                    title: block.title,
+                    category: Category(rawValue: block.category),
+                    startTime: block.startTime,
+                    endTime: block.endTime
                 )
-                dayPlan.blocks.append(block)
-                print("✅ Saved block:", planBlock.title, planBlock.startTime, "→", planBlock.endTime, "for", startOfDay)
+                dayPlan.blocks.append(schedBlock)
+                print("✅ Saved block:", block.title, "for", startOfDay)
             }
         }
 

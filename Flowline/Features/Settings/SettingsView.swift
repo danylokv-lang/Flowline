@@ -8,6 +8,9 @@ struct SettingsView: View {
             ProfileSettingsTab()
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }
 
+            AppearanceSettingsTab()
+                .tabItem { Label("Appearance", systemImage: "paintpalette") }
+
             NotificationSettingsTab()
                 .tabItem { Label("Notifications", systemImage: "bell") }
 
@@ -334,6 +337,68 @@ private struct DataSettingsTab: View {
         dayPlans.forEach { context.delete($0) }
         capturedTasks.forEach { context.delete($0) }
         hasCompletedOnboarding = false
+    }
+}
+
+// MARK: - Appearance Tab
+
+private struct AppearanceSettingsTab: View {
+    @EnvironmentObject private var colorManager: CategoryColorManager
+
+    var body: some View {
+        Form {
+            Section("Calendar Block Colors") {
+                colorRow(label: "Work", description: "Coding, projects, professional tasks",
+                         color: $colorManager.workColor)
+                colorRow(label: "Study", description: "Learning, courses, research",
+                         color: $colorManager.studyColor)
+                colorRow(label: "Health", description: "Gym, meals, breaks, walks",
+                         color: $colorManager.healthColor)
+                colorRow(label: "Personal", description: "Social, hobbies, free time",
+                         color: $colorManager.personalColor)
+            }
+
+            Section {
+                HStack {
+                    Spacer()
+                    Button("Reset to Defaults") {
+                        colorManager.resetToDefaults()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.vertical, 8)
+    }
+
+    private func colorRow(label: String, description: String, color: Binding<Color>) -> some View {
+        HStack(spacing: 12) {
+            // Preview swatch
+            RoundedRectangle(cornerRadius: 4)
+                .fill(color.wrappedValue)
+                .frame(width: 22, height: 22)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
+                )
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.system(size: 13, weight: .medium))
+                Text(description)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            ColorPicker("", selection: color, supportsOpacity: false)
+                .labelsHidden()
+                .frame(width: 28, height: 28)
+        }
+        .padding(.vertical, 2)
     }
 }
 

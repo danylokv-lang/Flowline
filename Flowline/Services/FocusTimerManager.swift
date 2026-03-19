@@ -89,12 +89,12 @@ final class FocusTimerManager: ObservableObject {
 
     private func tick() {
         timerRef = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            guard let manager = self else { return }
             Task { @MainActor in
-                guard let self else { return }
-                if self.timeRemaining > 0 {
-                    self.timeRemaining -= 1
+                if manager.timeRemaining > 0 {
+                    manager.timeRemaining -= 1
                 } else {
-                    self.finishSession()
+                    manager.finishSession()
                 }
             }
         }
@@ -102,12 +102,12 @@ final class FocusTimerManager: ObservableObject {
 
     private func tickBreak() {
         timerRef = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            guard let manager = self else { return }
             Task { @MainActor in
-                guard let self else { return }
-                if self.breakTimeRemaining > 0 {
-                    self.breakTimeRemaining -= 1
+                if manager.breakTimeRemaining > 0 {
+                    manager.breakTimeRemaining -= 1
                 } else {
-                    self.endBreak()
+                    manager.endBreak()
                 }
             }
         }

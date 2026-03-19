@@ -4,6 +4,7 @@ import SwiftData
 struct CalendarView: View {
     @Query private var dayPlans: [DayPlan]
     @Environment(\.modelContext) private var context
+    @EnvironmentObject private var colorManager: CategoryColorManager
     @State private var currentWeekStart: Date = CalendarView.mondayOfCurrentWeek()
     @State private var confirmDeleteDay: Date? = nil
     @State private var confirmDeleteWeek = false
@@ -253,25 +254,34 @@ struct CalendarView: View {
 
                         ZStack(alignment: .topLeading) {
                             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(color.opacity(0.3))
+                                .fill(color.opacity(0.18))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                        .stroke(color.opacity(0.5), lineWidth: 0.5)
+                                        .stroke(color.opacity(0.90), lineWidth: 1.5)
                                 )
+
+                            // Left accent bar
+                            HStack(spacing: 0) {
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(color)
+                                    .frame(width: 3)
+                                Spacer()
+                            }
 
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(block.title)
                                     .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(FlowLineTheme.mainTxt)
+                                    .foregroundColor(color)
                                     .lineLimit(height > 40 ? 2 : 1)
 
                                 if height > 36 {
                                     Text(timeRangeString(start: block.startTime, end: block.endTime))
                                         .font(.system(size: 8, design: .monospaced))
-                                        .foregroundColor(color.opacity(0.9))
+                                        .foregroundColor(color.opacity(0.75))
                                 }
                             }
-                            .padding(.horizontal, 5)
+                            .padding(.leading, 7)
+                            .padding(.trailing, 5)
                             .padding(.vertical, 3)
                         }
                         .frame(height: max(height, 14))
@@ -331,13 +341,7 @@ struct CalendarView: View {
     }
 
     private func colorForCategory(_ category: Category?) -> Color {
-        switch category {
-        case .study:    return Color(red: 0.4, green: 0.7, blue: 0.9)
-        case .work:     return FlowLineTheme.accent
-        case .health:   return FlowLineTheme.secondTxt
-        case .personal: return Color(red: 0.8, green: 0.6, blue: 0.9)
-        case nil:       return FlowLineTheme.secondBg
-        }
+        colorManager.color(for: category)
     }
 
     // MARK: - Delete

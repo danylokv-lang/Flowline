@@ -11,6 +11,7 @@ import UserNotifications
 struct FlowlineApp: App {
     @StateObject private var timerManager = FocusTimerManager()
     @StateObject private var subscriptionManager = SubscriptionManager()
+    @StateObject private var colorManager = CategoryColorManager()
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
     var sharedModelContainer: ModelContainer = {
@@ -40,6 +41,7 @@ struct FlowlineApp: App {
                     MainTabView()
                         .environmentObject(timerManager)
                         .environmentObject(subscriptionManager)
+                        .environmentObject(colorManager)
                 } else {
                     OnboardingView()
                 }
@@ -53,6 +55,7 @@ struct FlowlineApp: App {
         Settings {
             SettingsView()
                 .modelContainer(sharedModelContainer)
+                .environmentObject(colorManager)
         }
 
         // ── Menu Bar Extra ────────────────────────────────────────────────
