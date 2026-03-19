@@ -1,16 +1,9 @@
 import SwiftUI
 import SwiftData
-import UserNotifications
 
 struct FocusTimerView: View {
+    @EnvironmentObject var timerManager: FocusTimerManager
     @Query private var dayPlans: [DayPlan]
-    @State private var selectedBlock: ScheduleBlock? = nil
-    @State private var timeRemaining: TimeInterval = 0
-    @State private var totalTime: TimeInterval = 0
-    @State private var isRunning = false
-    @State private var isPaused = false
-    @State private var timerRef: Timer? = nil
-    @State private var notificationGranted = false
 
     private let calendar = Calendar.current
 
@@ -77,14 +70,14 @@ struct FocusTimerView: View {
             }
         }
         .onAppear {
-            requestNotificationPermission()
-            if selectedBlock == nil, let first = todayBlocks.first {
-                loadBlock(first)
+            timerManager.requestPermission()
+            if timerManager.selectedBlock == nil, let first = todayBlocks.first {
+                timerManager.loadBlock(first)
             }
         }
         .onChange(of: todayBlocks.count) {
-            if selectedBlock == nil, let first = todayBlocks.first {
-                loadBlock(first)
+            if timerManager.selectedBlock == nil, let first = todayBlocks.first {
+                timerManager.loadBlock(first)
             }
         }
     }
@@ -92,40 +85,33 @@ struct FocusTimerView: View {
     // MARK: - Timer Ring
 
     private var timerRing: some View {
-        let progress: CGFloat = totalTime > 0 ? CGFloat((totalTime - timeRemaining) / totalTime) : 0
-        let blockColor = colorForBlock(selectedBlock)
+        let blockColor = colorForBlock(timerManager.selectedBlock)
 
         return VStack(spacing: 16) {
             ZStack {
-                // Track
                 Circle()
                     .stroke(FlowLineTheme.secondBg.opacity(0.3), lineWidth: 10)
                     .frame(width: 215, height: 215)
 
-                // Progress arc
                 Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(
-                        blockColor,
-                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
-                    )
+                    .trim(from: 0, to: timerManager.progress)
+                    .stroke(blockColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .frame(width: 200, height: 200)
                     .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1), value: progress)
+                    .animation(.linear(duration: 1), value: timerManager.progress)
 
-                // Center content
                 VStack(spacing: 4) {
-                    Text(timeString(timeRemaining))
+                    Text(timerManager.timeString())
                         .font(.system(size: 40, weight: .black, design: .monospaced))
                         .foregroundColor(FlowLineTheme.mainTxt)
 
-                    if let block = selectedBlock {
+                    if let block = timerManager.selectedBlock {
                         Text(block.title)
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(FlowLineTheme.secondTxt)
                             .lineLimit(1)
                     } else {
-                        Text("Pick a block")
+                        Text("Pick a block below")
                             .font(.system(size: 12))
                             .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
                     }
@@ -138,11 +124,8 @@ struct FocusTimerView: View {
 
     private var controls: some View {
         HStack(spacing: 16) {
-            // Stop
-            if isRunning || isPaused {
-                Button {
-                    stopTimer()
-                } label: {
+            if timerManager.isRunning || timerManager.isPaused {
+                Button { timerManager.stop() } label: {
                     ZStack {
                         Circle()
                             .fill(FlowLineTheme.secondBg.opacity(0.3))
@@ -155,31 +138,28 @@ struct FocusTimerView: View {
                 .buttonStyle(.plain)
             }
 
-            // Start / Pause
             Button {
-                if isRunning {
-                    pauseTimer()
-                } else {
-                    startTimer()
-                }
+                if timerManager.isRunning { timerManager.pause() }
+                else { timerManager.start() }
             } label: {
                 ZStack {
                     Circle()
-                        .fill(selectedBlock != nil ? FlowLineTheme.accent : FlowLineTheme.secondBg.opacity(0.2))
+                        .fill(timerManager.selectedBlock != nil
+                              ? FlowLineTheme.accent
+                              : FlowLineTheme.secondBg.opacity(0.2))
                         .frame(width: 68, height: 68)
-                    Image(systemName: isRunning ? "pause.fill" : "play.fill")
+                    Image(systemName: timerManager.isRunning ? "pause.fill" : "play.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(selectedBlock != nil ? FlowLineTheme.mainBg : FlowLineTheme.secondTxt.opacity(0.3))
+                        .foregroundColor(timerManager.selectedBlock != nil
+                                         ? FlowLineTheme.mainBg
+                                         : FlowLineTheme.secondTxt.opacity(0.3))
                 }
             }
             .buttonStyle(.plain)
-            .disabled(selectedBlock == nil)
+            .disabled(timerManager.selectedBlock == nil)
 
-            // Skip — resets to full time
-            if isRunning || isPaused {
-                Button {
-                    resetTimer()
-                } label: {
+            if timerManager.isRunning || timerManager.isPaused {
+                Button { timerManager.reset() } label: {
                     ZStack {
                         Circle()
                             .fill(FlowLineTheme.secondBg.opacity(0.3))
@@ -197,22 +177,18 @@ struct FocusTimerView: View {
     // MARK: - Block Row
 
     private func blockRow(_ block: ScheduleBlock) -> some View {
-        let isSelected = selectedBlock?.persistentModelID == block.persistentModelID
+        let isSelected = timerManager.selectedBlock?.persistentModelID == block.persistentModelID
         let color = colorForBlock(block)
         let duration = block.endTime.timeIntervalSince(block.startTime)
 
         return Button {
-            if !isRunning {
-                loadBlock(block)
-            }
+            if !timerManager.isRunning { timerManager.loadBlock(block) }
         } label: {
             HStack(spacing: 14) {
-                // Color bar
                 Capsule()
                     .fill(color)
                     .frame(width: 3, height: 36)
 
-                // Info
                 VStack(alignment: .leading, spacing: 3) {
                     Text(block.title)
                         .font(.system(size: 14, weight: .semibold))
@@ -224,7 +200,6 @@ struct FocusTimerView: View {
 
                 Spacer()
 
-                // Time range
                 Text(timeRangeString(start: block.startTime, end: block.endTime))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
@@ -250,91 +225,8 @@ struct FocusTimerView: View {
             .padding(.horizontal, 16)
         }
         .buttonStyle(.plain)
-        .disabled(isRunning)
-        .opacity(isRunning && !isSelected ? 0.4 : 1)
-    }
-
-    // MARK: - Timer Logic
-
-    private func loadBlock(_ block: ScheduleBlock) {
-        stopTimer()
-        selectedBlock = block
-        let duration = block.endTime.timeIntervalSince(block.startTime)
-        totalTime = duration > 0 ? duration : 3600
-        timeRemaining = totalTime
-    }
-
-    private func startTimer() {
-        guard selectedBlock != nil else { return }
-        if timeRemaining <= 0 { timeRemaining = totalTime }
-        isRunning = true
-        isPaused = false
-
-        timerRef = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            if timeRemaining > 0 {
-                timeRemaining -= 1
-            } else {
-                timerFinished()
-            }
-        }
-    }
-
-    private func pauseTimer() {
-        timerRef?.invalidate()
-        timerRef = nil
-        isRunning = false
-        isPaused = true
-    }
-
-    private func stopTimer() {
-        timerRef?.invalidate()
-        timerRef = nil
-        isRunning = false
-        isPaused = false
-        if let block = selectedBlock {
-            let duration = block.endTime.timeIntervalSince(block.startTime)
-            totalTime = duration > 0 ? duration : 3600
-            timeRemaining = totalTime
-        }
-    }
-
-    private func resetTimer() {
-        timerRef?.invalidate()
-        timerRef = nil
-        isRunning = false
-        isPaused = false
-        timeRemaining = totalTime
-    }
-
-    private func timerFinished() {
-        timerRef?.invalidate()
-        timerRef = nil
-        isRunning = false
-        isPaused = false
-        timeRemaining = 0
-        sendNotification()
-    }
-
-    // MARK: - Notifications
-
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            DispatchQueue.main.async { notificationGranted = granted }
-        }
-    }
-
-    private func sendNotification() {
-        guard notificationGranted else { return }
-        let content = UNMutableNotificationContent()
-        content.title = "Block complete ✓"
-        content.body = "\(selectedBlock?.title ?? "Your session") is done. Take a short break."
-        content.sound = .default
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
+        .disabled(timerManager.isRunning)
+        .opacity(timerManager.isRunning && !isSelected ? 0.4 : 1)
     }
 
     // MARK: - Helpers
@@ -361,23 +253,9 @@ struct FocusTimerView: View {
         }
     }
 
-    private func timeString(_ interval: TimeInterval) -> String {
-        let h = Int(interval) / 3600
-        let m = (Int(interval) % 3600) / 60
-        let s = Int(interval) % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
-        }
-        return String(format: "%02d:%02d", m, s)
-    }
-
     private func durationString(_ interval: TimeInterval) -> String {
         let m = Int(interval) / 60
-        if m >= 60 {
-            let h = m / 60
-            let rem = m % 60
-            return rem > 0 ? "\(h)h \(rem)m" : "\(h)h"
-        }
+        if m >= 60 { let h = m / 60; let r = m % 60; return r > 0 ? "\(h)h \(r)m" : "\(h)h" }
         return "\(m)m"
     }
 

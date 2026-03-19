@@ -3,7 +3,10 @@ import SwiftData
 
 struct CalendarView: View {
     @Query private var dayPlans: [DayPlan]
+    @Environment(\.modelContext) private var context
     @State private var currentWeekStart: Date = CalendarView.mondayOfCurrentWeek()
+    @State private var confirmDeleteDay: Date? = nil
+    @State private var confirmDeleteWeek = false
 
     private let calendar = Calendar.current
     private let hourHeight: CGFloat = 60
@@ -75,6 +78,24 @@ struct CalendarView: View {
                                     .clipShape(Circle())
                             }
                             .buttonStyle(.plain)
+
+                            // Delete week button
+                            Button { confirmDeleteWeek = true } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(Color.red.opacity(0.7))
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.red.opacity(0.1))
+                                    .clipShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .help("Clear entire week")
+                            .confirmationDialog("Delete all blocks for this week?",
+                                                isPresented: $confirmDeleteWeek,
+                                                titleVisibility: .visible) {
+                                Button("Delete Week", role: .destructive) { deleteWeek() }
+                                Button("Cancel", role: .cancel) {}
+                            }
                         }
                     }
 
@@ -85,6 +106,7 @@ struct CalendarView: View {
                             let day = calendar.date(byAdding: .day, value: i, to: currentWeekStart)!
                             let dayNum = calendar.component(.day, from: day)
                             let isToday = calendar.isDateInToday(day)
+                            let hasBlocks = !blocksForDay(day).isEmpty
 
                             VStack(spacing: 4) {
                                 Text(dayLabels[i])
@@ -101,6 +123,34 @@ struct CalendarView: View {
                                     Text("\(dayNum)")
                                         .font(.system(size: 13, weight: isToday ? .black : .semibold))
                                         .foregroundColor(isToday ? FlowLineTheme.mainBg : FlowLineTheme.mainTxt)
+                                }
+
+                                // Trash icon — only shown when day has blocks
+                                if hasBlocks {
+                                    Button { confirmDeleteDay = day } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 8, weight: .bold))
+                                            .foregroundColor(Color.red.opacity(0.6))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Clear \(dayLabels[i])")
+                                    .confirmationDialog(
+                                        "Delete all blocks for \(dayLabels[i]) \(dayNum)?",
+                                        isPresented: Binding(
+                                            get: { confirmDeleteDay == day },
+                                            set: { if !$0 { confirmDeleteDay = nil } }
+                                        ),
+                                        titleVisibility: .visible
+                                    ) {
+                                        Button("Delete Day", role: .destructive) {
+                                            deleteDay(day)
+                                            confirmDeleteDay = nil
+                                        }
+                                        Button("Cancel", role: .cancel) { confirmDeleteDay = nil }
+                                    }
+                                } else {
+                                    // Placeholder to keep column height stable
+                                    Color.clear.frame(height: 12)
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -288,6 +338,27 @@ struct CalendarView: View {
         case .personal: return Color(red: 0.8, green: 0.6, blue: 0.9)
         case nil:       return FlowLineTheme.secondBg
         }
+    }
+
+    // MARK: - Delete
+
+    private func deleteDay(_ day: Date) {
+        let startOfDay = calendar.startOfDay(for: day)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let plans = dayPlans.filter {
+            let d = calendar.startOfDay(for: $0.date)
+            return d >= startOfDay && d < endOfDay
+        }
+        plans.forEach { context.delete($0) }
+    }
+
+    private func deleteWeek() {
+        let weekEnd = calendar.date(byAdding: .day, value: 7, to: currentWeekStart)!
+        let plans = dayPlans.filter {
+            let d = calendar.startOfDay(for: $0.date)
+            return d >= currentWeekStart && d < weekEnd
+        }
+        plans.forEach { context.delete($0) }
     }
 
     static func mondayOfCurrentWeek() -> Date {
