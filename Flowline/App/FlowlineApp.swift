@@ -12,6 +12,7 @@ struct FlowlineApp: App {
     @StateObject private var timerManager = FocusTimerManager()
     @StateObject private var subscriptionManager = SubscriptionManager()
     @StateObject private var colorManager = CategoryColorManager()
+    @StateObject private var authService = AuthService()
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
     var sharedModelContainer: ModelContainer = {
@@ -37,13 +38,18 @@ struct FlowlineApp: App {
         // ── Main Window ───────────────────────────────────────────────────
         WindowGroup(id: "main") {
             ZStack {
-                if hasCompletedOnboarding {
+                if !authService.isLoggedIn {
+                    AuthView()
+                        .environmentObject(authService)
+                } else if hasCompletedOnboarding {
                     MainTabView()
                         .environmentObject(timerManager)
                         .environmentObject(subscriptionManager)
                         .environmentObject(colorManager)
+                        .environmentObject(authService)
                 } else {
                     OnboardingView()
+                        .environmentObject(authService)
                 }
                 // Wire delegate on first render, not on state change
                 appSetup

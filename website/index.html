@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flowline — Stop losing your mornings to planning</title>
+  <meta name="description" content="Chat with AI for 60 seconds. Get a realistic day plan that actually fits your energy, priorities, and life. Free for macOS." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="/" class="wordmark">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".9"/>
+        <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
+      </svg>
+      Flowline
+    </a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <div class="nav-end">
+      <button class="link-btn" onclick="openAuth('login')">Sign in</button>
+      <button class="cta-btn" onclick="openAuth('register')">Get started free</button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="kicker">macOS · Free to start</div>
+      <h1 class="hero-h1">
+        Stop losing your<br />
+        mornings to<br />
+        <em>planning.</em>
+      </h1>
+      <p class="hero-body">
+        Tell Flowline what you need to get done today.
+        Its AI figures out when — accounting for your energy,
+        work hours, and the way you actually work.
+      </p>
+      <div class="hero-actions">
+        <button class="cta-btn cta-lg" onclick="openAuth('register')">
+          Start for free
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <a class="ghost-btn" href="#how">See how it works</a>
+      </div>
+      <p class="hero-note">No credit card. Runs natively on macOS.</p>
+    </div>
+
+    <div class="hero-right">
+      <div class="app-window">
+        <div class="window-chrome">
+          <div class="window-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <span class="window-title">Flowline — Thursday, Mar 19</span>
+        </div>
+        <div class="window-body">
+          <!-- Chat -->
+          <div class="chat-pane">
+            <div class="chat-msg user">Morning! I have a client call at 2pm, need to finish the pitch deck, go to the gym, and reply to emails.</div>
+            <div class="chat-msg ai">
+              <span class="ai-tag">✦ Flowline</span>
+              Here's your Thursday — I've kept your morning focused since the call is at 2:00 PM.
+              <div class="plan-preview">
+                <div class="plan-row work">
+                  <span class="plan-dot"></span>
+                  <span class="plan-name">Deep work — Pitch deck</span>
+                  <span class="plan-time">09:00 – 11:30</span>
+                </div>
+                <div class="plan-row study">
+                  <span class="plan-dot"></span>
+                  <span class="plan-name">Email triage</span>
+                  <span class="plan-time">11:30 – 12:00</span>
+                </div>
+                <div class="plan-row personal">
+                  <span class="plan-dot"></span>
+                  <span class="plan-name">Lunch break</span>
+                  <span class="plan-time">12:00 – 13:00</span>
+                </div>
+                <div class="plan-row work">
+                  <span class="plan-dot"></span>
+                  <span class="plan-name">Client call prep</span>
+                  <span class="plan-time">13:00 – 14:00</span>
+                </div>
+                <div class="plan-row health">
+                  <span class="plan-dot"></span>
+                  <span class="plan-name">Gym</span>
+                  <span class="plan-time">17:00 – 18:30</span>
+                </div>
+              </div>
+              Save this to calendar?
+            </div>
+            <div class="chat-msg user">Perfect, save it.</div>
+            <div class="chat-msg ai"><span class="ai-tag">✦ Flowline</span> Done — your Thursday is locked in. Good luck on the call.</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-glow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- STAT STRIP -->
+<div class="stat-strip">
+  <div class="stat-strip-inner">
+    <div class="stat"><strong>60 sec</strong> to your first plan</div>
+    <div class="divider-v"></div>
+    <div class="stat"><strong>Claude AI</strong> under the hood</div>
+    <div class="divider-v"></div>
+    <div class="stat"><strong>Native</strong> macOS app</div>
+    <div class="divider-v"></div>
+    <div class="stat"><strong>Free</strong> to start</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="section-intro reveal">
+    <div class="kicker">How it works</div>
+    <h2>A smarter way to start your day</h2>
+    <p>Most planners make you do all the thinking. Flowline flips that.</p>
+  </div>
+
+  <!-- Feature 1 -->
+  <div class="feature-row reveal">
+    <div class="feature-text">
+      <div class="step-num">01</div>
+      <h3>Just tell it what you have to do</h3>
+      <p>
+        No forms. No templates. Talk to Flowline like you'd talk to a smart colleague
+        — "I need to finish the report, have a team call at 3, and want to hit the gym."
+        It handles the scheduling.
+      </p>
+      <ul class="feature-list">
+        <li>Understands natural language</li>
+        <li>Respects your working hours and preferences</li>
+        <li>Adapts to your energy levels throughout the day</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <div class="mini-chat">
+        <div class="mini-msg u">I have a deadline Friday and three meetings today.</div>
+        <div class="mini-msg a">
+          <span class="ai-dot">✦</span>
+          Got it. I've blocked 09:00–12:00 for deep work on the deadline, left buffers around your meetings, and kept your evening clear.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 2 -->
+  <div class="feature-row feature-row-flip reveal">
+    <div class="feature-text">
+      <div class="step-num">02</div>
+      <h3>Lock in and actually stay focused</h3>
+      <p>
+        Pick a block, start the timer. Flowline tracks your session right from the
+        menu bar — no switching apps, no losing your place. Hourly nudges remind
+        you to take a real break before burnout sneaks in.
+      </p>
+      <ul class="feature-list">
+        <li>Per-block focus timer</li>
+        <li>Live countdown in your menu bar</li>
+        <li>Hourly break reminders — 5 or 10 min</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <div class="timer-visual">
+        <svg class="timer-ring" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#6d4cfa" stroke-width="6"
+                  stroke-dasharray="326" stroke-dashoffset="82"
+                  stroke-linecap="round" transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="timer-inner">
+          <div class="timer-time">01:24:07</div>
+          <div class="timer-label">Deep Work Session</div>
+        </div>
+        <div class="timer-badge">
+          <span>▶</span> Running
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 3 -->
+  <div class="feature-row reveal">
+    <div class="feature-text">
+      <div class="step-num">03</div>
+      <h3>See your whole week, instantly</h3>
+      <p>
+        A clean, color-coded calendar shows every planned block across the week.
+        Work is purple. Study is blue. Health is green. Personal is orange.
+        You know at a glance how your time is actually being spent.
+      </p>
+      <ul class="feature-list">
+        <li>Full 7-day calendar view</li>
+        <li>Color-coded by category</li>
+        <li>Delete or re-plan any day in seconds</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <div class="cal-mini">
+        <div class="cal-header">
+          <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span>
+        </div>
+        <div class="cal-body">
+          <div class="cal-col">
+            <div class="cal-block work" style="top:8%; height:28%"></div>
+            <div class="cal-block health" style="top:60%; height:16%"></div>
+          </div>
+          <div class="cal-col">
+            <div class="cal-block study" style="top:4%; height:22%"></div>
+            <div class="cal-block work" style="top:35%; height:32%"></div>
+          </div>
+          <div class="cal-col today">
+            <div class="cal-block work" style="top:8%; height:20%"></div>
+            <div class="cal-block study" style="top:32%; height:14%"></div>
+            <div class="cal-block personal" style="top:52%; height:20%"></div>
+          </div>
+          <div class="cal-col">
+            <div class="cal-block work" style="top:10%; height:24%"></div>
+            <div class="cal-block health" style="top:60%; height:18%"></div>
+          </div>
+          <div class="cal-col">
+            <div class="cal-block study" style="top:6%; height:18%"></div>
+            <div class="cal-block personal" style="top:40%; height:28%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MENU BAR CALLOUT -->
+<div class="menubar-callout reveal">
+  <div class="menubar-callout-inner">
+    <div class="menubar-text">
+      <h3>Your whole day lives in the menu bar</h3>
+      <p>Quick access to your timer and a mini chat — without ever leaving what you're working on.</p>
+    </div>
+    <div class="menubar-pill">
+      <div class="pill-icon">✦</div>
+      <div class="pill-time">01:24:07</div>
+      <div class="pill-sep"></div>
+      <div class="pill-label">Deep Work</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-intro reveal">
+    <div class="kicker">Pricing</div>
+    <h2>Start free. Upgrade when it clicks.</h2>
+    <p>We don't lock features behind a paywall. You get the full app. Pro just removes the limits.</p>
+  </div>
+
+  <div class="pricing-grid reveal">
+    <div class="pricing-card">
+      <div class="plan-top">
+        <div class="plan-name">Free</div>
+        <div class="plan-price-row">
+          <span class="plan-price">$0</span>
+          <span class="plan-per">forever</span>
+        </div>
+      </div>
+      <p class="plan-desc">Everything you need to try Flowline properly — no time limit.</p>
+      <ul class="plan-list">
+        <li><span class="li-mark">✓</span> 10 AI messages per day</li>
+        <li><span class="li-mark">✓</span> Focus timer with break reminders</li>
+        <li><span class="li-mark">✓</span> Full week calendar</li>
+        <li><span class="li-mark">✓</span> Menu bar access</li>
+        <li><span class="li-mark">✓</span> Customizable category colors</li>
+      </ul>
+      <button class="outline-btn" onclick="openAuth('register')">Get started</button>
+    </div>
+
+    <div class="pricing-card pricing-pro">
+      <div class="pro-badge">Most popular</div>
+      <div class="plan-top">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price-row">
+          <span class="plan-price">$4.99</span>
+          <span class="plan-per">/ month</span>
+        </div>
+        <div class="plan-annual">or $39.99 / year &mdash; 2 months free</div>
+      </div>
+      <p class="plan-desc">For people who use Flowline every day and want more planning power.</p>
+      <ul class="plan-list">
+        <li><span class="li-mark pro">✓</span> <strong>500 AI messages per day</strong></li>
+        <li><span class="li-mark pro">✓</span> Everything in Free</li>
+        <li><span class="li-mark pro">✓</span> Priority AI response speed</li>
+        <li><span class="li-mark pro">✓</span> Multi-device sync (coming soon)</li>
+        <li><span class="li-mark pro">✓</span> Early access to new features</li>
+      </ul>
+      <button class="cta-btn plan-cta" onclick="openAuth('register')">Start Pro</button>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM CTA -->
+<section class="bottom-cta">
+  <div class="bottom-cta-inner reveal">
+    <h2>A better morning starts tonight.</h2>
+    <p>Set up Flowline before you go to bed. Wake up knowing exactly what your day looks like.</p>
+    <button class="cta-btn cta-lg" onclick="openAuth('register')">
+      Create your free account
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <a href="/" class="wordmark footer-wordmark">
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+        <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".8"/>
+        <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
+      </svg>
+      Flowline
+    </a>
+    <div class="footer-links">
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="terms.html">Terms of Use</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="mailto:hello@flowlineapp.com">Contact</a>
+    </div>
+    <p class="footer-copy">© 2026 Flowline. Made for people who want their day back.</p>
+  </div>
+</footer>
+
+<!-- AUTH MODAL -->
+<div class="modal-bg" id="authModal" onclick="handleOverlayClick(event)">
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-x" onclick="closeAuth()" aria-label="Close">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+
+    <div class="modal-brand">
+      <svg width="24" height="24" viewBox="0 0 18 18" fill="none">
+        <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="#6d4cfa" opacity=".9"/>
+        <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
+      </svg>
+      <span>Flowline</span>
+    </div>
+
+    <div class="modal-tabs">
+      <button id="tab-login"    class="modal-tab active" onclick="switchTab('login')">Sign in</button>
+      <button id="tab-register" class="modal-tab"        onclick="switchTab('register')">Create account</button>
+    </div>
+
+    <form id="authForm" onsubmit="submitAuth(event)" autocomplete="on" novalidate>
+      <div id="nameGroup" class="field hidden">
+        <label for="nameInput">Name</label>
+        <input id="nameInput" type="text" placeholder="Your name" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="emailInput">Email</label>
+        <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email" required />
+      </div>
+      <div class="field">
+        <label for="passwordInput">Password</label>
+        <input id="passwordInput" type="password" placeholder="Min. 6 characters" autocomplete="current-password" required />
+      </div>
+
+      <div id="authError" class="error-box hidden"></div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">
+        <span id="submitLabel">Sign in</span>
+        <div id="submitSpinner" class="spin hidden"></div>
+      </button>
+    </form>
+
+    <p class="modal-footer-note">
+      By continuing you agree to our
+      <a href="terms.html" target="_blank">Terms of Use</a>
+      and <a href="privacy.html" target="_blank">Privacy Policy</a>.
+    </p>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
