@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+
+    <!-- Background -->
+    <radialGradient id="bg" cx="50%" cy="48%" r="70%">
+      <stop offset="0%"   stop-color="#0e0c1f"/>
+      <stop offset="100%" stop-color="#06060f"/>
+    </radialGradient>
+
+    <!-- Main glow behind star -->
+    <radialGradient id="glow-center" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#6d4cfa" stop-opacity="0.45"/>
+      <stop offset="55%"  stop-color="#6d4cfa" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#6d4cfa" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Outer rim glow (larger, softer) -->
+    <radialGradient id="glow-outer" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#4f35c8" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#4f35c8" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Star gradient: bright white core → lavender → purple -->
+    <radialGradient id="star-fill" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="30%"  stop-color="#e0d4ff"/>
+      <stop offset="65%"  stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#6d4cfa"/>
+    </radialGradient>
+
+    <!-- Star glow filter -->
+    <filter id="star-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Soft star shadow (purple) -->
+    <filter id="star-shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="32" flood-color="#6d4cfa" flood-opacity="0.7"/>
+    </filter>
+
+    <!-- Inner core bloom -->
+    <filter id="core-bloom" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Dot glow -->
+    <filter id="dot-glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Noise texture for premium feel -->
+    <filter id="noise" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noiseOut"/>
+      <feColorMatrix type="saturate" values="0" in="noiseOut" result="grayNoise"/>
+      <feBlend in="SourceGraphic" in2="grayNoise" mode="overlay" result="blended"/>
+      <feComposite in="blended" in2="SourceGraphic" operator="in"/>
+    </filter>
+
+    <!-- macOS corner radius clip -->
+    <clipPath id="round">
+      <rect width="1024" height="1024" rx="224" ry="224"/>
+    </clipPath>
+
+  </defs>
+
+  <g clip-path="url(#round)">
+
+    <!-- ── 1. Background ── -->
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+
+    <!-- Noise overlay (very subtle) -->
+    <rect width="1024" height="1024" fill="white" opacity="0.018" filter="url(#noise)"/>
+
+    <!-- ── 2. Outer ambient glow ── -->
+    <ellipse cx="512" cy="512" rx="480" ry="480" fill="url(#glow-outer)"/>
+
+    <!-- ── 3. Center glow bloom ── -->
+    <ellipse cx="512" cy="510" rx="260" ry="260" fill="url(#glow-center)"/>
+
+    <!-- ── 4. Main ✦ Star — shadow layer (purple halo) ── -->
+    <path filter="url(#star-shadow)"
+      d="
+        M512 168
+        C512 168  532 370  568 406
+        C604 442  806 462  806 462
+        C806 462  604 482  568 518
+        C532 554  512 756  512 756
+        C512 756  492 554  456 518
+        C420 482  218 462  218 462
+        C218 462  420 442  456 406
+        C492 370  512 168  512 168 Z
+      "
+      fill="url(#star-fill)"
+      opacity="0.5"
+    />
+
+    <!-- ── 5. Main ✦ Star — crisp layer ── -->
+    <path filter="url(#star-glow)"
+      d="
+        M512 168
+        C512 168  532 370  568 406
+        C604 442  806 462  806 462
+        C806 462  604 482  568 518
+        C532 554  512 756  512 756
+        C512 756  492 554  456 518
+        C420 482  218 462  218 462
+        C218 462  420 442  456 406
+        C492 370  512 168  512 168 Z
+      "
+      fill="url(#star-fill)"
+    />
+
+    <!-- ── 6. Bright white inner core ── -->
+    <circle cx="512" cy="462" r="26" fill="white" opacity="0.92" filter="url(#core-bloom)"/>
+    <circle cx="512" cy="462" r="10" fill="white" opacity="1"/>
+
+    <!-- ── 7. Three orbiting micro-dots (top-right arc) ── -->
+    <!-- Blue dot -->
+    <circle cx="648" cy="310" r="10" fill="#3b9eff" opacity="0.9" filter="url(#dot-glow)"/>
+    <!-- Purple dot -->
+    <circle cx="696" cy="362" r="7"  fill="#a78bfa" opacity="0.8" filter="url(#dot-glow)"/>
+    <!-- Orange dot -->
+    <circle cx="718" cy="424" r="5"  fill="#ff7b45" opacity="0.75" filter="url(#dot-glow)"/>
+
+    <!-- Subtle connector arc between dots (barely visible) -->
+    <path d="M648 310 Q672 336 696 362 Q707 393 718 424"
+          fill="none"
+          stroke="rgba(167,139,250,0.18)"
+          stroke-width="1.5"
+          stroke-dasharray="3 4"/>
+
+    <!-- ── 8. Icon border ring (very subtle) ── -->
+    <rect width="1024" height="1024" rx="224" ry="224"
+          fill="none"
+          stroke="rgba(109,76,250,0.15)"
+          stroke-width="1.5"/>
+
+  </g>
+</svg>
