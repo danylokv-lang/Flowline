@@ -83,11 +83,7 @@ struct OnboardingView: View {
                     Spacer()
 
                     Button {
-                        if currentStep < totalSteps - 1 {
-                            withAnimation(.easeInOut(duration: 0.25)) { currentStep += 1 }
-                        } else {
-                            completeOnboarding()
-                        }
+                        advance()
                     } label: {
                         HStack(spacing: 6) {
                             Text(currentStep == totalSteps - 1 ? "Get Started" : "Continue")
@@ -109,10 +105,21 @@ struct OnboardingView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(currentStep == 0 && name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .keyboardShortcut(.return, modifiers: [])
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 40)
             }
+        }
+    }
+
+    // MARK: - Navigation helper
+
+    private func advance() {
+        if currentStep < totalSteps - 1 {
+            withAnimation(.easeInOut(duration: 0.25)) { currentStep += 1 }
+        } else {
+            completeOnboarding()
         }
     }
 
@@ -137,6 +144,9 @@ struct OnboardingView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(FlowLineTheme.mainTxt)
                     .padding(.bottom, 10)
+                    .onSubmit {
+                        if !name.trimmingCharacters(in: .whitespaces).isEmpty { advance() }
+                    }
                     .placeholder(when: name.isEmpty) {
                         Text("Alex")
                             .font(.system(size: 22, weight: .semibold))

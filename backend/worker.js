@@ -362,6 +362,23 @@ export default {
         return res({ error: "Unauthorized" }, 401);
       }
 
+      // ── Legacy "/" route — iOS app posts here directly (no JWT needed) ──
+      if (path === "/" && method === "POST") {
+        const body     = await request.json();
+        const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key":         env.CLAUDE_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta":    "prompt-caching-2024-07-31",
+            "content-type":      "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await upstream.json();
+        return res(data, upstream.status);
+      }
+
       // ── Protected routes (JWT required) ──────────────────────────────
       const userId = await getUserId(request, env);
       if (!userId) return res({ error: "Not authenticated — include Bearer token" }, 401);

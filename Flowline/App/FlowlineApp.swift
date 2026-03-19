@@ -33,6 +33,7 @@ struct FlowlineApp: App {
     }()
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
 
     var body: some Scene {
         // ── Main Window ───────────────────────────────────────────────────
@@ -54,6 +55,15 @@ struct FlowlineApp: App {
                 // Wire delegate on first render, not on state change
                 appSetup
             }
+            // When the logged-in user changes, wipe local profile data
+            // so the new account starts with a clean slate
+            .onChange(of: authService.currentUser?.userId) { _, newUserId in
+                guard let newUserId else { return }
+                if newUserId != lastLoggedInUserId {
+                    clearLocalUserData()
+                    lastLoggedInUserId = newUserId
+                }
+            }
         }
         .modelContainer(sharedModelContainer)
 
@@ -62,6 +72,7 @@ struct FlowlineApp: App {
             SettingsView()
                 .modelContainer(sharedModelContainer)
                 .environmentObject(colorManager)
+                .environmentObject(authService)
         }
 
         // ── Menu Bar Extra ────────────────────────────────────────────────
@@ -87,6 +98,20 @@ struct FlowlineApp: App {
     // Wire delegate immediately — not dependent on any state change
     private func wireDelegate() {
         appDelegate.timerManager = timerManager
+    }
+
+    /// Wipe ALL local SwiftData when a different account logs in.
+    /// This ensures no data leaks between accounts on the same device.
+    private func clearLocalUserData() {
+        let ctx = sharedModelContainer.mainContext
+        if let items = try? ctx.fetch(FetchDescriptor<UserProfile>())    { items.forEach { ctx.delete($0) } }
+        if let items = try? ctx.fetch(FetchDescriptor<ChatMessage>())    { items.forEach { ctx.delete($0) } }
+        if let items = try? ctx.fetch(FetchDescriptor<DayPlan>())        { items.forEach { ctx.delete($0) } }
+        if let items = try? ctx.fetch(FetchDescriptor<CapturedTask>())   { items.forEach { ctx.delete($0) } }
+        if let items = try? ctx.fetch(FetchDescriptor<FlowTask>())       { items.forEach { ctx.delete($0) } }
+        try? ctx.save()
+        // Reset onboarding so the new user sets up their profile
+        hasCompletedOnboarding = false
     }
 
     private var appSetup: some View {

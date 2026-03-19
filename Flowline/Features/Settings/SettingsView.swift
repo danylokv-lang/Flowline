@@ -224,10 +224,13 @@ private struct FocusSettingsTab: View {
 
 private struct DataSettingsTab: View {
     @Environment(\.modelContext) private var context
+    @EnvironmentObject private var authService: AuthService
     @Query private var messages: [ChatMessage]
     @Query private var dayPlans: [DayPlan]
     @Query private var capturedTasks: [CapturedTask]
+    @Query private var profiles: [UserProfile]
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
+    @AppStorage("lastLoggedInUserId") private var lastLoggedInUserId: String = ""
 
     @State private var confirmClearChats = false
     @State private var confirmClearCalendar = false
@@ -336,7 +339,10 @@ private struct DataSettingsTab: View {
         messages.forEach { context.delete($0) }
         dayPlans.forEach { context.delete($0) }
         capturedTasks.forEach { context.delete($0) }
+        profiles.forEach { context.delete($0) }
         hasCompletedOnboarding = false
+        lastLoggedInUserId = ""
+        authService.logout()
     }
 }
 

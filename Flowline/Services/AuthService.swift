@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import Combine
 
 // ── User model returned by the API ────────────────────────────────────────
 

@@ -9,7 +9,7 @@ final class SubscriptionManager: ObservableObject {
     // MARK: - Published
 
     @Published private(set) var messagesUsedToday: Int = 0
-    @Published private(set) var isPro: Bool = false   // ← swap with RevenueCat entitlement
+    @Published private(set) var isPro: Bool = true    // ← TESTING: set false to re-enable paywall
 
     // MARK: - Limits
 
