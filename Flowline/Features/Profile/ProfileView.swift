@@ -1,13 +1,17 @@
 import SwiftUI
 import SwiftData
+import RevenueCatUI
 
 struct ProfileView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     @Query private var profiles: [UserProfile]
     @State private var selectedProfileID: PersistentIdentifier?
     @State private var showDeleteConfirm = false
     @State private var profileToDelete: UserProfile?
     @State private var showNewProfile = false
+    @State private var showPaywall = false
+    @State private var showCustomerCenter = false
 
     var body: some View {
         ZStack {
@@ -56,6 +60,108 @@ struct ProfileView: View {
                     }
                 }
 
+                // ── Subscription Status ───────────────────────────────
+                VStack(spacing: 8) {
+                    if subscriptionManager.isPro {
+                        // Pro — show manage / customer center
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(FlowLineTheme.accent.opacity(0.15))
+                                    .frame(width: 36, height: 36)
+                                Text("✦")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(FlowLineTheme.accent)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Flowline Pro")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(FlowLineTheme.mainTxt)
+                                Text(subscriptionManager.isLifetime ? "Lifetime access" : "Active subscription")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(FlowLineTheme.secondTxt)
+                            }
+                            Spacer()
+                            Button {
+                                showCustomerCenter = true
+                            } label: {
+                                Text("Manage")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(FlowLineTheme.accent)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(FlowLineTheme.accent.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(FlowLineTheme.accent.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(FlowLineTheme.accent.opacity(0.2), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 20)
+                    } else {
+                        // Free / Trial — show upgrade prompt
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                ZStack {
+                                    Circle()
+                                        .fill(FlowLineTheme.accent.opacity(0.15))
+                                        .frame(width: 36, height: 36)
+                                    Text("✦")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(FlowLineTheme.accent)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Text("Upgrade to Pro")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(FlowLineTheme.mainTxt)
+                                        if subscriptionManager.isInTrial {
+                                            Text("\(subscriptionManager.trialDaysRemaining)d trial")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(Color.orange)
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                    Text("\(subscriptionManager.remainingMessages) messages left today")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(FlowLineTheme.secondTxt)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(FlowLineTheme.secondTxt)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [FlowLineTheme.accent.opacity(0.1), FlowLineTheme.accent.opacity(0.05)],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(FlowLineTheme.accent.opacity(0.25), lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 20)
+                    }
+                }
+                .padding(.vertical, 12)
+
                 // ── New Profile Button ────────────────────────────────
                 Rectangle()
                     .fill(FlowLineTheme.borderHi)
@@ -99,6 +205,10 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showNewProfile) {
             OnboardingView(isInitialOnboarding: false)
+        }
+        .flowlinePaywall(isPresented: $showPaywall, subscriptionManager: subscriptionManager)
+        .sheet(isPresented: $showCustomerCenter) {
+            FlowlineCustomerCenter()
         }
         .onAppear {
             if selectedProfileID == nil, let first = profiles.first {

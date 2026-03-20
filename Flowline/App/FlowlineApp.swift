@@ -6,6 +6,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import RevenueCat
 
 @main
 struct FlowlineApp: App {
@@ -51,6 +52,7 @@ struct FlowlineApp: App {
                 } else {
                     OnboardingView()
                         .environmentObject(authService)
+                        .environmentObject(subscriptionManager)
                 }
                 // Wire delegate on first render, not on state change
                 appSetup
@@ -63,6 +65,8 @@ struct FlowlineApp: App {
                     clearLocalUserData()
                     lastLoggedInUserId = newUserId
                 }
+                // Start 3-day trial on first login
+                subscriptionManager.startTrialIfNeeded()
             }
         }
         .modelContainer(sharedModelContainer)
@@ -92,8 +96,6 @@ struct FlowlineApp: App {
         }
         .menuBarExtraStyle(.window)
     }
-
-    init() {}
 
     // Wire delegate immediately — not dependent on any state change
     private func wireDelegate() {

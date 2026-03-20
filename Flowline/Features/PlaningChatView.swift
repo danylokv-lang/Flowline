@@ -63,7 +63,7 @@ struct PlanningChatView: View {
     @State private var lastFailedMessage: String? = nil
     @State private var editorHeight: CGFloat = 17
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
-    @StateObject private var aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
+    @StateObject private var aiService = ClaudePlanningService(apiKey: "")
     private let planSaver = PlanSavingService()
 
     var body: some View {
@@ -251,10 +251,7 @@ struct PlanningChatView: View {
             .onChange(of: profiles.first?.wakeTime) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.sleepTime) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.hasWorkHours) { refreshSystemPrompt() }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView { showPaywall = false }
-                    .environmentObject(subscriptionManager)
-            }
+            .flowlinePaywall(isPresented: $showPaywall, subscriptionManager: subscriptionManager)
 
             // ── Sidebar ──────────────────────────────────────────────
             if showSidebar {

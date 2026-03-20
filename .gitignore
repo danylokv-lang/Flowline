@@ -1,6 +1,7 @@
 # --- Sensitive files ---
 # API keys and secrets
 Flowline/App/Config.swift
+Secrets.xcconfig
 Plan.md
 
 # --- Xcode ---

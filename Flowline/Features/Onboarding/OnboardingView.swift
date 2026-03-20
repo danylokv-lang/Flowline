@@ -1,11 +1,14 @@
 import SwiftUI
 import SwiftData
+import RevenueCatUI
 
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     var isInitialOnboarding: Bool = true
     @State private var currentStep = 0
+    @State private var showPaywall = false
 
     @State private var name: String = ""
     @State private var wakeTime = Calendar.current.date(from: DateComponents(hour: 7, minute: 0))!
@@ -110,6 +113,12 @@ struct OnboardingView: View {
                 .padding(.horizontal, 28)
                 .padding(.bottom, 40)
             }
+        }
+        .sheet(isPresented: $showPaywall) {
+            FlowlinePaywallView { finishOnboarding() }
+                .environmentObject(subscriptionManager)
+                .interactiveDismissDisabled(false)
+                .onDisappear { finishOnboarding() }
         }
     }
 
@@ -307,10 +316,16 @@ struct OnboardingView: View {
         )
         modelContext.insert(profile)
         if isInitialOnboarding {
-            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            // Show paywall — finishing it (buy or dismiss) marks onboarding complete
+            showPaywall = true
         } else {
             dismiss()
         }
+    }
+
+    private func finishOnboarding() {
+        subscriptionManager.startTrialIfNeeded()
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
     }
 }
 

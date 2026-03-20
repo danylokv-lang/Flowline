@@ -263,7 +263,7 @@ private struct MiniChatView: View {
     @State private var isSending = false
     @State private var state: ChatState = .idle
 
-    private let aiService = ClaudePlanningService(apiKey: Config.claudeAPIKey)
+    private let aiService = ClaudePlanningService(apiKey: "")
 
     private enum ChatState { case idle, sending, done, error }
 
