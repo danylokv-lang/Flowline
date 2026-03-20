@@ -1,5 +1,45 @@
 const API = 'https://claude-proxy.danylokv.workers.dev';
 
+// ── Aceternity Glowing Effect — mouse-tracking conic border ───────────────
+(function initGlowingCards() {
+  const cards = () => document.querySelectorAll('.glow-card');
+  let raf = null;
+
+  document.addEventListener('pointermove', (e) => {
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      cards().forEach(card => {
+        const rect = card.getBoundingClientRect();
+        const cx = rect.left + rect.width  * 0.5;
+        const cy = rect.top  + rect.height * 0.5;
+
+        // Inactive zone: suppress glow when cursor is near center (0.7 ratio)
+        const inactiveR = 0.5 * Math.min(rect.width, rect.height) * 0.7;
+        if (Math.hypot(e.clientX - cx, e.clientY - cy) < inactiveR) {
+          card.style.setProperty('--glow-active', '0');
+          return;
+        }
+
+        // Proximity check — 60px margin around card
+        const near = e.clientX > rect.left  - 60 && e.clientX < rect.right  + 60 &&
+                     e.clientY > rect.top   - 60 && e.clientY < rect.bottom + 60;
+
+        card.style.setProperty('--glow-active', near ? '1' : '0');
+        if (!near) return;
+
+        // Angle from card center to cursor → drives conic gradient rotation
+        const angle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) + 90;
+        card.style.setProperty('--glow-start', angle);
+      });
+    });
+  });
+
+  // Reset on pointer leave
+  document.addEventListener('pointerleave', () => {
+    cards().forEach(c => c.style.setProperty('--glow-active', '0'));
+  });
+})();
+
 // ── Scroll-based nav ──────────────────────────────────────────────────────
 window.addEventListener('scroll', () => {
   document.getElementById('nav').classList.toggle('scrolled', scrollY > 20);

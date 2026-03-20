@@ -50,6 +50,8 @@ struct PlanningChatView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ChatMessage.timestamp) private var savedMessages: [ChatMessage]
     @Query private var profiles: [UserProfile]
+    @Query(filter: #Predicate<CapturedTask> { !$0.isScheduled }, sort: \CapturedTask.createdAt)
+    private var inboxTasks: [CapturedTask]
     @Binding var selectedTab: Int
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
@@ -58,11 +60,15 @@ struct PlanningChatView: View {
     @State private var isSaving: Bool = false
     @State private var didLoadHistory = false
     @State private var showCalendarBanner = false
+    @State private var showCalendarPicker = false
+    @State private var calendarPickerItems: [WritableCalendarInfo] = []
+    @State private var selectedCalendarID: String = ""
     @State private var showSidebar = false
     @State private var showPaywall = false
     @State private var lastFailedMessage: String? = nil
     @State private var editorHeight: CGFloat = 17
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
+    @AppStorage("lastUsedCalendarID") private var lastUsedCalendarID: String = ""
     @StateObject private var aiService = ClaudePlanningService(apiKey: "")
     private let planSaver = PlanSavingService()
     private let calendarService = CalendarService.shared
@@ -192,7 +198,17 @@ struct PlanningChatView: View {
                     if hasPlanInChat && !isLoading && !isSaving {
                         HStack {
                             Spacer()
-                            Button { savePlanToCalendar() } label: {
+                            Button {
+                                let cals = calendarService.writableCalendars()
+                                calendarPickerItems = cals
+                                // Restore last-used calendar, fall back to first
+                                if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
+                                    selectedCalendarID = lastUsedCalendarID
+                                } else {
+                                    selectedCalendarID = cals.first?.id ?? ""
+                                }
+                                showCalendarPicker = true
+                            } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "calendar.badge.plus")
                                         .font(.system(size: 12, weight: .bold))
@@ -315,6 +331,17 @@ struct PlanningChatView: View {
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showSidebar)
+        .sheet(isPresented: $showCalendarPicker) {
+            CalendarPickerSheet(
+                calendars: calendarPickerItems,
+                selectedID: $selectedCalendarID,
+                onSave: {
+                    showCalendarPicker = false
+                    savePlanToCalendar(toCalendarID: selectedCalendarID)
+                },
+                onCancel: { showCalendarPicker = false }
+            )
+        }
     }
 
     // MARK: - Empty State
@@ -453,15 +480,31 @@ struct PlanningChatView: View {
     private func refreshSystemPrompt() {
         guard let profile = profiles.first else { return }
 
-        // Flowline blocks already saved in the app
-        var ctx = (try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)) ?? ""
+        var sections: [String] = []
 
-        // Apple Calendar events — merge in if available
-        if let appleEvents = calendarService.formattedForAI(date: Date()) {
-            ctx += ctx.isEmpty ? appleEvents : "\n\(appleEvents)"
+        // Section 1: blocks already saved inside Flowline
+        if let flowlineCtx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext),
+           !flowlineCtx.isEmpty {
+            sections.append("FLOWLINE SAVED BLOCKS (already planned by user):\n\(flowlineCtx)")
         }
 
-        aiService.updateSystemPrompt(from: profile, calendarContext: ctx.isEmpty ? nil : ctx)
+        // Section 2: All connected calendar events (Apple iCloud, Google, Exchange, etc.) — today + 3 weeks
+        if let calCtx = calendarService.formattedForAI(date: Date(), weeks: 3) {
+            sections.append("ALL CONNECTED CALENDARS (real appointments from Apple, Google, and other synced accounts, next 3 weeks — events tagged [Google] are from Google Calendar):\n\(calCtx)")
+        }
+
+        // Section 3: Task inbox — unscheduled items the AI should plan around
+        if !inboxTasks.isEmpty {
+            let formatted = inboxTasks.map { "• \($0.text) [\($0.category)]" }.joined(separator: "\n")
+            sections.append("""
+TASK INBOX (unscheduled tasks — when the user asks to plan a day, slot these in where they fit. \
+After planning, tell the user which inbox tasks you included):
+\(formatted)
+""")
+        }
+
+        let combined = sections.isEmpty ? nil : sections.joined(separator: "\n\n")
+        aiService.updateSystemPrompt(from: profile, calendarContext: combined)
     }
 
     // MARK: - Send
@@ -568,7 +611,7 @@ struct PlanningChatView: View {
         messages.contains { !$0.isThinking && !$0.isSavedPlan && $0.role == .assistant && $0.content.count > 200 }
     }
 
-    private func savePlanToCalendar() {
+    private func savePlanToCalendar(toCalendarID calendarID: String? = nil) {
         guard !isSaving else { return }
         isSaving = true
         messages.append(Message(role: .assistant, content: "Saving to calendar...", isThinking: true))
@@ -581,7 +624,11 @@ struct PlanningChatView: View {
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
-                try? calendarService.savePlan(plan)
+                try calendarService.savePlan(plan, toCalendarID: calendarID)
+                // Remember the calendar the user picked
+                if let id = calendarID, !id.isEmpty {
+                    lastUsedCalendarID = id
+                }
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(
                         role: .assistant,
@@ -591,7 +638,14 @@ struct PlanningChatView: View {
                 }
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
-                    messages[index] = Message(role: .assistant, content: "Failed: \(error.localizedDescription)")
+                    let errMsg: String
+                    if error.localizedDescription.lowercased().contains("caldav") ||
+                       error.localizedDescription.lowercased().contains("google") {
+                        errMsg = "Couldn't save to Google Calendar. Try a different calendar or check your connection."
+                    } else {
+                        errMsg = "Calendar save failed: \(error.localizedDescription)"
+                    }
+                    messages[index] = Message(role: .assistant, content: errMsg, isError: true, isRetryable: true)
                 }
             }
             isSaving = false
@@ -717,6 +771,164 @@ struct PlanningChatView: View {
                 .fill(FlowLineTheme.borderHi)
                 .frame(width: 0.5)
         }
+    }
+}
+
+// MARK: - Calendar Picker Sheet
+
+private struct CalendarPickerSheet: View {
+    let calendars: [WritableCalendarInfo]
+    @Binding var selectedID: String
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
+    // Group calendars by source name
+    private var grouped: [(sourceName: String, isGoogle: Bool, items: [WritableCalendarInfo])] {
+        var map: [String: (isGoogle: Bool, items: [WritableCalendarInfo])] = [:]
+        for cal in calendars {
+            if map[cal.sourceName] == nil {
+                map[cal.sourceName] = (isGoogle: cal.isGoogle, items: [])
+            }
+            map[cal.sourceName]?.items.append(cal)
+        }
+        return map.map { (sourceName: $0.key, isGoogle: $0.value.isGoogle, items: $0.value.items) }
+            .sorted { $0.sourceName < $1.sourceName }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // ── Header ───────────────────────────────────────────────────
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Save to Calendar")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                    Text("Choose where your plan blocks are added")
+                        .font(.system(size: 11))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                }
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+            }
+            .padding(18)
+
+            Divider()
+                .background(FlowLineTheme.border)
+
+            // ── Calendar list ─────────────────────────────────────────────
+            if calendars.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .font(.system(size: 28))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                    Text("No writable calendars found.\nGrant calendar access in Settings → Calendars.")
+                        .font(.system(size: 12))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(24)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(grouped, id: \.sourceName) { group in
+                            // Source header
+                            HStack(spacing: 5) {
+                                if group.isGoogle {
+                                    Text("G")
+                                        .font(.system(size: 8, weight: .black))
+                                        .foregroundStyle(
+                                            LinearGradient(colors: [.blue, .red],
+                                                           startPoint: .topLeading,
+                                                           endPoint: .bottomTrailing)
+                                        )
+                                        .frame(width: 12, height: 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 2)
+                                                .fill(FlowLineTheme.secondBg)
+                                                .overlay(RoundedRectangle(cornerRadius: 2)
+                                                    .stroke(FlowLineTheme.border, lineWidth: 0.5))
+                                        )
+                                } else {
+                                    Image(systemName: "apple.logo")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(FlowLineTheme.secondTxt)
+                                }
+                                Text(group.sourceName)
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(FlowLineTheme.secondTxt)
+                                    .textCase(.uppercase)
+                                    .tracking(0.5)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 14)
+                            .padding(.bottom, 5)
+
+                            ForEach(group.items) { cal in
+                                Button {
+                                    selectedID = cal.id
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        // Calendar color dot
+                                        Circle()
+                                            .fill(cal.calColor.map { Color(cgColor: $0) } ?? Color.accentColor)
+                                            .frame(width: 10, height: 10)
+
+                                        Text(cal.title)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(FlowLineTheme.mainTxt)
+
+                                        Spacer()
+
+                                        if selectedID == cal.id {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(FlowLineTheme.accent)
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 9)
+                                    .background(
+                                        selectedID == cal.id
+                                            ? FlowLineTheme.accent.opacity(0.08)
+                                            : Color.clear
+                                    )
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 8)
+                }
+            }
+
+            Divider()
+                .background(FlowLineTheme.border)
+
+            // ── Save button ───────────────────────────────────────────────
+            Button(action: onSave) {
+                HStack(spacing: 7) {
+                    Image(systemName: "calendar.badge.checkmark")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Save Plan Here")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(selectedID.isEmpty ? FlowLineTheme.accent.opacity(0.4) : FlowLineTheme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 9))
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedID.isEmpty)
+            .padding(16)
+        }
+        .frame(width: 320, height: 420)
+        .background(FlowLineTheme.mainBg)
     }
 }
 

@@ -2,6 +2,16 @@ import Combine
 import EventKit
 import Foundation
 
+// MARK: - Writable calendar info (used by the in-chat picker)
+
+struct WritableCalendarInfo: Identifiable {
+    let id: String          // EKCalendar.calendarIdentifier
+    let title: String
+    let sourceName: String
+    let isGoogle: Bool
+    let calColor: CGColor?
+}
+
 /// Reads Apple Calendar events and formats them for the AI system prompt.
 @MainActor
 final class CalendarService: ObservableObject {
@@ -45,9 +55,9 @@ final class CalendarService: ObservableObject {
 
     // MARK: - Format for AI
 
-    /// Returns a compact, human-readable string of Apple Calendar events
-    /// covering today + the next `weeks` weeks, for use in the Claude system prompt.
-    /// Returns nil if no events or not authorized.
+    /// Returns a compact, human-readable string of all connected calendar events
+    /// (Apple iCloud, Google Calendar, Exchange, etc.) covering today + the next `weeks` weeks,
+    /// for use in the Claude system prompt. Returns nil if no events or not authorized.
     func formattedForAI(date: Date, weeks: Int = 3) -> String? {
         let cal = Calendar.current
         let start = cal.startOfDay(for: date)
@@ -76,12 +86,21 @@ final class CalendarService: ObservableObject {
 
         let lines = dayMap.map { entry -> String in
             let eventStrings = entry.events.map { evt -> String in
+                // Determine source tag (Google, iCloud, Exchange, etc.)
+                let srcTitle  = evt.calendar?.source?.title ?? ""
+                let srcType   = evt.calendar?.source?.sourceType
+                let isGoogle  = srcType == .calDAV &&
+                    (srcTitle.lowercased().contains("google") ||
+                     srcTitle.lowercased().contains("gmail") ||
+                     srcTitle.contains("@gmail"))
+                let tag = isGoogle ? " [Google]" : ""
+
                 if evt.isAllDay {
-                    return "\(evt.title!) (all day)"
+                    return "\(evt.title!) (all day)\(tag)"
                 }
                 let start = timeFmt.string(from: evt.startDate)
                 let end   = timeFmt.string(from: evt.endDate)
-                return "\(start)–\(end) \(evt.title!)"
+                return "\(start)–\(end) \(evt.title!)\(tag)"
             }
             return "\(entry.key): \(eventStrings.joined(separator: " · "))"
         }
@@ -89,16 +108,59 @@ final class CalendarService: ObservableObject {
         return lines.joined(separator: "\n")
     }
 
-    // MARK: - Write to Apple Calendar
+    // MARK: - Calendar discovery
 
-    /// Returns the dedicated "Flowline" calendar, creating it if needed.
+    /// All calendars the user can write events to, sorted by source name.
+    func writableCalendars() -> [WritableCalendarInfo] {
+        store.calendars(for: .event)
+            .filter { $0.allowsContentModifications }
+            .map { cal in
+                let srcTitle = cal.source?.title ?? "On My Mac"
+                let srcType  = cal.source?.sourceType ?? .local
+                let isGoogle = srcType == .calDAV &&
+                    (srcTitle.lowercased().contains("google") ||
+                     srcTitle.lowercased().contains("gmail") ||
+                     srcTitle.contains("@gmail"))
+                return WritableCalendarInfo(
+                    id:         cal.calendarIdentifier,
+                    title:      cal.title,
+                    sourceName: srcTitle,
+                    isGoogle:   isGoogle,
+                    calColor:   cal.cgColor
+                )
+            }
+            .sorted { $0.sourceName < $1.sourceName }
+    }
+
+    // MARK: - Write to Calendar
+
+    /// Returns the dedicated "Flowline" calendar on the user's preferred source,
+    /// creating it if it doesn't already exist there.
     private func flowlineCalendar() -> EKCalendar? {
-        if let existing = store.calendars(for: .event).first(where: { $0.title == "Flowline" }) {
+        let preferredTitle = UserDefaults.standard.string(forKey: "saveCalendarSourceTitle") ?? ""
+
+        // Resolve target source
+        let targetSource: EKSource?
+        if preferredTitle.isEmpty {
+            targetSource = store.defaultCalendarForNewEvents?.source
+        } else {
+            targetSource = store.sources.first(where: { $0.title == preferredTitle })
+        }
+
+        // Re-use existing "Flowline" calendar only if it's on the right source
+        if let existing = store.calendars(for: .event).first(where: {
+            $0.title == "Flowline" &&
+            (targetSource == nil || $0.source?.sourceIdentifier == targetSource?.sourceIdentifier)
+        }) {
             return existing
         }
+
+        // Create a new "Flowline" calendar on the target source
         let cal = EKCalendar(for: .event, eventStore: store)
         cal.title = "Flowline"
-        cal.source = store.defaultCalendarForNewEvents?.source ?? store.sources.first(where: { $0.sourceType == .local })
+        cal.source = targetSource
+            ?? store.defaultCalendarForNewEvents?.source
+            ?? store.sources.first(where: { $0.sourceType == .local })
         do {
             try store.saveCalendar(cal, commit: true)
             return cal
@@ -107,11 +169,21 @@ final class CalendarService: ObservableObject {
         }
     }
 
-    /// Saves plan blocks to a "Flowline" calendar in Apple Calendar.
-    /// Deletes any existing Flowline events on the affected dates first to avoid duplicates.
-    func savePlan(_ plan: GeneratedPlan) throws {
+    /// Saves plan blocks to the chosen calendar (by identifier) or falls back to the
+    /// dedicated "Flowline" calendar. Deletes existing events on affected dates first.
+    func savePlan(_ plan: GeneratedPlan, toCalendarID calendarID: String? = nil) throws {
         guard isAuthorized else { return }
-        guard let flCal = flowlineCalendar() else { return }
+
+        // Prefer the user-picked calendar (an existing one, avoids CalDAV create issues)
+        let flCal: EKCalendar
+        if let id = calendarID,
+           let picked = store.calendar(withIdentifier: id),
+           picked.allowsContentModifications {
+            flCal = picked
+        } else {
+            guard let fallback = flowlineCalendar() else { return }
+            flCal = fallback
+        }
 
         let dateFmt = DateFormatter()
         dateFmt.dateFormat = "yyyy-MM-dd"

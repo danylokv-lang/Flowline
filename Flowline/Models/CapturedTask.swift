@@ -3,11 +3,14 @@ import SwiftData
 
 @Model final class CapturedTask {
     var text: String
+    var category: String   // "work" | "study" | "health" | "personal"
     var createdAt: Date
-    var isScheduled: Bool = false
+    var isScheduled: Bool
 
-    init(text: String) {
-        self.text = text
-        self.createdAt = Date()
+    init(text: String, category: String = "work") {
+        self.text        = text
+        self.category    = category
+        self.createdAt   = Date()
+        self.isScheduled = false
     }
 }

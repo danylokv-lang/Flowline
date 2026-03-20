@@ -248,45 +248,13 @@ struct CalendarView: View {
 
                     // Schedule blocks
                     ForEach(blocks, id: \.persistentModelID) { block in
-                        let top = yPosition(for: block.startTime)
+                        let top    = yPosition(for: block.startTime)
                         let height = blockHeight(start: block.startTime, end: block.endTime)
-                        let color = colorForCategory(block.category)
 
-                        ZStack(alignment: .topLeading) {
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(color.opacity(0.18))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                        .stroke(color.opacity(0.90), lineWidth: 1.5)
-                                )
-
-                            // Left accent bar
-                            HStack(spacing: 0) {
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(color)
-                                    .frame(width: 3)
-                                Spacer()
-                            }
-
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(block.title)
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(color)
-                                    .lineLimit(height > 40 ? 2 : 1)
-
-                                if height > 36 {
-                                    Text(timeRangeString(start: block.startTime, end: block.endTime))
-                                        .font(.system(size: 8, design: .monospaced))
-                                        .foregroundColor(color.opacity(0.75))
-                                }
-                            }
-                            .padding(.leading, 7)
-                            .padding(.trailing, 5)
-                            .padding(.vertical, 3)
-                        }
-                        .frame(height: max(height, 14))
-                        .padding(.horizontal, 2)
-                        .offset(y: top)
+                        blockView(for: block, height: height)
+                            .frame(height: max(height, 14))
+                            .padding(.horizontal, 2)
+                            .offset(y: top)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -295,6 +263,146 @@ struct CalendarView: View {
             }
         }
         .frame(height: gridHeight, alignment: .topLeading)
+    }
+
+    // MARK: - Block rendering
+
+    @ViewBuilder
+    private func blockView(for block: ScheduleBlock, height: CGFloat) -> some View {
+        let isSplit = block.title.contains("/")
+
+        if isSplit {
+            let parts  = block.title.split(separator: "/", maxSplits: 1)
+                                    .map { String($0).trimmingCharacters(in: .whitespaces) }
+            let title1 = parts[0]
+            let title2 = parts.count > 1 ? parts[1] : ""
+            let color1 = colorForCategory(block.category)
+            let color2 = colorForCategory(guessCategory(from: title2))
+
+            ZStack(alignment: .topLeading) {
+                // Split background: left half color1, right half color2
+                HStack(spacing: 0) {
+                    Rectangle().fill(color1.opacity(0.18))
+                    Rectangle().fill(color2.opacity(0.18))
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+
+                // Gradient border
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [color1.opacity(0.9), color2.opacity(0.9)],
+                            startPoint: .leading, endPoint: .trailing
+                        ),
+                        lineWidth: 1.5
+                    )
+
+                // Left accent bar
+                HStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(color1)
+                        .frame(width: 3)
+                    Spacer()
+                }
+
+                // Center divider
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [color1.opacity(0.35), color2.opacity(0.35)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 1)
+                        .offset(x: geo.size.width / 2)
+                }
+
+                // Text: two halves
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title1)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(color1)
+                            .lineLimit(height > 40 ? 2 : 1)
+                        if height > 36 {
+                            Text(timeRangeString(start: block.startTime, end: block.endTime))
+                                .font(.system(size: 8, design: .monospaced))
+                                .foregroundColor(color1.opacity(0.75))
+                        }
+                    }
+                    .padding(.leading, 7).padding(.trailing, 3).padding(.vertical, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title2)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(color2)
+                            .lineLimit(height > 40 ? 2 : 1)
+                    }
+                    .padding(.horizontal, 5).padding(.vertical, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        } else {
+            let color = colorForCategory(block.category)
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(color.opacity(0.18))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .stroke(color.opacity(0.90), lineWidth: 1.5)
+                    )
+
+                HStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(color)
+                        .frame(width: 3)
+                    Spacer()
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(block.title)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(color)
+                        .lineLimit(height > 40 ? 2 : 1)
+
+                    if height > 36 {
+                        Text(timeRangeString(start: block.startTime, end: block.endTime))
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(color.opacity(0.75))
+                    }
+                }
+                .padding(.leading, 7)
+                .padding(.trailing, 5)
+                .padding(.vertical, 3)
+            }
+        }
+    }
+
+    /// Infers a category from keywords in a task title (used for the right half of split blocks).
+    private func guessCategory(from title: String) -> Category {
+        let t = title.lowercased()
+        if t.contains("gym") || t.contains("run") || t.contains("workout") ||
+           t.contains("walk") || t.contains("exercise") || t.contains("yoga") ||
+           t.contains("swim") || t.contains("meal") || t.contains("lunch") ||
+           t.contains("dinner") || t.contains("breakfast") || t.contains("break") ||
+           t.contains("sleep") || t.contains("nap") || t.contains("recovery") {
+            return .health
+        } else if t.contains("school") || t.contains("class") || t.contains("study") ||
+                  t.contains("lecture") || t.contains("read") || t.contains("homework") ||
+                  t.contains("course") || t.contains("learn") || t.contains("review") ||
+                  t.contains("flashcard") || t.contains("exam") || t.contains("notes") {
+            return .study
+        } else if t.contains("code") || t.contains("coding") || t.contains("work") ||
+                  t.contains("project") || t.contains("build") || t.contains("design") ||
+                  t.contains("meeting") || t.contains("call") || t.contains("sprint") ||
+                  t.contains("portfolio") || t.contains("leetcode") || t.contains("dev") ||
+                  t.contains("app") || t.contains("feature") {
+            return .work
+        }
+        return .personal
     }
 
     // MARK: - Helpers

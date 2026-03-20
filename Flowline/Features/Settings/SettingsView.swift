@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import EventKit
 
 struct SettingsView: View {
     var body: some View {
@@ -11,6 +12,9 @@ struct SettingsView: View {
             AppearanceSettingsTab()
                 .tabItem { Label("Appearance", systemImage: "paintpalette") }
 
+            CalendarSettingsTab()
+                .tabItem { Label("Calendars", systemImage: "calendar") }
+
             NotificationSettingsTab()
                 .tabItem { Label("Notifications", systemImage: "bell") }
 
@@ -20,7 +24,7 @@ struct SettingsView: View {
             DataSettingsTab()
                 .tabItem { Label("Data", systemImage: "externaldrive") }
         }
-        .frame(width: 480, height: 380)
+        .frame(width: 480, height: 500)
     }
 }
 
@@ -229,8 +233,9 @@ private struct DataSettingsTab: View {
     @Query private var dayPlans: [DayPlan]
     @Query private var capturedTasks: [CapturedTask]
     @Query private var profiles: [UserProfile]
+    @AppStorage("hasSeenIntro")           private var hasSeenIntro = true
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
-    @AppStorage("lastLoggedInUserId") private var lastLoggedInUserId: String = ""
+    @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
 
     @State private var confirmClearChats = false
     @State private var confirmClearCalendar = false
@@ -340,9 +345,288 @@ private struct DataSettingsTab: View {
         dayPlans.forEach { context.delete($0) }
         capturedTasks.forEach { context.delete($0) }
         profiles.forEach { context.delete($0) }
+        hasSeenIntro = false
         hasCompletedOnboarding = false
         lastLoggedInUserId = ""
         authService.logout()
+    }
+}
+
+// MARK: - Calendars Tab
+
+private struct CalendarGroup: Identifiable {
+    let id = UUID()
+    let sourceName: String
+    let isGoogle: Bool
+    let isApple: Bool
+    let calendars: [(name: String, color: Color)]
+}
+
+private struct CalendarSettingsTab: View {
+    @AppStorage("saveCalendarSourceTitle") private var saveSourceTitle: String = ""
+    @State private var authStatus: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
+    @State private var calendarGroups: [CalendarGroup] = []
+    @State private var availableSources: [String] = []
+
+    private var isAuthorized: Bool {
+        authStatus == .fullAccess || authStatus == .authorized
+    }
+
+    var body: some View {
+        Form {
+            // ── Access status ─────────────────────────────────────────────
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 20))
+                        .foregroundColor(.red)
+                        .frame(width: 30)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Calendar Access")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Flowline reads your events so the AI can plan around them.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    accessBadge
+                }
+                .padding(.vertical, 2)
+
+                if authStatus == .denied || authStatus == .restricted {
+                    Button("Open Privacy Settings") {
+                        NSWorkspace.shared.open(
+                            URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            } header: {
+                Text("Permissions")
+            }
+
+            // ── Live calendar list ────────────────────────────────────────
+            if isAuthorized {
+                if calendarGroups.isEmpty {
+                    Section("Calendars Being Read") {
+                        Text("No calendars found on this device.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    ForEach(calendarGroups) { group in
+                        Section {
+                            ForEach(group.calendars, id: \.name) { cal in
+                                HStack(spacing: 10) {
+                                    Circle()
+                                        .fill(cal.color)
+                                        .frame(width: 10, height: 10)
+                                    Text(cal.name)
+                                        .font(.system(size: 13))
+                                    Spacer()
+                                }
+                            }
+                        } header: {
+                            HStack(spacing: 6) {
+                                if group.isGoogle {
+                                    Text("G")
+                                        .font(.system(size: 9, weight: .black))
+                                        .foregroundStyle(
+                                            LinearGradient(colors: [.blue, .red],
+                                                           startPoint: .topLeading,
+                                                           endPoint: .bottomTrailing)
+                                        )
+                                        .frame(width: 14, height: 14)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 3)
+                                                .fill(Color(nsColor: .windowBackgroundColor))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 3)
+                                                        .stroke(Color.secondary.opacity(0.25), lineWidth: 0.5)
+                                                )
+                                        )
+                                } else if group.isApple {
+                                    Image(systemName: "apple.logo")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+                                }
+                                Text(group.sourceName)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Save destination ──────────────────────────────────────────
+            if isAuthorized && !availableSources.isEmpty {
+                Section {
+                    Picker("Account", selection: $saveSourceTitle) {
+                        Text("System default").tag("")
+                        ForEach(availableSources, id: \.self) { src in
+                            Text(src).tag(src)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Text("Flowline creates a \"Flowline\" calendar inside the chosen account and saves all planned blocks there.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                } header: {
+                    Text("Save Plans To")
+                }
+            }
+
+            // ── Add Google Calendar ───────────────────────────────────────
+            Section {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(nsColor: .windowBackgroundColor))
+                            .frame(width: 30, height: 30)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                            )
+                        Text("G")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(colors: [.blue, .red],
+                                               startPoint: .topLeading,
+                                               endPoint: .bottomTrailing)
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Google Calendar")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(googleConnected
+                             ? "Connected — events are being read by AI."
+                             : "Connect via macOS Internet Accounts.")
+                            .font(.system(size: 11))
+                            .foregroundColor(googleConnected ? .green : .secondary)
+                    }
+
+                    Spacer()
+
+                    if googleConnected {
+                        Label("Connected", systemImage: "checkmark.circle.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.green)
+                            .labelStyle(.titleAndIcon)
+                    } else {
+                        Button("Connect") {
+                            NSWorkspace.shared.open(
+                                URL(string: "x-apple.systempreferences:com.apple.preferences.internetaccounts")!
+                            )
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+                .padding(.vertical, 2)
+
+                if !googleConnected {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .padding(.top, 1)
+                        Text("Tap **Connect** → add your Google account → enable Calendars. Flowline reads it the same way as Apple Calendar — no extra setup.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 2)
+                }
+            } header: {
+                Text("Add More Calendars")
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.vertical, 8)
+        .onAppear { refresh() }
+    }
+
+    // MARK: - Helpers
+
+    private var googleConnected: Bool {
+        calendarGroups.contains(where: \.isGoogle)
+    }
+
+    @ViewBuilder
+    private var accessBadge: some View {
+        switch authStatus {
+        case .fullAccess, .authorized:
+            Label("Allowed", systemImage: "checkmark.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.green)
+                .labelStyle(.titleAndIcon)
+        case .denied, .restricted:
+            Label("Blocked", systemImage: "xmark.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.red)
+                .labelStyle(.titleAndIcon)
+        default:
+            Label("Not set up", systemImage: "circle.dashed")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.secondary)
+                .labelStyle(.titleAndIcon)
+        }
+    }
+
+    private func refresh() {
+        authStatus = EKEventStore.authorizationStatus(for: .event)
+        guard isAuthorized else { calendarGroups = []; availableSources = []; return }
+
+        let store = EKEventStore()
+        let all = store.calendars(for: .event)
+
+        // Group by source
+        var sourceMap: [String: (isGoogle: Bool, isApple: Bool, cals: [(name: String, color: Color)])] = [:]
+
+        for cal in all.sorted(by: { $0.title < $1.title }) {
+            let src = cal.source
+            let srcTitle = src?.title ?? "On My Mac"
+            let srcType  = src?.sourceType ?? .local
+
+            let isGoogle = srcType == .calDAV &&
+                (srcTitle.lowercased().contains("google") ||
+                 srcTitle.lowercased().contains("gmail") ||
+                 srcTitle.contains("@gmail") ||
+                 srcTitle.contains("@googlemail"))
+            let isApple  = srcType == .local || srcType == .calDAV && !isGoogle
+                          || srcType == .mobileMe
+
+            let cgColor = cal.cgColor.map { Color(cgColor: $0) } ?? Color.accentColor
+
+            if sourceMap[srcTitle] == nil {
+                sourceMap[srcTitle] = (isGoogle: isGoogle, isApple: !isGoogle, cals: [])
+            }
+            sourceMap[srcTitle]?.cals.append((name: cal.title, color: cgColor))
+        }
+
+        // Sort: Apple first, then Google, then others
+        calendarGroups = sourceMap.map { key, val in
+            CalendarGroup(sourceName: key,
+                          isGoogle: val.isGoogle,
+                          isApple: val.isApple,
+                          calendars: val.cals)
+        }
+        .sorted {
+            if $0.isApple != $1.isApple { return $0.isApple }
+            if $0.isGoogle != $1.isGoogle { return $0.isGoogle }
+            return $0.sourceName < $1.sourceName
+        }
+
+        // Sources available for saving — only writable ones (local, calDAV, exchange, mobileMe)
+        availableSources = store.sources
+            .filter { [.local, .calDAV, .exchange, .mobileMe].contains($0.sourceType) }
+            .map(\.title)
+            .sorted()
     }
 }
 

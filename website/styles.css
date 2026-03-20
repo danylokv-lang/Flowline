@@ -758,3 +758,148 @@ body {
   .menubar-callout-inner { flex-direction: column; }
   .footer-links { margin-left: 0; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SPLITE — Hero spotlight beam
+   Inspired by serafim/splite — animated conic spotlight on dark background
+───────────────────────────────────────────────────────────────────────── */
+@keyframes spotlight-sweep {
+  0%   { opacity: 0; transform: translate(-72%, -60%) skewX(-10deg); }
+  100% { opacity: 1; transform: translate(-50%, -42%) skewX(-10deg); }
+}
+
+.hero-spotlight {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  width: 138%;
+  height: 169%;
+  opacity: 0;
+  animation: spotlight-sweep 2.2s ease forwards 0.4s;
+  mix-blend-mode: soft-light;
+}
+
+/* Subtle dot grid layered over hero — fades out toward bottom */
+.hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(255 255 255 / .055) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(ellipse 90% 65% at 55% 10%, black 20%, transparent 90%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 65% at 55% 10%, black 20%, transparent 90%);
+}
+
+/* Ensure hero content sits above spotlight + dot grid */
+.hero-inner { position: relative; z-index: 1; }
+
+/* Gradient headline — neutral-50 → neutral-400 direction, Splite style */
+.hero-h1 {
+  background: linear-gradient(172deg, #f3f3f8 25%, #8282a0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.hero-h1 em {
+  background: linear-gradient(130deg, #9b7dff 0%, #cbb8ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-style: italic;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   GLOWING EFFECT — Mouse-tracking conic gradient border
+   Inspired by aceternity/glowing-effect component
+───────────────────────────────────────────────────────────────────────── */
+.glow-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.glow-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid transparent;
+
+  /* Multi-stop colorful conic gradient — follows mouse via --glow-start */
+  background:
+    radial-gradient(circle, #a78bfa 10%, transparent 20%),
+    radial-gradient(circle at 40% 40%, #c084fc 5%, transparent 15%),
+    radial-gradient(circle at 60% 60%, #818cf8 10%, transparent 20%),
+    radial-gradient(circle at 40% 60%, #6366f1 10%, transparent 20%),
+    repeating-conic-gradient(
+      from 236.84deg at 50% 50%,
+      #a78bfa 0%,
+      #c084fc calc(25% / 5),
+      #818cf8 calc(50% / 5),
+      #6366f1 calc(75% / 5),
+      #a78bfa calc(100% / 5)
+    );
+  background-attachment: fixed;
+
+  /* Fade in/out based on proximity */
+  opacity: var(--glow-active, 0);
+  transition: opacity 0.35s ease;
+
+  /* Conic mask — only show the border area at the swept angle */
+  mask-image:
+    linear-gradient(#0000, #0000),
+    conic-gradient(
+      from calc((var(--glow-start, 0) - 28) * 1deg),
+      transparent 0deg,
+      white,
+      transparent 56deg
+    );
+  mask-clip: padding-box, border-box;
+  mask-composite: intersect;
+
+  /* Safari / older webkit */
+  -webkit-mask-image:
+    linear-gradient(#0000, #0000),
+    conic-gradient(
+      from calc((var(--glow-start, 0) - 28) * 1deg),
+      transparent 0deg,
+      white,
+      transparent 56deg
+    );
+  -webkit-mask-clip: padding-box, border-box;
+  -webkit-mask-composite: destination-in;
+
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Pro card gets a slightly wider glow arc */
+.pricing-pro.glow-card::after {
+  mask-image:
+    linear-gradient(#0000, #0000),
+    conic-gradient(
+      from calc((var(--glow-start, 0) - 40) * 1deg),
+      transparent 0deg,
+      white,
+      transparent 80deg
+    );
+  -webkit-mask-image:
+    linear-gradient(#0000, #0000),
+    conic-gradient(
+      from calc((var(--glow-start, 0) - 40) * 1deg),
+      transparent 0deg,
+      white,
+      transparent 80deg
+    );
+  background:
+    repeating-conic-gradient(
+      from 236.84deg at 50% 50%,
+      #8b6dff 0%,
+      #c084fc calc(25% / 5),
+      #6366f1 calc(50% / 5),
+      #a78bfa calc(75% / 5),
+      #8b6dff calc(100% / 5)
+    );
+  background-attachment: fixed;
+}

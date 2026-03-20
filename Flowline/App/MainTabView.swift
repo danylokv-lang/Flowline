@@ -23,6 +23,12 @@ struct MainTabView: View {
                     Label("Focus", systemImage: "timer")
                 }
                 .tag(2)
+
+            TaskInboxView()
+                .tabItem {
+                    Label("Inbox", systemImage: "tray.full")
+                }
+                .tag(3)
         }
         .tint(FlowLineTheme.accent)
         .toolbar {

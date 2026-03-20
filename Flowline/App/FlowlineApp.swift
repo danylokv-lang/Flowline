@@ -33,6 +33,7 @@ struct FlowlineApp: App {
         }
     }()
 
+    @AppStorage("hasSeenIntro")           private var hasSeenIntro = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
 
@@ -40,7 +41,9 @@ struct FlowlineApp: App {
         // ── Main Window ───────────────────────────────────────────────────
         WindowGroup(id: "main") {
             ZStack {
-                if !authService.isLoggedIn {
+                if !hasSeenIntro {
+                    AppIntroView()
+                } else if !authService.isLoggedIn {
                     AuthView()
                         .environmentObject(authService)
                 } else if hasCompletedOnboarding {
