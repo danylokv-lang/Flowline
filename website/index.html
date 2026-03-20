@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Flowline — Stop losing your mornings to planning</title>
   <meta name="description" content="Chat with AI for 60 seconds. Get a realistic day plan that actually fits your energy, priorities, and life. Free for macOS." />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,10 +24,10 @@
       Flowline
     </a>
     <nav class="nav-links">
-      <a href="#how">How it works</a>
-      <a href="#pricing">Pricing</a>
-      <a href="terms.html">Terms</a>
-      <a href="privacy.html">Privacy</a>
+      <a href="#how" data-text="How it works"><span class="hover-text"></span>How it works</a>
+      <a href="#pricing" data-text="Pricing"><span class="hover-text"></span>Pricing</a>
+      <a href="terms.html" data-text="Terms"><span class="hover-text"></span>Terms</a>
+      <a href="privacy.html" data-text="Privacy"><span class="hover-text"></span>Privacy</a>
     </nav>
     <div class="nav-end">
       <button class="link-btn" onclick="openAuth('login')">Sign in</button>
@@ -341,7 +342,7 @@
       <a href="#pricing">Pricing</a>
       <a href="terms.html">Terms of Use</a>
       <a href="privacy.html">Privacy Policy</a>
-      <a href="mailto:hello@flowlineapp.com">Contact</a>
+      <a href="mailto:dkov.dev@gmail.com">Contact</a>
     </div>
     <p class="footer-copy">© 2026 Flowline. Made for people who want their day back.</p>
   </div>
@@ -369,20 +370,57 @@
 
     <!-- Auth form (login / register) -->
     <form id="authForm" onsubmit="submitAuth(event)" autocomplete="on" novalidate>
-      <div id="nameGroup" class="field hidden">
-        <label for="nameInput">Name</label>
-        <input id="nameInput" type="text" placeholder="Your name" autocomplete="name" />
-      </div>
-      <div class="field">
-        <label for="emailInput">Email</label>
-        <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email" required />
-      </div>
-      <div class="field">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <label for="passwordInput" style="margin:0">Password</label>
-          <button type="button" id="forgotLink" class="forgot-link" onclick="switchTab('forgot')">Forgot password?</button>
+
+      <!-- Name (register only) -->
+      <div id="nameGroup" class="nebula-field hidden">
+        <div class="nebula-input">
+          <input id="nameInput" type="text" class="input" placeholder=" " autocomplete="name" />
+          <label class="user-label" for="nameInput">Your name</label>
+          <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z"/>
+          </svg>
+          <div class="nebula-particle" style="--x:0.3;--y:-0.5;--delay:0.0s"></div>
+          <div class="nebula-particle" style="--x:0.6;--y:-0.2;--delay:0.2s"></div>
+          <div class="nebula-particle" style="--x:0.4;--y:0.4;--delay:0.4s"></div>
+          <div class="nebula-particle" style="--x:0.8;--y:0.1;--delay:0.1s"></div>
+          <div class="nebula-particle" style="--x:0.2;--y:-0.6;--delay:0.3s"></div>
+          <div class="nebula-particle" style="--x:0.7;--y:0.3;--delay:0.5s"></div>
         </div>
-        <input id="passwordInput" type="password" placeholder="Min. 6 characters" autocomplete="current-password" required />
+      </div>
+
+      <!-- Email -->
+      <div class="nebula-field">
+        <div class="nebula-input">
+          <input id="emailInput" type="email" class="input" placeholder=" " autocomplete="email" required />
+          <label class="user-label" for="emailInput">Email</label>
+          <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+          <div class="nebula-particle" style="--x:0.3;--y:-0.5;--delay:0.0s"></div>
+          <div class="nebula-particle" style="--x:0.6;--y:-0.2;--delay:0.2s"></div>
+          <div class="nebula-particle" style="--x:0.4;--y:0.4;--delay:0.4s"></div>
+          <div class="nebula-particle" style="--x:0.8;--y:0.1;--delay:0.1s"></div>
+          <div class="nebula-particle" style="--x:0.2;--y:-0.6;--delay:0.3s"></div>
+          <div class="nebula-particle" style="--x:0.7;--y:0.3;--delay:0.5s"></div>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="nebula-field">
+        <div class="nebula-input">
+          <input id="passwordInput" type="password" class="input" placeholder=" " autocomplete="current-password" required />
+          <label class="user-label" for="passwordInput">Password</label>
+          <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M18 8h-1V6c0-2.8-2.2-5-5-5S7 3.2 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.7 1.4-3.1 3.1-3.1 1.7 0 3.1 1.4 3.1 3.1v2z"/>
+          </svg>
+          <div class="nebula-particle" style="--x:0.3;--y:-0.5;--delay:0.0s"></div>
+          <div class="nebula-particle" style="--x:0.6;--y:-0.2;--delay:0.2s"></div>
+          <div class="nebula-particle" style="--x:0.4;--y:0.4;--delay:0.4s"></div>
+          <div class="nebula-particle" style="--x:0.8;--y:0.1;--delay:0.1s"></div>
+          <div class="nebula-particle" style="--x:0.2;--y:-0.6;--delay:0.3s"></div>
+          <div class="nebula-particle" style="--x:0.7;--y:0.3;--delay:0.5s"></div>
+        </div>
+        <button type="button" id="forgotLink" class="forgot-link" style="margin-top:8px;display:block;text-align:right" onclick="switchTab('forgot')">Forgot password?</button>
       </div>
 
       <div id="authError" class="error-box hidden"></div>
@@ -397,9 +435,20 @@
     <div id="forgotForm" class="hidden">
       <p style="font-size:14px;color:#aaaacc;margin:0 0 20px">Enter your email and we'll send you a reset link.</p>
       <form onsubmit="submitForgot(event)" novalidate>
-        <div class="field">
-          <label for="forgotEmail">Email</label>
-          <input id="forgotEmail" type="email" placeholder="you@example.com" autocomplete="email" required />
+        <div class="nebula-field">
+          <div class="nebula-input">
+            <input id="forgotEmail" type="email" class="input" placeholder=" " autocomplete="email" required />
+            <label class="user-label" for="forgotEmail">Email</label>
+            <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            </svg>
+            <div class="nebula-particle" style="--x:0.3;--y:-0.5;--delay:0.0s"></div>
+            <div class="nebula-particle" style="--x:0.6;--y:-0.2;--delay:0.2s"></div>
+            <div class="nebula-particle" style="--x:0.4;--y:0.4;--delay:0.4s"></div>
+            <div class="nebula-particle" style="--x:0.8;--y:0.1;--delay:0.1s"></div>
+            <div class="nebula-particle" style="--x:0.2;--y:-0.6;--delay:0.3s"></div>
+            <div class="nebula-particle" style="--x:0.7;--y:0.3;--delay:0.5s"></div>
+          </div>
         </div>
         <div id="forgotError" class="error-box hidden"></div>
         <div id="forgotSuccess" class="success-box hidden"></div>

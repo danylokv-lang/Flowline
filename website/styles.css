@@ -90,10 +90,33 @@ body {
   display: flex; gap: 6px; margin-left: 40px;
 }
 .nav-links a {
-  font-size: 13.5px; color: var(--txt2); padding: 5px 12px;
-  border-radius: 8px; transition: color .15s, background .15s;
+  font-size: 13.5px;
+  position: relative;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255,255,255,.45);
+  padding: 5px 12px;
+  border-radius: 8px;
+  display: inline-block;
+  text-decoration: none;
+  --animation-color: var(--accent-hi);
 }
-.nav-links a:hover { color: var(--txt); background: rgba(255 255 255/.05); }
+.nav-links a .hover-text {
+  position: absolute;
+  color: var(--animation-color);
+  width: 0%;
+  inset: 0;
+  padding: 5px 12px;
+  border-right: 2px solid var(--animation-color);
+  overflow: hidden;
+  transition: width .4s ease;
+  -webkit-text-stroke: 1px var(--animation-color);
+  white-space: nowrap;
+  display: flex; align-items: center;
+}
+.nav-links a:hover .hover-text {
+  width: 100%;
+  filter: drop-shadow(0 0 6px var(--animation-color));
+}
 
 .nav-end {
   display: flex; align-items: center; gap: 8px; margin-left: auto;
@@ -101,20 +124,37 @@ body {
 
 /* ── Buttons ── */
 .cta-btn {
+  position: relative; overflow: hidden;
   background: var(--accent); color: #fff;
-  border: none; padding: 9px 18px; border-radius: 9px;
-  font-size: 13.5px; font-weight: 600;
-  display: inline-flex; align-items: center; gap: 7px;
-  transition: background .15s, transform .15s, box-shadow .15s;
-  box-shadow: 0 1px 3px rgba(109 76 250/.4);
+  border: 2px solid rgba(255,255,255,.22);
+  padding: 9px 20px; border-radius: 9999px;
+  font-size: 13.5px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; outline: none;
+  transition: transform .3s ease, box-shadow .3s ease, border-color .3s;
+  box-shadow: 0 6px 20px rgba(109 76 250/.35);
 }
 .cta-btn:hover {
-  background: var(--accent-hi);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(109 76 250/.4);
+  transform: scale(1.05);
+  border-color: rgba(255,255,255,.5);
+  box-shadow: 0 12px 32px rgba(109 76 250/.5);
 }
-.cta-btn:active { transform: none; }
-.cta-btn.cta-lg { padding: 13px 24px; font-size: 15px; border-radius: 11px; }
+.cta-btn:active { transform: scale(.97); }
+.cta-btn svg { transition: transform .3s ease; flex-shrink: 0; }
+.cta-btn:hover svg { transform: translateX(4px); }
+.cta-btn::before {
+  content: '';
+  position: absolute; width: 80px; height: 100%;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.75), transparent 70%);
+  top: 0; left: -80px; opacity: .5;
+}
+.cta-btn:hover::before { animation: cta-shine 1.5s ease-out infinite; }
+@keyframes cta-shine {
+  0%  { left: -80px; }
+  60% { left: 100%; }
+  to  { left: 100%; }
+}
+.cta-btn.cta-lg { padding: 13px 28px; font-size: 15px; }
 
 .link-btn {
   background: none; border: none; color: var(--txt2);
@@ -554,6 +594,65 @@ body {
 }
 .modal-tab.active { background: var(--accent); color: white; }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   NEBULA INPUTS
+───────────────────────────────────────────────────────────────────────── */
+.nebula-field { position: relative; margin-bottom: 16px; }
+.nebula-input { position: relative; }
+
+.nebula-input .input {
+  width: 100%;
+  padding: 14px 14px 14px 42px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-s);
+  color: var(--txt);
+  font-size: 14px; font-family: inherit;
+  outline: none; border-radius: 9px;
+  transition: border-color .3s ease, box-shadow .3s ease;
+  box-sizing: border-box;
+}
+.nebula-input .user-label {
+  position: absolute;
+  left: 42px; top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--txt3); font-size: 14px;
+  transition: all .25s ease;
+  background: var(--bg-s);
+  padding: 0 3px; z-index: 1; line-height: 1;
+}
+.nebula-input .input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(109,76,250,.12), 0 6px 20px rgba(109,76,250,.15);
+}
+.nebula-input .input:focus ~ .user-label,
+.nebula-input .input:not(:placeholder-shown) ~ .user-label {
+  top: 0; left: 10px; font-size: 11px; font-weight: 600; color: var(--accent-hi);
+}
+.nebula-input .field-icon {
+  position: absolute; top: 50%; left: 13px; transform: translateY(-50%);
+  width: 18px; height: 18px; fill: var(--txt3);
+  transition: fill .25s ease; pointer-events: none;
+}
+.nebula-input .input:focus ~ .field-icon { fill: var(--accent-hi); }
+
+/* Particles */
+.nebula-particle {
+  position: absolute; width: 5px; height: 5px; border-radius: 50%;
+  pointer-events: none; opacity: 0; top: 50%; left: 13px;
+  filter: blur(.5px); mix-blend-mode: screen;
+}
+.nebula-input .input:focus ~ .nebula-particle {
+  animation: fl-nebula-float 1.8s forwards ease-out;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes fl-nebula-float {
+  0%   { transform: translate(0,-50%) scale(.8); opacity: 0; background: #a78bfa; }
+  20%  { opacity: .7; }
+  100% { transform: translate(calc(var(--x)*110px), calc(var(--y)*28px)) scale(1.1); opacity: 0; background: #6df2ff; }
+}
+
+/* Legacy .field — kept for any remaining uses */
 .field { margin-bottom: 14px; }
 .field label {
   display: block; font-size: 12px; font-weight: 600;
