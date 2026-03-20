@@ -199,15 +199,24 @@ struct PlanningChatView: View {
                         HStack {
                             Spacer()
                             Button {
-                                let cals = calendarService.writableCalendars()
-                                calendarPickerItems = cals
-                                // Restore last-used calendar, fall back to first
-                                if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
-                                    selectedCalendarID = lastUsedCalendarID
-                                } else {
-                                    selectedCalendarID = cals.first?.id ?? ""
+                                _Concurrency.Task { @MainActor in
+                                    await calendarService.requestAccess()
+                                    var cals = calendarService.writableCalendars()
+                                    // EKEventStore can return empty on first access right after launch
+                                    // — wait briefly and retry once so the store has time to warm up
+                                    if cals.isEmpty {
+                                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 400_000_000)
+                                        cals = calendarService.writableCalendars()
+                                    }
+                                    calendarPickerItems = cals
+                                    // Restore last-used calendar, fall back to first
+                                    if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
+                                        selectedCalendarID = lastUsedCalendarID
+                                    } else {
+                                        selectedCalendarID = cals.first?.id ?? ""
+                                    }
+                                    showCalendarPicker = true
                                 }
-                                showCalendarPicker = true
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "calendar.badge.plus")

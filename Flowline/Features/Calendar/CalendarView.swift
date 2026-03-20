@@ -255,6 +255,13 @@ struct CalendarView: View {
                             .frame(height: max(height, 14))
                             .padding(.horizontal, 2)
                             .offset(y: top)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deleteBlock(block)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -471,6 +478,16 @@ struct CalendarView: View {
             return d >= currentWeekStart && d < weekEnd
         }
         plans.forEach { context.delete($0) }
+    }
+
+    private func deleteBlock(_ block: ScheduleBlock) {
+        for plan in dayPlans {
+            if let idx = plan.blocks.firstIndex(where: { $0.persistentModelID == block.persistentModelID }) {
+                plan.blocks.remove(at: idx)   // immediate re-render
+                context.delete(block)          // clean up from store
+                break
+            }
+        }
     }
 
     static func mondayOfCurrentWeek() -> Date {
