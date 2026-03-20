@@ -65,7 +65,9 @@ final class SubscriptionManager: ObservableObject {
     }
 
     var dailyLimit: Int {
-        isPro || isInTrial ? Self.proLimit : Self.freeLimit
+        if isPro || isInTrial { return Self.proLimit }
+        if trialExpired { return 0 }   // must subscribe after trial
+        return Self.freeLimit
     }
 
     func startTrialIfNeeded() {
@@ -77,7 +79,7 @@ final class SubscriptionManager: ObservableObject {
     // MARK: - Message Limiting
 
     var isAtLimit: Bool {
-        !isPro && !isInTrial && messagesUsedToday >= dailyLimit
+        !isPro && (trialExpired || messagesUsedToday >= dailyLimit)
     }
 
     var remainingMessages: Int {

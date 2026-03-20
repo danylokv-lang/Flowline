@@ -60,16 +60,6 @@ struct FlowlinePaywallView: View {
                             .font(.system(size: 30, weight: .black))
                             .foregroundColor(.white)
 
-                        // Sale badge
-                        HStack(spacing: 6) {
-                            Text("LIMITED OFFER")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(Color(hex: "#ff7b45"))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Color(hex: "#ff7b45").opacity(0.15))
-                                .clipShape(Capsule())
-                        }
                     }
                     .padding(.bottom, 28)
 
@@ -86,31 +76,17 @@ struct FlowlinePaywallView: View {
                     // ── Plan card ─────────────────────────────────
                     HStack(spacing: 14) {
                         VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 6) {
-                                Text("Monthly")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                                Text("SALE 55% OFF")
-                                    .font(.system(size: 9, weight: .black))
-                                    .foregroundColor(Color(hex: "#ff7b45"))
-                                    .padding(.horizontal, 6).padding(.vertical, 2)
-                                    .background(Color(hex: "#ff7b45").opacity(0.15))
-                                    .clipShape(Capsule())
-                            }
+                            Text("Monthly")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(.white)
                             Text("per month · cancel anytime")
                                 .font(.system(size: 12))
                                 .foregroundColor(Color(hex: "#7a7a9a"))
                         }
                         Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("$4.99")
-                                .font(.system(size: 22, weight: .black))
-                                .foregroundColor(.white)
-                            Text("$10.99")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color(hex: "#44445a"))
-                                .strikethrough(true, color: Color(hex: "#44445a"))
-                        }
+                        Text("$4.99")
+                            .font(.system(size: 22, weight: .black))
+                            .foregroundColor(.white)
                     }
                     .padding(.horizontal, 18)
                     .padding(.vertical, 16)

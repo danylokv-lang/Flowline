@@ -283,9 +283,9 @@
       </div>
       <p class="plan-desc">Everything you need to try Flowline properly — no time limit.</p>
       <ul class="plan-list">
-        <li><span class="li-mark">✓</span> 10 AI messages per day</li>
+        <li><span class="li-mark">✓</span> 3 AI messages per day</li>
         <li><span class="li-mark">✓</span> Focus timer with break reminders</li>
-        <li><span class="li-mark">✓</span> Full week calendar</li>
+        <li><span class="li-mark">✓</span> Full week calendar view</li>
         <li><span class="li-mark">✓</span> Menu bar access</li>
         <li><span class="li-mark">✓</span> Customizable category colors</li>
       </ul>
@@ -300,15 +300,14 @@
           <span class="plan-price">$4.99</span>
           <span class="plan-per">/ month</span>
         </div>
-        <div class="plan-annual">or $39.99 / year &mdash; 2 months free</div>
       </div>
-      <p class="plan-desc">For people who use Flowline every day and want more planning power.</p>
+      <p class="plan-desc">For people who use Flowline every day and want their full planning power.</p>
       <ul class="plan-list">
-        <li><span class="li-mark pro">✓</span> <strong>500 AI messages per day</strong></li>
+        <li><span class="li-mark pro">✓</span> <strong>10 AI messages per day</strong></li>
+        <li><span class="li-mark pro">✓</span> Smart calendar &amp; replanning</li>
+        <li><span class="li-mark pro">✓</span> Focus timer with session tracking</li>
+        <li><span class="li-mark pro">✓</span> Smart reminders &amp; notifications</li>
         <li><span class="li-mark pro">✓</span> Everything in Free</li>
-        <li><span class="li-mark pro">✓</span> Priority AI response speed</li>
-        <li><span class="li-mark pro">✓</span> Multi-device sync (coming soon)</li>
-        <li><span class="li-mark pro">✓</span> Early access to new features</li>
       </ul>
       <button class="cta-btn plan-cta" onclick="openAuth('register')">Start Pro</button>
     </div>
@@ -363,11 +362,12 @@
       <span>Flowline</span>
     </div>
 
-    <div class="modal-tabs">
+    <div class="modal-tabs" id="authTabs">
       <button id="tab-login"    class="modal-tab active" onclick="switchTab('login')">Sign in</button>
       <button id="tab-register" class="modal-tab"        onclick="switchTab('register')">Create account</button>
     </div>
 
+    <!-- Auth form (login / register) -->
     <form id="authForm" onsubmit="submitAuth(event)" autocomplete="on" novalidate>
       <div id="nameGroup" class="field hidden">
         <label for="nameInput">Name</label>
@@ -378,7 +378,10 @@
         <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email" required />
       </div>
       <div class="field">
-        <label for="passwordInput">Password</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label for="passwordInput" style="margin:0">Password</label>
+          <button type="button" id="forgotLink" class="forgot-link" onclick="switchTab('forgot')">Forgot password?</button>
+        </div>
         <input id="passwordInput" type="password" placeholder="Min. 6 characters" autocomplete="current-password" required />
       </div>
 
@@ -390,7 +393,25 @@
       </button>
     </form>
 
-    <p class="modal-footer-note">
+    <!-- Forgot password form -->
+    <div id="forgotForm" class="hidden">
+      <p style="font-size:14px;color:#aaaacc;margin:0 0 20px">Enter your email and we'll send you a reset link.</p>
+      <form onsubmit="submitForgot(event)" novalidate>
+        <div class="field">
+          <label for="forgotEmail">Email</label>
+          <input id="forgotEmail" type="email" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div id="forgotError" class="error-box hidden"></div>
+        <div id="forgotSuccess" class="success-box hidden"></div>
+        <button type="submit" class="submit-btn" id="forgotBtn">
+          <span id="forgotLabel">Send reset link</span>
+          <div id="forgotSpinner" class="spin hidden"></div>
+        </button>
+      </form>
+      <button type="button" class="forgot-link" style="margin-top:14px;display:block" onclick="switchTab('login')">← Back to sign in</button>
+    </div>
+
+    <p class="modal-footer-note" id="authFooterNote">
       By continuing you agree to our
       <a href="terms.html" target="_blank">Terms of Use</a>
       and <a href="privacy.html" target="_blank">Privacy Policy</a>.

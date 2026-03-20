@@ -17,13 +17,51 @@ const observer = new IntersectionObserver(entries => {
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
+// ── Auth state ────────────────────────────────────────────────────────────
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('fl_user')); } catch { return null; }
+}
+
+function updateNavForUser() {
+  const user = getUser();
+  const navEnd = document.querySelector('.nav-end');
+  if (!navEnd) return;
+  if (user) {
+    const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    navEnd.innerHTML = `
+      <span class="nav-avatar" title="${user.name}">${initials}</span>
+      <button class="link-btn" onclick="signOut()">Sign out</button>
+    `;
+  } else {
+    navEnd.innerHTML = `
+      <button class="link-btn" onclick="openAuth('login')">Sign in</button>
+      <button class="cta-btn" onclick="openAuth('register')">Get started free</button>
+    `;
+  }
+}
+
+function signOut() {
+  localStorage.removeItem('fl_token');
+  localStorage.removeItem('fl_user');
+  updateNavForUser();
+  showToastMessage('✦', 'Signed out. See you soon!', '');
+}
+
+// Init nav on page load
+updateNavForUser();
+
 // ── Auth modal ────────────────────────────────────────────────────────────
 let activeTab = 'login';
 
 function openAuth(tab = 'login') {
   switchTab(tab);
   document.getElementById('authModal').classList.add('open');
-  setTimeout(() => document.getElementById('emailInput').focus(), 250);
+  setTimeout(() => {
+    const el = tab === 'forgot'
+      ? document.getElementById('forgotEmail')
+      : document.getElementById('emailInput');
+    el?.focus();
+  }, 250);
 }
 
 function closeAuth() {
@@ -40,17 +78,41 @@ document.addEventListener('keydown', e => {
 
 function switchTab(tab) {
   activeTab = tab;
-  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
-  document.getElementById('nameGroup').classList.toggle('hidden', tab === 'login');
-  document.getElementById('submitLabel').textContent = tab === 'login' ? 'Sign in' : 'Create account';
-  document.getElementById('authError').classList.add('hidden');
 
-  const pwInput = document.getElementById('passwordInput');
-  pwInput.autocomplete = tab === 'login' ? 'current-password' : 'new-password';
+  const isForgot   = tab === 'forgot';
+  const authForm   = document.getElementById('authForm');
+  const forgotForm = document.getElementById('forgotForm');
+  const authTabs   = document.getElementById('authTabs');
+  const forgotLink = document.getElementById('forgotLink');
+  const footerNote = document.getElementById('authFooterNote');
+
+  // Toggle views
+  authForm.classList.toggle('hidden', isForgot);
+  forgotForm.classList.toggle('hidden', !isForgot);
+  authTabs.classList.toggle('hidden', isForgot);
+  if (forgotLink) forgotLink.classList.toggle('hidden', isForgot);
+  if (footerNote) footerNote.classList.toggle('hidden', isForgot);
+
+  if (!isForgot) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('nameGroup').classList.toggle('hidden', tab === 'login');
+    document.getElementById('submitLabel').textContent = tab === 'login' ? 'Sign in' : 'Create account';
+    document.getElementById('authError').classList.add('hidden');
+
+    const pwInput = document.getElementById('passwordInput');
+    pwInput.autocomplete = tab === 'login' ? 'current-password' : 'new-password';
+  }
+
+  // Reset forgot form
+  if (isForgot) {
+    document.getElementById('forgotEmail').value = '';
+    document.getElementById('forgotError').classList.add('hidden');
+    document.getElementById('forgotSuccess').classList.add('hidden');
+  }
 }
 
-// ── Submit ────────────────────────────────────────────────────────────────
+// ── Submit auth ───────────────────────────────────────────────────────────
 async function submitAuth(e) {
   e.preventDefault();
 
@@ -80,14 +142,14 @@ async function submitAuth(e) {
       ? { email, password }
       : { name, email, password };
 
-    const res  = await fetch(API + path, {
+    const r    = await fetch(API + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
+    const data = await r.json();
 
-    if (!res.ok) {
+    if (!r.ok) {
       showError(data.error || 'Something went wrong. Please try again.');
       return;
     }
@@ -99,7 +161,13 @@ async function submitAuth(e) {
     }));
 
     closeAuth();
-    showToast(data.name, activeTab === 'register');
+    updateNavForUser();
+
+    const isNew = activeTab === 'register';
+    showToastMessage('✦',
+      isNew ? `Welcome, ${data.name}!` : `Welcome back, ${data.name}!`,
+      isNew ? 'Check your email for a welcome message.' : 'Open Flowline on your Mac to get started.'
+    );
 
   } catch {
     showError('No internet connection. Please try again.');
@@ -108,6 +176,49 @@ async function submitAuth(e) {
   }
 }
 
+// ── Submit forgot password ────────────────────────────────────────────────
+async function submitForgot(e) {
+  e.preventDefault();
+
+  const btn     = document.getElementById('forgotBtn');
+  const label   = document.getElementById('forgotLabel');
+  const spinner = document.getElementById('forgotSpinner');
+  const errorEl = document.getElementById('forgotError');
+  const successEl = document.getElementById('forgotSuccess');
+
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) return;
+
+  setLoading(true, btn, label, spinner);
+  errorEl.classList.add('hidden');
+  successEl.classList.add('hidden');
+
+  try {
+    const r = await fetch(API + '/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await r.json();
+
+    if (!r.ok) {
+      showForgotError(data.error || 'Something went wrong. Please try again.');
+      return;
+    }
+
+    // Always show success (even if email not found — security best practice)
+    successEl.textContent = `If ${email} has an account, a reset link is on its way.`;
+    successEl.classList.remove('hidden');
+    btn.disabled = true;
+
+  } catch {
+    showForgotError('No internet connection. Please try again.');
+  } finally {
+    setLoading(false, btn, label, spinner);
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 function setLoading(on, btn, label, spinner) {
   btn.disabled = on;
   label.classList.toggle('hidden', on);
@@ -120,30 +231,72 @@ function showError(msg) {
   el.classList.remove('hidden');
 }
 
+function showForgotError(msg) {
+  const el = document.getElementById('forgotError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
 // ── Toast ─────────────────────────────────────────────────────────────────
-function showToast(name, isNew) {
+function showToastMessage(icon, title, subtitle) {
+  injectToastStyle();
   const t = document.createElement('div');
-  t.style.cssText = `
-    position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(8px);
-    background:#14142a; border:1px solid rgba(109,76,250,.35); border-radius:12px;
-    padding:13px 20px; font-family:Inter,sans-serif; font-size:14px; font-weight:500;
-    color:#eeeef5; box-shadow:0 8px 40px rgba(0,0,0,.5); z-index:300;
-    display:flex; align-items:center; gap:12px; white-space:nowrap;
-    animation:toastIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
-  `;
+  t.className = 'fl-toast';
   t.innerHTML = `
-    <span style="color:#8b6dff;font-size:16px">✦</span>
-    <span>${isNew ? `Welcome, ${name}!` : `Welcome back, ${name}!`}</span>
-    <span style="color:#44445a;font-size:13px">Open Flowline on your Mac to get started.</span>
+    <span class="fl-toast-icon">${icon}</span>
+    <div class="fl-toast-body">
+      <span class="fl-toast-title">${title}</span>
+      ${subtitle ? `<span class="fl-toast-sub">${subtitle}</span>` : ''}
+    </div>
   `;
-
-  if (!document.getElementById('toast-style')) {
-    const s = document.createElement('style');
-    s.id = 'toast-style';
-    s.textContent = `@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`;
-    document.head.appendChild(s);
-  }
-
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 5000);
+  requestAnimationFrame(() => t.classList.add('fl-toast-in'));
+  setTimeout(() => {
+    t.classList.remove('fl-toast-in');
+    t.classList.add('fl-toast-out');
+    setTimeout(() => t.remove(), 400);
+  }, 4500);
+}
+
+function injectToastStyle() {
+  if (document.getElementById('fl-toast-css')) return;
+  const s = document.createElement('style');
+  s.id = 'fl-toast-css';
+  s.textContent = `
+    .fl-toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0f0f1e; border: 1px solid rgba(109,76,250,.4);
+      border-radius: 14px; padding: 14px 20px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 12px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(109,76,250,.1);
+      z-index: 9999; opacity: 0; transition: opacity .3s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+      font-family: Inter, sans-serif; white-space: nowrap; pointer-events: none;
+    }
+    .fl-toast-in  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .fl-toast-out { opacity: 0; transform: translateX(-50%) translateY(10px); transition: opacity .3s ease, transform .3s ease; }
+    .fl-toast-icon { color: #8b6dff; font-size: 18px; flex-shrink: 0; }
+    .fl-toast-body { display: flex; flex-direction: column; gap: 2px; }
+    .fl-toast-title { font-size: 14px; font-weight: 600; color: #eeeef5; }
+    .fl-toast-sub   { font-size: 13px; color: #6666aa; }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, #6d4cfa, #9b6dff);
+      color: #fff; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: default; flex-shrink: 0;
+    }
+    .forgot-link {
+      background: none; border: none; padding: 0; cursor: pointer;
+      font-size: 13px; color: #6666aa; font-family: inherit;
+      transition: color .2s;
+    }
+    .forgot-link:hover { color: #8b6dff; }
+    .success-box {
+      background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25);
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 14px; color: #4ade80; margin-bottom: 14px;
+    }
+  `;
+  document.head.appendChild(s);
 }

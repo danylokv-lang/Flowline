@@ -2,22 +2,24 @@
  * Flowline Backend — Cloudflare Worker
  *
  * Routes:
- *   POST /auth/register       — create account (email + password)
- *   POST /auth/login          — login, returns JWT
- *   GET  /user/profile        — get profile (JWT required)
- *   PUT  /user/profile        — update profile (JWT required)
- *   GET  /user/subscription   — check pro status (JWT required)
- *   POST /ai                  — Claude proxy with per-user rate limit (JWT required)
- *   GET  /calendar            — get week calendar (JWT required)
- *   POST /calendar/sync       — save/replace days (JWT required)
+ *   POST /auth/register            — create account (email + password)
+ *   POST /auth/login               — login, returns JWT
+ *   POST /auth/forgot-password     — send password reset email
+ *   POST /auth/reset-password      — set new password via reset token
+ *   GET  /user/profile             — get profile (JWT required)
+ *   PUT  /user/profile             — update profile (JWT required)
+ *   GET  /user/subscription        — check pro status (JWT required)
+ *   POST /ai                       — Claude proxy with per-user rate limit (JWT required)
+ *   GET  /calendar                 — get week calendar (JWT required)
+ *   POST /calendar/sync            — save/replace days (JWT required)
  *
- * All routes require x-app-secret header.
+ * All routes require x-app-secret header (except /auth/*).
  * Authenticated routes also require Authorization: Bearer <token>
  *
  * Wrangler bindings needed:
  *   D1 database  → DB
  *   KV namespace → RATE_KV
- *   Secrets      → APP_SECRET, JWT_SECRET, CLAUDE_API_KEY
+ *   Secrets      → APP_SECRET, JWT_SECRET, CLAUDE_API_KEY, RESEND_API_KEY
  */
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -28,9 +30,10 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, x-app-secret",
 };
 
-const FREE_AI_LIMIT_PER_DAY = 10;
-const PRO_AI_LIMIT_PER_DAY  = 500;
+const FREE_AI_LIMIT_PER_DAY = 3;
+const PRO_AI_LIMIT_PER_DAY  = 10;
 const JWT_EXPIRY_SECONDS    = 90 * 24 * 60 * 60; // 90 days
+const RESET_TOKEN_TTL       = 3600; // 1 hour
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -121,13 +124,59 @@ async function verifyPassword(password, stored) {
 // ── Rate Limiting (KV-backed, per-user per-day) ────────────────────────────
 
 async function checkRateLimit(userId, env, limit) {
-  // Key resets each calendar day
   const day = new Date().toISOString().slice(0, 10); // yyyy-MM-dd
   const key = `rl:${userId}:${day}`;
   const current = parseInt((await env.RATE_KV.get(key)) ?? "0");
   if (current >= limit) return false;
   await env.RATE_KV.put(key, String(current + 1), { expirationTtl: 86400 });
   return true;
+}
+
+// ── Email via Resend ───────────────────────────────────────────────────────
+
+async function sendEmail(env, { to, subject, html }) {
+  if (!env.RESEND_API_KEY) return false;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Flowline <noreply@flowline.ink>",
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+function emailBase(content) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  body{margin:0;padding:0;background:#080810;font-family:Inter,-apple-system,sans-serif;color:#eeeef5}
+  .wrap{max-width:480px;margin:40px auto;padding:0 20px}
+  .logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;font-weight:700;font-size:17px;color:#eeeef5;text-decoration:none}
+  .card{background:#0f0f1e;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:36px}
+  h2{margin:0 0 12px;font-size:22px;font-weight:700;color:#eeeef5}
+  p{margin:0 0 20px;font-size:15px;line-height:1.6;color:#aaaacc}
+  .btn{display:inline-block;background:#6d4cfa;color:#fff;text-decoration:none;padding:13px 28px;border-radius:10px;font-weight:600;font-size:15px;margin:4px 0 20px}
+  .note{font-size:13px;color:#55556a;line-height:1.5}
+  .footer{margin-top:28px;font-size:12px;color:#44445a;text-align:center}
+</style></head>
+<body><div class="wrap">
+  <a class="logo" href="https://flowline.ink">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="#6d4cfa" opacity=".9"/><path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/></svg>
+    Flowline
+  </a>
+  <div class="card">${content}</div>
+  <div class="footer">© 2026 Flowline · <a href="https://flowline.ink/privacy.html" style="color:#55556a">Privacy Policy</a></div>
+</div></body></html>`;
 }
 
 // ── Auth: Register ─────────────────────────────────────────────────────────
@@ -157,6 +206,19 @@ async function handleRegister(req, env) {
   ).bind(userId, "07:00", "23:00", ts).run();
 
   const token = await jwtSign({ sub: userId, exp: now() + JWT_EXPIRY_SECONDS }, env.JWT_SECRET);
+
+  // Welcome email (non-blocking)
+  sendEmail(env, {
+    to: email.toLowerCase(),
+    subject: "Welcome to Flowline ✦",
+    html: emailBase(`
+      <h2>Welcome, ${name}! ✦</h2>
+      <p>You're all set. Open Flowline on your Mac to start planning your first day with AI — it only takes 60 seconds.</p>
+      <a class="btn" href="https://flowline.ink">Open Flowline</a>
+      <p class="note">You're on the Free plan — 3 AI messages per day to plan your schedule. Upgrade to Pro anytime for 10 messages/day and all features unlocked.</p>
+    `),
+  });
+
   return res({ token, userId, name, email: email.toLowerCase(), isPro: false });
 }
 
@@ -178,6 +240,89 @@ async function handleLogin(req, env) {
   const isPro = user.is_pro === 1 && (!user.pro_expires_at || user.pro_expires_at > now());
   const token = await jwtSign({ sub: user.id, exp: now() + JWT_EXPIRY_SECONDS }, env.JWT_SECRET);
   return res({ token, userId: user.id, name: user.name, email: user.email, isPro });
+}
+
+// ── Auth: Forgot Password ──────────────────────────────────────────────────
+
+async function handleForgotPassword(req, env) {
+  const { email } = await req.json();
+  if (!email) return res({ error: "Email required" }, 400);
+
+  const user = await env.DB.prepare("SELECT id, name FROM users WHERE email = ?")
+    .bind(email.toLowerCase()).first();
+
+  // Always return success — don't reveal whether email is registered
+  if (!user) return res({ success: true });
+
+  // Delete any existing unused tokens for this user
+  await env.DB.prepare("DELETE FROM password_reset_tokens WHERE user_id = ?")
+    .bind(user.id).run();
+
+  const token = crypto.randomUUID();
+  const expiresAt = now() + RESET_TOKEN_TTL;
+
+  await env.DB.prepare(
+    "INSERT INTO password_reset_tokens (token, user_id, expires_at, used) VALUES (?,?,?,0)"
+  ).bind(token, user.id, expiresAt).run();
+
+  const resetUrl = `https://flowline.ink/reset-password.html?token=${token}`;
+
+  await sendEmail(env, {
+    to: email.toLowerCase(),
+    subject: "Reset your Flowline password",
+    html: emailBase(`
+      <h2>Reset your password</h2>
+      <p>We got a request to reset the password for your Flowline account. Click the button below — this link expires in 1 hour.</p>
+      <a class="btn" href="${resetUrl}">Reset password</a>
+      <p class="note">If you didn't request this, you can ignore this email — your password won't change.<br/><br/>Or copy this link: <span style="word-break:break-all;color:#8b6dff">${resetUrl}</span></p>
+    `),
+  });
+
+  return res({ success: true });
+}
+
+// ── Auth: Reset Password ───────────────────────────────────────────────────
+
+async function handleResetPassword(req, env) {
+  const { token, password } = await req.json();
+  if (!token || !password) return res({ error: "Token and password required" }, 400);
+  if (password.length < 6) return res({ error: "Password must be at least 6 characters" }, 400);
+
+  const record = await env.DB.prepare(
+    "SELECT token, user_id, expires_at, used FROM password_reset_tokens WHERE token = ?"
+  ).bind(token).first();
+
+  if (!record)            return res({ error: "Invalid or expired reset link" }, 400);
+  if (record.used)        return res({ error: "This reset link has already been used" }, 400);
+  if (record.expires_at < now()) return res({ error: "Reset link has expired. Please request a new one." }, 400);
+
+  const hash = await hashPassword(password);
+  const ts   = now();
+
+  await env.DB.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?")
+    .bind(hash, ts, record.user_id).run();
+
+  await env.DB.prepare("UPDATE password_reset_tokens SET used = 1 WHERE token = ?")
+    .bind(token).run();
+
+  // Confirmation email
+  const user = await env.DB.prepare("SELECT email, name FROM users WHERE id = ?")
+    .bind(record.user_id).first();
+
+  if (user) {
+    sendEmail(env, {
+      to: user.email,
+      subject: "Your Flowline password has been changed",
+      html: emailBase(`
+        <h2>Password changed ✓</h2>
+        <p>Hi ${user.name}, your Flowline password was successfully changed.</p>
+        <p>If you made this change, you're all set. If you didn't, <a href="https://flowline.ink/reset-password-request.html" style="color:#8b6dff">reset your password immediately</a> or contact us at <a href="mailto:support@flowlineapp.com" style="color:#8b6dff">support@flowlineapp.com</a>.</p>
+        <p class="note">This change was made on ${new Date().toUTCString()}.</p>
+      `),
+    });
+  }
+
+  return res({ success: true });
 }
 
 // ── User: Get Profile ──────────────────────────────────────────────────────
@@ -301,7 +446,6 @@ async function handleGetCalendar(userId, url, env) {
 // ── Calendar: Sync (replace days) ─────────────────────────────────────────
 
 async function handleSyncCalendar(userId, req, env) {
-  // Body: { days: [{ date: "yyyy-MM-dd", aiNotes: "...", blocks: [...] }] }
   const { days } = await req.json();
   if (!Array.isArray(days)) return res({ error: "days array required" }, 400);
 
@@ -353,8 +497,10 @@ export default {
 
     try {
       // ── Auth routes — open to website + iOS (no app-secret needed) ───
-      if (path === "/auth/register" && method === "POST") return handleRegister(request, env);
-      if (path === "/auth/login"    && method === "POST") return handleLogin(request, env);
+      if (path === "/auth/register"        && method === "POST") return handleRegister(request, env);
+      if (path === "/auth/login"           && method === "POST") return handleLogin(request, env);
+      if (path === "/auth/forgot-password" && method === "POST") return handleForgotPassword(request, env);
+      if (path === "/auth/reset-password"  && method === "POST") return handleResetPassword(request, env);
 
       // All other routes require the app secret (iOS only)
       const appSecret = request.headers.get("x-app-secret");

@@ -48,6 +48,14 @@ CREATE TABLE IF NOT EXISTS schedule_blocks (
   created_at INTEGER NOT NULL
 );
 
+-- ── Password Reset Tokens ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  token       TEXT    PRIMARY KEY,
+  user_id     TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at  INTEGER NOT NULL,                   -- Unix timestamp (1 hour TTL)
+  used        INTEGER NOT NULL DEFAULT 0          -- 0 = unused, 1 = already used
+);
+
 -- ── Indexes ────────────────────────────────────────────────────────────────
 -- Fast week queries: "give me all days for user X between date A and B"
 CREATE INDEX IF NOT EXISTS idx_calendar_user_date ON calendar_days(user_id, date);

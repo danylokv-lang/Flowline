@@ -145,6 +145,49 @@ struct PlanningChatView: View {
                         .fill(FlowLineTheme.border)
                         .frame(height: 0.5)
 
+                    // ── Upgrade banner (trial ended or limit hit) ─────────
+                    if subscriptionManager.isAtLimit {
+                        HStack(spacing: 14) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(subscriptionManager.trialExpired ? "Your free trial has ended" : "Daily limit reached")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(FlowLineTheme.mainTxt)
+                                Text("Upgrade to Flowline Pro to keep planning")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(FlowLineTheme.secondTxt)
+                            }
+                            Spacer()
+                            Button {
+                                showPaywall = true
+                            } label: {
+                                Text("Upgrade")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 7)
+                                    .background(FlowLineTheme.accent)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(FlowLineTheme.accent.opacity(0.07))
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+
+                    // ── Messages remaining counter ────────────────────────
+                    if !subscriptionManager.isPro && !subscriptionManager.isAtLimit && subscriptionManager.isInTrial {
+                        HStack {
+                            Spacer()
+                            Text("\(subscriptionManager.remainingMessages) messages left today · \(subscriptionManager.trialDaysRemaining)d trial remaining")
+                                .font(.system(size: 10))
+                                .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 6)
+                    }
+
                     if hasPlanInChat && !isLoading && !isSaving {
                         HStack {
                             Spacer()
@@ -182,7 +225,7 @@ struct PlanningChatView: View {
                                 maxHeight: 110
                             ) {
                                 let trimmed = inputText.trimmingCharacters(in: .whitespaces)
-                                guard !trimmed.isEmpty, !isLoading, !isSaving else { return }
+                                guard !trimmed.isEmpty, !isLoading, !isSaving, !subscriptionManager.isAtLimit else { return }
                                 sendMessage()
                             }
                             .frame(height: editorHeight)
@@ -200,7 +243,7 @@ struct PlanningChatView: View {
                             ZStack {
                                 Circle()
                                     .fill(
-                                        inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving
+                                        inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving || subscriptionManager.isAtLimit
                                             ? FlowLineTheme.tertiaryBg
                                             : FlowLineTheme.accent
                                     )
@@ -208,14 +251,14 @@ struct PlanningChatView: View {
                                 Image(systemName: "arrow.up")
                                     .font(.system(size: 14, weight: .bold))
                                     .foregroundColor(
-                                        inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving
+                                        inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving || subscriptionManager.isAtLimit
                                             ? FlowLineTheme.secondTxt.opacity(0.3)
                                             : FlowLineTheme.mainBg
                                     )
                             }
                         }
                         .buttonStyle(.plain)
-                        .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving)
+                        .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading || isSaving || subscriptionManager.isAtLimit)
                         .padding(.bottom, 2)
                     }
                     .padding(.horizontal, 16)
