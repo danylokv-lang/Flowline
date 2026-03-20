@@ -29,7 +29,7 @@ function updateNavForUser() {
   if (user) {
     const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     navEnd.innerHTML = `
-      <span class="nav-avatar" title="${user.name}">${initials}</span>
+      <a href="/welcome.html" class="nav-avatar" title="${user.name}" style="text-decoration:none">${initials}</a>
       <button class="link-btn" onclick="signOut()">Sign out</button>
     `;
   } else {
@@ -163,11 +163,8 @@ async function submitAuth(e) {
     closeAuth();
     updateNavForUser();
 
-    const isNew = activeTab === 'register';
-    showToastMessage('✦',
-      isNew ? `Welcome, ${data.name}!` : `Welcome back, ${data.name}!`,
-      isNew ? 'Check your email for a welcome message.' : 'Open Flowline on your Mac to get started.'
-    );
+    // Redirect to welcome page
+    window.location.href = '/welcome.html';
 
   } catch {
     showError('No internet connection. Please try again.');

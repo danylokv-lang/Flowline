@@ -65,6 +65,7 @@ struct PlanningChatView: View {
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @StateObject private var aiService = ClaudePlanningService(apiKey: "")
     private let planSaver = PlanSavingService()
+    private let calendarService = CalendarService.shared
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -288,6 +289,10 @@ struct PlanningChatView: View {
             .onAppear {
                 refreshSystemPrompt()
                 loadHistory()
+                Task {
+                    await calendarService.requestAccess()
+                    refreshSystemPrompt() // re-run after calendar access granted
+                }
             }
             .onChange(of: profiles.first?.name) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.bio) { refreshSystemPrompt() }
@@ -447,8 +452,16 @@ struct PlanningChatView: View {
 
     private func refreshSystemPrompt() {
         guard let profile = profiles.first else { return }
-        let ctx = try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)
-        aiService.updateSystemPrompt(from: profile, calendarContext: ctx)
+
+        // Flowline blocks already saved in the app
+        var ctx = (try? planSaver.calendarContext(forWeekOf: Date(), context: modelContext)) ?? ""
+
+        // Apple Calendar events — merge in if available
+        if let appleEvents = calendarService.formattedForAI(date: Date()) {
+            ctx += ctx.isEmpty ? appleEvents : "\n\(appleEvents)"
+        }
+
+        aiService.updateSystemPrompt(from: profile, calendarContext: ctx.isEmpty ? nil : ctx)
     }
 
     // MARK: - Send
@@ -484,6 +497,7 @@ struct PlanningChatView: View {
                 if let jsonData = response.data(using: .utf8),
                    let plan = try? JSONDecoder().decode(GeneratedPlan.self, from: jsonData) {
                     try? planSaver.save(plan: plan, for: Date(), context: modelContext)
+                    try? calendarService.savePlan(plan)
                     if let index = messages.lastIndex(where: { $0.isThinking }) {
                         messages[index] = Message(role: .assistant, content: plan.summary, isSavedPlan: true)
                     }
@@ -567,6 +581,7 @@ struct PlanningChatView: View {
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                try? calendarService.savePlan(plan)
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(
                         role: .assistant,

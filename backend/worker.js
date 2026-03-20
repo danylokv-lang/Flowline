@@ -316,7 +316,7 @@ async function handleResetPassword(req, env) {
       html: emailBase(`
         <h2>Password changed ✓</h2>
         <p>Hi ${user.name}, your Flowline password was successfully changed.</p>
-        <p>If you made this change, you're all set. If you didn't, <a href="https://flowline.ink/reset-password-request.html" style="color:#8b6dff">reset your password immediately</a> or contact us at <a href="mailto:support@flowlineapp.com" style="color:#8b6dff">support@flowlineapp.com</a>.</p>
+        <p>If you made this change, you're all set. If you didn't, <a href="https://flowline.ink/reset-password-request.html" style="color:#8b6dff">reset your password immediately</a> or contact us at <a href="mailto:dkov.dev@gmail.com" style="color:#8b6dff">dkov.dev@gmail.com</a>.</p>
         <p class="note">This change was made on ${new Date().toUTCString()}.</p>
       `),
     });

@@ -90,33 +90,25 @@ body {
   display: flex; gap: 6px; margin-left: 40px;
 }
 .nav-links a {
-  font-size: 13.5px;
+  font-size: 13.5px; font-weight: 800;
+  color: var(--txt2);
+  text-transform: uppercase; letter-spacing: .04em;
+  padding: 5px 12px;
+  display: inline-block; text-decoration: none;
   position: relative;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(255,255,255,.45);
-  padding: 5px 12px;
-  border-radius: 8px;
-  display: inline-block;
-  text-decoration: none;
-  --animation-color: var(--accent-hi);
+  transition: color 400ms cubic-bezier(.25,.8,.25,1);
 }
-.nav-links a .hover-text {
+.nav-links a:hover { color: #fff; }
+.nav-links a::after {
+  content: '';
+  pointer-events: none;
+  bottom: 1px; left: 50%;
   position: absolute;
-  color: var(--animation-color);
-  width: 0%;
-  inset: 0;
-  padding: 5px 12px;
-  border-right: 2px solid var(--animation-color);
-  overflow: hidden;
-  transition: width .4s ease;
-  -webkit-text-stroke: 1px var(--animation-color);
-  white-space: nowrap;
-  display: flex; align-items: center;
+  width: 0%; height: 2px;
+  background: #fff;
+  transition: width 400ms cubic-bezier(.25,.8,.25,1), left 400ms cubic-bezier(.25,.8,.25,1);
 }
-.nav-links a:hover .hover-text {
-  width: 100%;
-  filter: drop-shadow(0 0 6px var(--animation-color));
-}
+.nav-links a:hover::after { width: 100%; left: 0%; }
 
 .nav-end {
   display: flex; align-items: center; gap: 8px; margin-left: auto;
@@ -157,11 +149,24 @@ body {
 .cta-btn.cta-lg { padding: 13px 28px; font-size: 15px; }
 
 .link-btn {
-  background: none; border: none; color: var(--txt2);
-  font-size: 13.5px; font-weight: 500; padding: 9px 12px;
-  border-radius: 9px; transition: color .15s, background .15s;
+  background: none; border: none;
+  color: var(--txt2); font-size: 13.5px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .04em;
+  padding: 9px 12px; cursor: pointer;
+  position: relative;
+  transition: color 400ms cubic-bezier(.25,.8,.25,1);
 }
-.link-btn:hover { color: var(--txt); background: rgba(255 255 255/.05); }
+.link-btn:hover { color: #fff; }
+.link-btn::after {
+  content: '';
+  pointer-events: none;
+  bottom: 5px; left: 50%;
+  position: absolute;
+  width: 0%; height: 2px;
+  background: #fff;
+  transition: width 400ms cubic-bezier(.25,.8,.25,1), left 400ms cubic-bezier(.25,.8,.25,1);
+}
+.link-btn:hover::after { width: calc(100% - 24px); left: 12px; }
 
 .ghost-btn {
   display: inline-flex; align-items: center;
