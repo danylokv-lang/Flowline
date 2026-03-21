@@ -337,3 +337,9 @@ function injectToastStyle() {
   `;
   document.head.appendChild(s);
 }
+
+// ── Auto-open forgot-password modal when returning from reset page ─────────
+if (new URLSearchParams(location.search).get('reset') === '1') {
+  // Wait for DOM + auth modal to be ready, then open forgot tab
+  document.addEventListener('DOMContentLoaded', () => openAuth('forgot'));
+}

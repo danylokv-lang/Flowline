@@ -104,18 +104,55 @@ private struct ProfileForm: View {
 // MARK: - Notifications Tab
 
 private struct NotificationSettingsTab: View {
-    @AppStorage("breakRemindersEnabled") private var breakRemindersEnabled = true
-    @AppStorage("breakReminderInterval") private var breakReminderIntervalHours = 1
-    @AppStorage("notificationSound") private var notificationSound = true
+    @AppStorage("breakRemindersEnabled")  private var breakRemindersEnabled = true
+    @AppStorage("breakReminderInterval")  private var breakReminderIntervalHours = 1
+    @AppStorage("notificationSound")      private var notificationSound = true
+    @AppStorage("dailyReminderEnabled")   private var dailyReminderEnabled = false
+    @AppStorage("dailyReminderHour")      private var dailyReminderHour = 8
+    @AppStorage("dailyReminderMinute")    private var dailyReminderMinute = 0
     @State private var permissionStatus: UNAuthorizationStatus = .notDetermined
+    @State private var reminderTime = Date()
 
     private let intervalOptions = [1: "Every hour", 2: "Every 2 hours", 3: "Every 3 hours"]
 
     var body: some View {
         Form {
+            // ── Daily planning reminder ───────────────────────────────────────
+            Section {
+                Toggle("Daily planning reminder", isOn: $dailyReminderEnabled)
+                    .onChange(of: dailyReminderEnabled) { _, enabled in
+                        if enabled {
+                            requestPermissionThenSchedule()
+                        } else {
+                            cancelDailyReminder()
+                        }
+                    }
+
+                if dailyReminderEnabled {
+                    DatePicker(
+                        "Remind me at",
+                        selection: $reminderTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .onChange(of: reminderTime) { _, t in
+                        let comps = Calendar.current.dateComponents([.hour, .minute], from: t)
+                        dailyReminderHour   = comps.hour   ?? 8
+                        dailyReminderMinute = comps.minute ?? 0
+                        scheduleDailyReminder()
+                    }
+                }
+            } header: {
+                Label("Morning Reminder", systemImage: "sun.horizon")
+            } footer: {
+                Text("A daily nudge to plan your day with Flowline. Sent once at your chosen time.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            // ── Break reminders ───────────────────────────────────────────────
             Section("Break Reminders") {
                 Toggle("Hourly break notifications", isOn: $breakRemindersEnabled)
-                    .onChange(of: breakRemindersEnabled) { updateNotifications() }
+                    .onChange(of: breakRemindersEnabled) { updateBreakNotifications() }
 
                 if breakRemindersEnabled {
                     Picker("Remind me", selection: $breakReminderIntervalHours) {
@@ -124,12 +161,13 @@ private struct NotificationSettingsTab: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .onChange(of: breakReminderIntervalHours) { updateNotifications() }
+                    .onChange(of: breakReminderIntervalHours) { updateBreakNotifications() }
 
                     Toggle("Sound", isOn: $notificationSound)
                 }
             }
 
+            // ── Permission status ─────────────────────────────────────────────
             Section("Permission") {
                 HStack {
                     Circle()
@@ -153,8 +191,17 @@ private struct NotificationSettingsTab: View {
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
-        .onAppear { checkPermission() }
+        .onAppear {
+            checkPermission()
+            // Restore time picker to saved value
+            var comps        = DateComponents()
+            comps.hour       = dailyReminderHour
+            comps.minute     = dailyReminderMinute
+            reminderTime     = Calendar.current.date(from: comps) ?? Date()
+        }
     }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private var statusColor: Color {
         switch permissionStatus {
@@ -179,12 +226,49 @@ private struct NotificationSettingsTab: View {
         }
     }
 
-    private func updateNotifications() {
+    private func requestPermissionThenSchedule() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            DispatchQueue.main.async {
+                permissionStatus = granted ? .authorized : .denied
+                if granted { scheduleDailyReminder() }
+                else { dailyReminderEnabled = false }
+            }
+        }
+    }
+
+    private func scheduleDailyReminder() {
+        cancelDailyReminder()
+        var comps    = DateComponents()
+        comps.hour   = dailyReminderHour
+        comps.minute = dailyReminderMinute
+
+        let content       = UNMutableNotificationContent()
+        content.title     = "Time to plan your day ✦"
+        content.body      = "Open Flowline and tell AI what's on your plate — takes 60 seconds."
+        content.sound     = .default
+        content.categoryIdentifier = "DAILY_PLAN"
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
+        let request = UNNotificationRequest(
+            identifier: "flowline.dailyReminder",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func cancelDailyReminder() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: ["flowline.dailyReminder"])
+    }
+
+    private func updateBreakNotifications() {
         guard breakRemindersEnabled else {
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            // Re-add daily reminder if it was active
+            if dailyReminderEnabled { scheduleDailyReminder() }
             return
         }
-        // Reschedule with new interval — FocusTimerManager handles the actual scheduling
         NotificationCenter.default.post(name: .rescheduleBreaks, object: breakReminderIntervalHours)
     }
 }
@@ -377,10 +461,20 @@ private struct CalendarSettingsTab: View {
                         .font(.system(size: 13))
                     Spacer()
                     if isAuthorized {
-                        Label("Connected", systemImage: "checkmark.circle.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.green)
-                            .labelStyle(.titleAndIcon)
+                        HStack(spacing: 8) {
+                            Label("Connected", systemImage: "checkmark.circle.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.green)
+                                .labelStyle(.titleAndIcon)
+                            Button("Revoke") {
+                                NSWorkspace.shared.open(
+                                    URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!
+                                )
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .tint(.red)
+                        }
                     } else {
                         Button("Allow Access") {
                             NSWorkspace.shared.open(
@@ -406,10 +500,19 @@ private struct CalendarSettingsTab: View {
                         .font(.system(size: 13))
                     Spacer()
                     if googleConnected {
-                        Label("Connected", systemImage: "checkmark.circle.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.green)
-                            .labelStyle(.titleAndIcon)
+                        HStack(spacing: 8) {
+                            Label("Connected", systemImage: "checkmark.circle.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.green)
+                                .labelStyle(.titleAndIcon)
+                            Button("Manage") {
+                                NSWorkspace.shared.open(
+                                    URL(string: "x-apple.systempreferences:com.apple.preferences.internetaccounts")!
+                                )
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
                     } else {
                         Button("Connect") {
                             NSWorkspace.shared.open(

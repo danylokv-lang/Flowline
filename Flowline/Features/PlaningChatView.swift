@@ -48,6 +48,7 @@ struct ShimmerModifier: ViewModifier {
 
 struct PlanningChatView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openSettings) private var openSettings
     @Query(sort: \ChatMessage.timestamp) private var savedMessages: [ChatMessage]
     @Query private var profiles: [UserProfile]
     @Query(filter: #Predicate<CapturedTask> { !$0.isScheduled }, sort: \CapturedTask.createdAt)
@@ -67,14 +68,21 @@ struct PlanningChatView: View {
     @State private var showPaywall = false
     @State private var lastFailedMessage: String? = nil
     @State private var editorHeight: CGFloat = 17
+    @State private var emptyGlow = false
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @AppStorage("lastUsedCalendarID") private var lastUsedCalendarID: String = ""
     @StateObject private var aiService = ClaudePlanningService(apiKey: "")
+    @StateObject private var streak = StreakManager.shared
     private let planSaver = PlanSavingService()
     private let calendarService = CalendarService.shared
 
     var body: some View {
         ZStack(alignment: .leading) {
+            // ── Cosmos background ─────────────────────────────────────────
+            FlowLineTheme.mainBg.ignoresSafeArea()
+            CosmosBackground()
+                .ignoresSafeArea()
+
             VStack(spacing: 0) {
 
                 // ── Header ──────────────────────────────────────────────
@@ -101,9 +109,35 @@ struct PlanningChatView: View {
                     Text("FLOWLINE")
                         .font(.system(size: 12, weight: .heavy))
                         .tracking(6)
-                        .foregroundColor(FlowLineTheme.mainTxt)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "#c4b5fd"), FlowLineTheme.accentHi],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
 
                     Spacer()
+
+                    // Streak pill (hidden when loading)
+                    if streak.currentStreak > 0 && !isLoading {
+                        HStack(spacing: 4) {
+                            Text(streak.currentStreak > 1 ? "🔥" : "✦")
+                                .font(.system(size: 11))
+                            Text(streak.currentStreak > 1
+                                 ? "\(streak.currentStreak) days"
+                                 : "Day 1")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(streak.currentStreak > 1 ? .orange : FlowLineTheme.accent)
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(
+                            (streak.currentStreak > 1 ? Color.orange : FlowLineTheme.accent)
+                                .opacity(0.12)
+                        )
+                        .clipShape(Capsule())
+                        .transition(.scale.combined(with: .opacity))
+                    }
 
                     // Session dot indicator
                     Circle()
@@ -227,8 +261,14 @@ struct PlanningChatView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 7)
-                                .background(FlowLineTheme.accent)
+                                .background(
+                                    LinearGradient(
+                                        colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                                        startPoint: .leading, endPoint: .trailing
+                                    )
+                                )
                                 .clipShape(Capsule())
+                                .shadow(color: FlowLineTheme.accent.opacity(0.45), radius: 10, x: 0, y: 4)
                             }
                             .buttonStyle(.plain)
                         }
@@ -292,7 +332,7 @@ struct PlanningChatView: View {
                 }
                 .background(FlowLineTheme.mainBg)
             }
-            .background(FlowLineTheme.mainBg)
+            // No background on outer VStack — cosmos shows through chat area
             .animation(.easeOut(duration: 0.25), value: messages.isEmpty)
             .overlay(alignment: .top) {
                 if showCalendarBanner {
@@ -355,21 +395,208 @@ struct PlanningChatView: View {
 
     // MARK: - Empty State
 
+    // ── Smart time-aware empty state ──────────────────────────────────────────
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Text("FL")
-                .font(.system(size: 72, weight: .black))
-                .foregroundColor(FlowLineTheme.tertiaryBg.opacity(0.8))
-                .tracking(-2)
+        VStack(spacing: 24) {
 
-            VStack(spacing: 4) {
-                Text("What's on your mind?")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(FlowLineTheme.mainTxt)
-                Text("Dump your tasks — I'll plan it.")
-                    .font(.system(size: 14))
-                    .foregroundColor(FlowLineTheme.secondTxt)
+            // ── Icon + streak badge ───────────────────────────────────────────
+            ZStack(alignment: .bottomTrailing) {
+                ZStack {
+                    // Outer pulsing glow ring
+                    Circle()
+                        .fill(FlowLineTheme.accent.opacity(emptyGlow ? 0.12 : 0.04))
+                        .frame(width: emptyGlow ? 96 : 80, height: emptyGlow ? 96 : 80)
+                        .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: emptyGlow)
+                    // Mid ring
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [FlowLineTheme.accent.opacity(0.35), Color(hex: "#8b6dff").opacity(0.15)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                        .frame(width: 72, height: 72)
+                    // Inner fill
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [FlowLineTheme.accent.opacity(0.18), Color(hex: "#8b6dff").opacity(0.08)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 72, height: 72)
+                    Text("✦")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "#c4b5fd"), FlowLineTheme.accentHi],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: FlowLineTheme.accent.opacity(0.6), radius: 8, x: 0, y: 0)
+                }
+                .onAppear { emptyGlow = true }
+                if streak.currentStreak > 1 {
+                    HStack(spacing: 3) {
+                        Text("🔥")
+                            .font(.system(size: 11))
+                        Text("\(streak.currentStreak)")
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.orange)
+                    .clipShape(Capsule())
+                    .offset(x: 8, y: 4)
+                }
             }
+
+            // ── Greeting + subtitle ───────────────────────────────────────────
+            VStack(spacing: 6) {
+                Text(timeGreeting)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd").opacity(0.9)],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+                Text(timeSubtitle)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+                    .multilineTextAlignment(.center)
+            }
+
+            // ── Profile quality nudge (shown only when bio is empty) ─────────
+            if profiles.first?.bio.isEmpty ?? true {
+                Button {
+                    openSettings()
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(FlowLineTheme.accentHi)
+                        Text("Add your context in Settings for better plans")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(FlowLineTheme.dimTxt)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(FlowLineTheme.tertiaryBg.opacity(0.7))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(FlowLineTheme.accent.opacity(0.18), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: 320)
+            }
+
+            // ── Quick-start chips ─────────────────────────────────────────────
+            VStack(spacing: 8) {
+                ForEach(quickPrompts, id: \.self) { prompt in
+                    Button {
+                        inputText = prompt
+                        sendMessage()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [FlowLineTheme.accentHi, Color(hex: "#c4b5fd")],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    )
+                                )
+                            Text(prompt)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(FlowLineTheme.mainTxt)
+                                .lineLimit(1)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            LinearGradient(
+                                colors: [FlowLineTheme.tertiaryBg, FlowLineTheme.secondBg.opacity(0.80)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [
+                                            FlowLineTheme.accent.opacity(0.30),
+                                            Color(hex: "#8b6dff").opacity(0.12)
+                                        ],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                        .shadow(color: FlowLineTheme.accent.opacity(0.08), radius: 6, x: 0, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isLoading || isSaving)
+                }
+            }
+            .frame(maxWidth: 320)
+        }
+        .padding(.horizontal, 32)
+    }
+
+    private var timeGreeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:  return "Good morning ☀️"
+        case 12..<17: return "Good afternoon 👋"
+        case 17..<21: return "Good evening 🌆"
+        default:      return "Planning late? 🌙"
+        }
+    }
+
+    private var timeSubtitle: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if streak.currentStreak > 1 {
+            return "\(streak.currentStreak)-day streak — keep it going!"
+        }
+        switch hour {
+        case 5..<12:  return "Start strong — tell me what you need to get done today."
+        case 12..<17: return "Still time to structure your afternoon."
+        case 17..<21: return "Plan tomorrow now so you start tomorrow relaxed."
+        default:      return "Tell me what's on your plate."
+        }
+    }
+
+    private var quickPrompts: [String] {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 {
+            return [
+                "Plan my whole day",
+                "Deep work morning + meetings afternoon",
+                "Light day — just the essentials"
+            ]
+        } else if hour < 17 {
+            return [
+                "Structure the rest of my day",
+                "I have 3 hours left — what should I do?",
+                "Plan tomorrow"
+            ]
+        } else {
+            return [
+                "Plan tomorrow",
+                "Evening wind-down + tomorrow prep",
+                "Quick end-of-day review"
+            ]
         }
     }
 
@@ -378,41 +605,52 @@ struct PlanningChatView: View {
     @ViewBuilder
     private func chatBubble(_ message: Message) -> some View {
         if message.role == .user {
-            // User: right-aligned pill
+            // User: right-aligned, gradient purple bubble
             HStack {
-                Spacer(minLength: 64)
+                Spacer(minLength: 60)
                 Text(message.content)
                     .font(.system(size: 14))
+                    .foregroundColor(FlowLineTheme.mainTxt)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .foregroundColor(FlowLineTheme.mainTxt)
-                    .background(FlowLineTheme.tertiaryBg)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                FlowLineTheme.accent.opacity(0.28),
+                                Color(hex: "#8b6dff").opacity(0.16)
+                            ],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [FlowLineTheme.accent.opacity(0.50), Color(hex: "#8b6dff").opacity(0.30)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: FlowLineTheme.accent.opacity(0.20), radius: 8, x: 0, y: 4)
                     .textSelection(.enabled)
             }
         } else if message.isThinking {
-            // Thinking: left border + shimmer
-            HStack(alignment: .top, spacing: 12) {
-                Capsule()
-                    .fill(FlowLineTheme.accent.opacity(0.4))
-                    .frame(width: 2)
+            aiCard {
                 Text(message.content)
                     .font(.system(size: 14))
                     .foregroundColor(FlowLineTheme.secondTxt)
                     .modifier(ShimmerModifier())
-                Spacer(minLength: 40)
             }
         } else if message.isSavedPlan {
-            // Saved plan: solid accent border + view calendar button
-            HStack(alignment: .top, spacing: 12) {
-                Capsule()
-                    .fill(FlowLineTheme.accent)
-                    .frame(width: 2)
+            aiCard(accent: true) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(message.content)
                         .font(.system(size: 14))
                         .foregroundColor(FlowLineTheme.secondTxt)
                         .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         selectedTab = 1
                     } label: {
@@ -430,14 +668,9 @@ struct PlanningChatView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                Spacer(minLength: 40)
             }
         } else if message.isError {
-            // Error bubble with optional retry
-            HStack(alignment: .top, spacing: 12) {
-                Capsule()
-                    .fill(Color.red.opacity(0.5))
-                    .frame(width: 2)
+            aiCard(isError: true) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -460,27 +693,88 @@ struct PlanningChatView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color.red.opacity(0.6))
+                            .background(Color.red.opacity(0.55))
                             .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                Spacer(minLength: 40)
             }
         } else {
-            // AI: editorial left-border, no background
-            HStack(alignment: .top, spacing: 12) {
-                Capsule()
-                    .fill(FlowLineTheme.borderHi)
-                    .frame(width: 2)
+            // Normal AI message card
+            aiCard {
                 Text(message.content)
                     .font(.system(size: 14))
                     .foregroundColor(FlowLineTheme.secondTxt)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Spacer(minLength: 40)
             }
+        }
+    }
+
+    /// Branded AI card — "✦ FLOWLINE" tag + dark bubble, matching website style.
+    @ViewBuilder
+    private func aiCard<Content: View>(
+        accent: Bool = false,
+        isError: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 9) {
+                // ✦ Flowline label — matches website .ai-tag
+                Text("✦ Flowline")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .foregroundColor(
+                        isError ? Color.red.opacity(0.7) : FlowLineTheme.accent
+                    )
+                content()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background {
+                if isError {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.red.opacity(0.07))
+                } else if accent {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [FlowLineTheme.accent.opacity(0.14), Color(hex: "#8b6dff").opacity(0.07)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                } else {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [FlowLineTheme.tertiaryBg, FlowLineTheme.secondBg.opacity(0.9)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(
+                        isError
+                            ? AnyShapeStyle(Color.red.opacity(0.22))
+                            : accent
+                                ? AnyShapeStyle(LinearGradient(
+                                    colors: [FlowLineTheme.accent.opacity(0.50), Color(hex: "#8b6dff").opacity(0.25)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing))
+                                : AnyShapeStyle(LinearGradient(
+                                    colors: [Color.white.opacity(0.14), Color.white.opacity(0.06)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing)),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(
+                color: isError
+                    ? Color.red.opacity(0.08)
+                    : accent
+                        ? FlowLineTheme.accent.opacity(0.18)
+                        : Color.black.opacity(0.25),
+                radius: accent ? 12 : 6,
+                x: 0, y: 3
+            )
+            Spacer(minLength: 40)
         }
     }
 
@@ -520,7 +814,7 @@ After planning, tell the user which inbox tasks you included):
 
     private func sendMessage(_ overrideText: String? = nil) {
         let text = overrideText ?? inputText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty, !isLoading else { return }
+        guard !text.isEmpty, !isLoading, !isSaving else { return }
 
         // ── Subscription check ─────────────────────────────────────────────
         guard subscriptionManager.consumeMessage() else {
@@ -549,7 +843,6 @@ After planning, tell the user which inbox tasks you included):
                 if let jsonData = response.data(using: .utf8),
                    let plan = try? JSONDecoder().decode(GeneratedPlan.self, from: jsonData) {
                     try? planSaver.save(plan: plan, for: Date(), context: modelContext)
-                    try? calendarService.savePlan(plan)
                     if let index = messages.lastIndex(where: { $0.isThinking }) {
                         messages[index] = Message(role: .assistant, content: plan.summary, isSavedPlan: true)
                     }
@@ -638,6 +931,7 @@ After planning, tell the user which inbox tasks you included):
                 if let id = calendarID, !id.isEmpty {
                     lastUsedCalendarID = id
                 }
+                StreakManager.shared.recordPlan()
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(
                         role: .assistant,
@@ -941,6 +1235,12 @@ private struct CalendarPickerSheet: View {
     }
 }
 
+// MARK: - Cosmos Background
+
+/// Three-layer star field rendered with a Canvas for zero-overhead animation.
+/// Layer 1: 55 distant white micro-stars (almost stationary, barely visible)
+/// Layer 2: 18 mid-field accent-purple drifters
+/// Layer 3: 7 bright foreground stars (slow drift, gentle twinkle)
 #Preview {
     PlanningChatView(selectedTab: .constant(0))
 }

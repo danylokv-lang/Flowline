@@ -100,12 +100,17 @@ struct AuthView: View {
                 Spacer()
 
                 // ── Footer ──────────────────────────────────────────────
-                Text("By continuing you agree to our Terms of Use and Privacy Policy")
-                    .font(.system(size: 10))
-                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 48)
-                    .padding(.bottom, 20)
+                HStack(spacing: 4) {
+                    Text("By continuing you agree to our")
+                    Link("Terms of Use", destination: URL(string: "https://flowline.ink/terms")!)
+                    Text("and")
+                    Link("Privacy Policy", destination: URL(string: "https://flowline.ink/privacy")!)
+                }
+                .font(.system(size: 10))
+                .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 48)
+                .padding(.bottom, 20)
             }
             .frame(maxWidth: 420)
         }

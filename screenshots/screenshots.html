@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flowline App Store Screenshots</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #080810; --bg-s: #0e0e1c; --bg-t: #14142a;
+    --txt: #eeeef5; --txt2: #7a7a9a; --txt3: #44445a;
+    --accent: #6d4cfa; --accent-hi: #8b6dff;
+    --border: rgba(255,255,255,0.07); --border-hi: rgba(255,255,255,0.13);
+  }
+  body { background:#1a1a2e; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif; display:flex; flex-direction:column; align-items:center; gap:40px; padding:40px; }
+  .sw { position:relative; width:2560px; height:1600px; transform-origin:top left; transform:scale(0.4); margin-bottom:-960px; border-radius:16px; overflow:hidden; box-shadow:0 0 0 2px rgba(255,255,255,0.08),0 40px 120px rgba(0,0,0,0.8); }
+  .slide { width:2560px; height:1600px; background:var(--bg); position:relative; overflow:hidden; }
+  .window { background:var(--bg-s); border-radius:16px; border:1px solid var(--border-hi); overflow:hidden; box-shadow:0 32px 80px rgba(0,0,0,0.6); }
+  .tb { height:44px; background:var(--bg-t); display:flex; align-items:center; padding:0 16px; gap:8px; border-bottom:1px solid var(--border); }
+  .dot { width:12px; height:12px; border-radius:50%; }
+  .tbl { flex:1; text-align:center; font-size:13px; font-weight:500; color:var(--txt2); margin-right:52px; }
+  .ai-card { background:var(--bg-t); border:1px solid var(--border-hi); border-radius:14px; padding:16px 18px; }
+  .ai-lbl { font-size:10px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--accent-hi); margin-bottom:10px; }
+  .ai-txt { font-size:14px; line-height:1.65; color:var(--txt); }
+  .ub { background:rgba(109,76,250,0.13); border:1px solid rgba(109,76,250,0.25); border-radius:14px; padding:12px 16px; font-size:14px; color:var(--txt); max-width:480px; margin-left:auto; }
+  .pb { display:flex; align-items:center; gap:12px; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid var(--border); margin-bottom:6px; }
+  .pd { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .pt { font-size:12px; color:var(--txt2); width:90px; flex-shrink:0; }
+  .pn { font-size:13px; color:var(--txt); font-weight:500; }
+  .tag { font-size:10px; padding:2px 8px; border-radius:20px; font-weight:600; margin-left:auto; flex-shrink:0; }
+  .glow { position:absolute; border-radius:50%; filter:blur(120px); pointer-events:none; }
+  .badge { display:inline-flex; align-items:center; gap:6px; background:rgba(109,76,250,0.15); border:1px solid rgba(109,76,250,0.35); border-radius:100px; padding:6px 18px; font-size:13px; font-weight:600; color:var(--accent-hi); letter-spacing:0.3px; }
+  .shl { position:absolute; bottom:80px; left:0; right:0; text-align:center; }
+  .h1 { font-size:72px; font-weight:800; color:var(--txt); letter-spacing:-1.5px; line-height:1.1; }
+  .h1 span { color:var(--accent-hi); }
+  .sub { font-size:30px; color:var(--txt2); margin-top:12px; }
+  /* Calendar event blocks */
+  .cev { border-radius:6px; padding:6px 10px; position:absolute; }
+  .cet { font-size:11px; font-weight:600; color:rgba(255,255,255,0.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ces { font-size:10px; color:rgba(255,255,255,0.55); margin-top:2px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ SLIDE 1 ══════════════════════════ -->
+<div class="sw" id="s1">
+<div class="slide">
+  <div class="glow" style="width:900px;height:900px;background:#6d4cfa;opacity:0.12;top:-200px;left:-200px;"></div>
+  <div class="glow" style="width:600px;height:600px;background:#8b6dff;opacity:0.08;bottom:100px;right:100px;"></div>
+  <div style="position:absolute;top:80px;left:50%;transform:translateX(-50%);"><div class="badge">✦ Flowline — AI Daily Planner for Mac</div></div>
+
+  <div class="window" style="position:absolute;top:160px;left:50%;transform:translateX(-50%);width:1700px;height:1100px;display:flex;flex-direction:column;">
+    <div class="tb">
+      <div class="dot" style="background:#ff5f57;"></div><div class="dot" style="background:#febc2e;"></div><div class="dot" style="background:#28c840;"></div>
+      <div class="tbl">Flowline</div>
+    </div>
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <!-- Sidebar -->
+      <div style="width:240px;background:var(--bg);border-right:1px solid var(--border);padding:20px 14px;flex-shrink:0;">
+        <div style="font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:12px;">Recent</div>
+        <div style="background:rgba(109,76,250,0.15);border:1px solid rgba(109,76,250,0.3);border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+          <div style="font-size:13px;color:var(--txt);font-weight:500;">Today's Plan</div>
+          <div style="font-size:11px;color:var(--txt2);margin-top:3px;">Just now</div>
+        </div>
+        <div style="padding:10px 12px;margin-bottom:6px;"><div style="font-size:13px;color:var(--txt2);">Wednesday Plan</div><div style="font-size:11px;color:var(--txt3);margin-top:3px;">Yesterday</div></div>
+        <div style="padding:10px 12px;margin-bottom:6px;"><div style="font-size:13px;color:var(--txt2);">Deep Work Session</div><div style="font-size:11px;color:var(--txt3);margin-top:3px;">2 days ago</div></div>
+        <div style="padding:10px 12px;"><div style="font-size:13px;color:var(--txt2);">Week Review</div><div style="font-size:11px;color:var(--txt3);margin-top:3px;">3 days ago</div></div>
+      </div>
+      <!-- Chat -->
+      <div style="flex:1;display:flex;flex-direction:column;">
+        <div style="flex:1;padding:40px 48px;display:flex;flex-direction:column;gap:24px;overflow:hidden;">
+          <div class="ub">Plan my Thursday — I have a standup at 10am, client call at 2pm, and need to finish the landing page. Also want to hit the gym.</div>
+          <div class="ai-card" style="max-width:880px;">
+            <div class="ai-lbl">✦ Flowline</div>
+            <div class="ai-txt" style="margin-bottom:16px;">Here's your Thursday. I've blocked deep work before your standup, kept the afternoon light after your client call, and fit gym in at 6 pm when your energy usually dips.</div>
+            <div class="pb"><div class="pd" style="background:#6d4cfa;"></div><div class="pt">7:00 – 8:00</div><div class="pn">Morning routine + breakfast</div><div class="tag" style="background:rgba(109,76,250,0.15);color:#8b6dff;">Personal</div></div>
+            <div class="pb"><div class="pd" style="background:#3b82f6;"></div><div class="pt">8:15 – 9:45</div><div class="pn">Deep work — Landing page (hero + features)</div><div class="tag" style="background:rgba(59,130,246,0.15);color:#60a5fa;">Work</div></div>
+            <div class="pb"><div class="pd" style="background:#f59e0b;"></div><div class="pt">10:00 – 10:30</div><div class="pn">Team standup</div><div class="tag" style="background:rgba(245,158,11,0.15);color:#fbbf24;">Meeting</div></div>
+            <div class="pb"><div class="pd" style="background:#3b82f6;"></div><div class="pt">10:45 – 13:00</div><div class="pn">Deep work — Landing page (finish + deploy)</div><div class="tag" style="background:rgba(59,130,246,0.15);color:#60a5fa;">Work</div></div>
+            <div class="pb"><div class="pd" style="background:#10b981;"></div><div class="pt">13:00 – 13:45</div><div class="pn">Lunch break</div><div class="tag" style="background:rgba(16,185,129,0.15);color:#34d399;">Break</div></div>
+            <div class="pb"><div class="pd" style="background:#f59e0b;"></div><div class="pt">14:00 – 15:00</div><div class="pn">Client call</div><div class="tag" style="background:rgba(245,158,11,0.15);color:#fbbf24;">Meeting</div></div>
+            <div class="pb"><div class="pd" style="background:#ef4444;"></div><div class="pt">18:00 – 19:30</div><div class="pn">Gym — push day</div><div class="tag" style="background:rgba(239,68,68,0.15);color:#f87171;">Health</div></div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <button style="background:var(--accent);border:none;color:white;font-size:13px;font-weight:600;padding:10px 22px;border-radius:8px;cursor:pointer;">Save to Calendar</button>
+              <button style="background:var(--bg);border:1px solid var(--border-hi);color:var(--txt2);font-size:13px;font-weight:500;padding:10px 22px;border-radius:8px;cursor:pointer;">Adjust</button>
+            </div>
+          </div>
+        </div>
+        <div style="padding:24px 40px;border-top:1px solid var(--border);">
+          <div style="background:var(--bg-t);border:1px solid var(--border-hi);border-radius:14px;padding:16px 22px;display:flex;align-items:center;gap:14px;">
+            <div style="flex:1;font-size:14px;color:var(--txt3);">Ask Flowline anything about your day…</div>
+            <div style="width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shl">
+    <div class="h1">Tell AI your day.<br><span>Get a perfect plan.</span></div>
+    <div class="sub">Just describe what you need — Flowline does the rest</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════ SLIDE 2 ══════════════════════════ -->
+<div class="sw" id="s2">
+<div class="slide">
+  <div class="glow" style="width:800px;height:800px;background:#6d4cfa;opacity:0.10;top:-150px;right:-100px;"></div>
+  <div class="glow" style="width:500px;height:500px;background:#3b82f6;opacity:0.08;bottom:200px;left:100px;"></div>
+  <div style="position:absolute;top:80px;left:50%;transform:translateX(-50%);"><div class="badge">✦ Visual Schedule — See Every Block</div></div>
+
+  <div class="window" style="position:absolute;top:160px;left:50%;transform:translateX(-50%);width:1800px;height:1100px;display:flex;flex-direction:column;">
+    <div class="tb">
+      <div class="dot" style="background:#ff5f57;"></div><div class="dot" style="background:#febc2e;"></div><div class="dot" style="background:#28c840;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:16px;">
+        <div style="background:rgba(109,76,250,0.2);border:1px solid rgba(109,76,250,0.4);border-radius:6px;padding:4px 14px;font-size:12px;color:var(--accent-hi);font-weight:600;">Plan</div>
+        <div style="padding:4px 14px;font-size:12px;color:var(--txt2);">Calendar</div>
+      </div>
+      <div class="tbl">Thursday, March 21</div>
+    </div>
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <!-- Time axis -->
+      <div style="width:72px;background:var(--bg);border-right:1px solid var(--border);padding-top:0;flex-shrink:0;">
+        <div style="height:24px;"></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">6am</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">7am</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">8am</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">9am</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">10am</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">11am</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">12pm</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">1pm</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">2pm</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">3pm</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">4pm</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">5pm</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">6pm</span></div>
+        <div style="height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:12px;padding-top:4px;"><span style="font-size:12px;color:var(--txt3);">7pm</span></div>
+      </div>
+      <!-- Grid -->
+      <div style="flex:1;position:relative;background:var(--bg);">
+        <!-- Hour lines -->
+        <div style="position:absolute;left:0;right:0;top:24px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:80px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:136px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:192px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:248px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:304px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:360px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:416px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:472px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:528px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:584px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:640px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:696px;height:1px;background:var(--border);"></div>
+        <div style="position:absolute;left:0;right:0;top:752px;height:1px;background:var(--border);"></div>
+
+        <!-- 7am: Morning routine (7–8am) = top:80+56=136? Let me calculate: 6am=80, 7am=136, 8am=192, 9am=248, 10am=304, 11am=360, 12pm=416, 1pm=472, 2pm=528, 3pm=584, 4pm=640, 5pm=696, 6pm=752, 7pm=808 -->
+        <!-- Morning routine 7-8 am: top=136, height=56 -->
+        <div class="cev" style="background:linear-gradient(135deg,rgba(109,76,250,0.85),rgba(139,109,255,0.85));left:14px;right:14px;top:136px;height:56px;">
+          <div class="cet">☀️ Morning routine</div>
+          <div class="ces">7:00 – 8:00 AM</div>
+        </div>
+        <!-- Deep work 8:15-9:45: top=192+14=206, height=84-14=84 -->
+        <div class="cev" style="background:linear-gradient(135deg,rgba(59,130,246,0.85),rgba(37,99,235,0.85));left:14px;right:14px;top:206px;height:84px;">
+          <div class="cet">💻 Deep work — Landing page (hero + features)</div>
+          <div class="ces">8:15 – 9:45 AM</div>
+        </div>
+        <!-- Standup 10:00-10:30: top=304, height=28 -->
+        <div class="cev" style="background:linear-gradient(135deg,rgba(245,158,11,0.9),rgba(217,119,6,0.9));left:14px;right:14px;top:304px;height:28px;">
+          <div class="cet">📹 Team standup · 10:00 AM</div>
+        </div>
+        <!-- Deep work 10:45-13:00: top=304+42=346, height=130 -->
+        <div class="cev" style="background:linear-gradient(135deg,rgba(59,130,246,0.85),rgba(37,99,235,0.85));left:14px;right:14px;top:346px;height:126px;">
+          <div class="cet">💻 Deep work — Finish & deploy</div>
+          <div class="ces">10:45 AM – 1:00 PM</div>
+        </div>
+        <!-- Lunch 13-13:45: top=472, height=42 -->
+        <div class="cev" style="background:linear-gradient(135deg,rgba(16,185,129,0.85),rgba(5,150,105,0.85));left:14px;right:14px;top:472px;height:42px;">
+          <div class="cet">🍱 Lunch break · 1:00 – 1:45 PM</div>
+        </div>
+        <!-- Client call 14-15: top=528, height=56 -->
+        <div class="cev" style="background:linear-gradient(135deg,rgba(245,158,11,0.9),rgba(217,119,6,0.9));left:14px;right:14px;top:528px;height:56px;">
+          <div class="cet">📞 Client call</div>
+          <div class="ces">2:00 – 3:00 PM</div>
+        </div>
+        <!-- Gym 18-19:30: top=752, height=84 -->
+        <div class="cev" style="background:linear-gradient(135deg,rgba(239,68,68,0.85),rgba(220,38,38,0.85));left:14px;right:14px;top:752px;height:84px;">
+          <div class="cet">🏋️ Gym — push day</div>
+          <div class="ces">6:00 – 7:30 PM</div>
+        </div>
+        <!-- Now line at ~10:15 = 304 + 14 = 318 -->
+        <div style="position:absolute;left:0;right:0;top:318px;height:2px;background:var(--accent);z-index:10;">
+          <div style="width:12px;height:12px;background:var(--accent);border-radius:50%;position:absolute;left:-6px;top:-5px;"></div>
+        </div>
+      </div>
+      <!-- Stats panel -->
+      <div style="width:300px;background:var(--bg-s);border-left:1px solid var(--border);padding:28px 22px;flex-shrink:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:18px;">Today at a glance</div>
+        <div style="background:var(--bg-t);border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--txt2);margin-bottom:4px;">Deep Work</div>
+          <div style="font-size:32px;font-weight:800;color:#3b82f6;">4.5 hrs</div>
+        </div>
+        <div style="background:var(--bg-t);border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--txt2);margin-bottom:4px;">Meetings</div>
+          <div style="font-size:32px;font-weight:800;color:#f59e0b;">1.5 hrs</div>
+        </div>
+        <div style="background:var(--bg-t);border-radius:14px;padding:18px;margin-bottom:20px;border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--txt2);margin-bottom:4px;">Blocks</div>
+          <div style="font-size:32px;font-weight:800;color:var(--accent-hi);">7</div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:12px;">Categories</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:10px;height:10px;border-radius:50%;background:#3b82f6;flex-shrink:0;"></div><div style="font-size:13px;color:var(--txt);width:70px;">Work</div><div style="flex:1;height:5px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:65%;height:100%;background:#3b82f6;border-radius:4px;"></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div><div style="font-size:13px;color:var(--txt);width:70px;">Meetings</div><div style="flex:1;height:5px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:22%;height:100%;background:#f59e0b;border-radius:4px;"></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444;flex-shrink:0;"></div><div style="font-size:13px;color:var(--txt);width:70px;">Health</div><div style="flex:1;height:5px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:20%;height:100%;background:#ef4444;border-radius:4px;"></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:10px;height:10px;border-radius:50%;background:#6d4cfa;flex-shrink:0;"></div><div style="font-size:13px;color:var(--txt);width:70px;">Personal</div><div style="flex:1;height:5px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:13%;height:100%;background:#6d4cfa;border-radius:4px;"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shl">
+    <div class="h1">Your day,<br><span>visualized perfectly.</span></div>
+    <div class="sub">Color-coded blocks — edit, move, or delete with right-click</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════ SLIDE 3 ══════════════════════════ -->
+<div class="sw" id="s3">
+<div class="slide" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+
+  <!-- Big ambient glows -->
+  <div class="glow" style="width:800px;height:800px;background:#4285f4;opacity:0.10;top:-100px;left:-100px;"></div>
+  <div class="glow" style="width:800px;height:800px;background:#6d4cfa;opacity:0.12;bottom:-100px;right:-100px;"></div>
+  <div class="glow" style="width:600px;height:400px;background:#ff3b30;opacity:0.07;top:400px;left:50%;transform:translateX(-50%);"></div>
+
+  <!-- Top label -->
+  <div style="position:absolute;top:80px;left:50%;transform:translateX(-50%);">
+    <div class="badge">✦ Works with the calendars you already use</div>
+  </div>
+
+  <!-- Headline -->
+  <div style="text-align:center;margin-bottom:80px;margin-top:-60px;">
+    <div style="font-size:96px;font-weight:900;color:var(--txt);letter-spacing:-2px;line-height:1.0;">Syncs with</div>
+    <div style="font-size:96px;font-weight:900;letter-spacing:-2px;line-height:1.0;background:linear-gradient(90deg,#4285f4,#6d4cfa,#ff3b30);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Google &amp; Apple Calendar</div>
+    <div style="font-size:28px;color:var(--txt2);margin-top:18px;font-weight:400;">AI reads your events before planning — and saves your plan back with one click</div>
+  </div>
+
+  <!-- Two big calendar cards side by side -->
+  <div style="display:flex;gap:32px;align-items:stretch;margin-bottom:72px;">
+
+    <!-- Google Calendar card -->
+    <div style="width:580px;background:var(--bg-s);border:1px solid rgba(66,133,244,0.35);border-radius:28px;padding:44px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 20% 20%,rgba(66,133,244,0.12),transparent 60%);pointer-events:none;"></div>
+      <!-- Icon -->
+      <div style="width:88px;height:88px;background:rgba(66,133,244,0.15);border:1px solid rgba(66,133,244,0.3);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:28px;">
+        <span style="font-size:52px;font-weight:900;color:#4285f4;line-height:1;">G</span>
+      </div>
+      <div style="font-size:28px;font-weight:800;color:var(--txt);margin-bottom:8px;">Google Calendar</div>
+      <div style="font-size:16px;color:var(--txt2);margin-bottom:28px;line-height:1.5;">Add via System Settings → Internet Accounts → Google. All your events are instantly visible to Flowline.</div>
+      <!-- Feature list -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#4285f4;flex-shrink:0;"></div><span style="font-size:15px;color:var(--txt);">Reads all your Google events</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#4285f4;flex-shrink:0;"></div><span style="font-size:15px;color:var(--txt);">AI plans around existing meetings</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#4285f4;flex-shrink:0;"></div><span style="font-size:15px;color:var(--txt);">Save plan blocks back to Google</span></div>
+      </div>
+      <!-- Status badge -->
+      <div style="position:absolute;top:28px;right:28px;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.4);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:#34d399;">✓ Supported</div>
+    </div>
+
+    <!-- Plus sign -->
+    <div style="display:flex;align-items:center;justify-content:center;width:60px;flex-shrink:0;">
+      <div style="font-size:48px;color:var(--txt3);font-weight:300;">+</div>
+    </div>
+
+    <!-- Apple Calendar card -->
+    <div style="width:580px;background:var(--bg-s);border:1px solid rgba(255,59,48,0.3);border-radius:28px;padding:44px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 80% 20%,rgba(255,59,48,0.10),transparent 60%);pointer-events:none;"></div>
+      <!-- Icon -->
+      <div style="width:88px;height:88px;background:rgba(255,59,48,0.12);border:1px solid rgba(255,59,48,0.25);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:28px;font-size:48px;line-height:1;">📅</div>
+      <div style="font-size:28px;font-weight:800;color:var(--txt);margin-bottom:8px;">Apple Calendar</div>
+      <div style="font-size:16px;color:var(--txt2);margin-bottom:28px;line-height:1.5;">iCloud, local, and Exchange calendars work automatically — no extra steps, no login required.</div>
+      <!-- Feature list -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#ff3b30;flex-shrink:0;"></div><span style="font-size:15px;color:var(--txt);">iCloud, local &amp; Exchange events</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#ff3b30;flex-shrink:0;"></div><span style="font-size:15px;color:var(--txt);">Zero setup — works automatically</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#ff3b30;flex-shrink:0;"></div><span style="font-size:15px;color:var(--txt);">Save AI plans to any Apple calendar</span></div>
+      </div>
+      <!-- Status badge -->
+      <div style="position:absolute;top:28px;right:28px;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.4);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:#34d399;">✓ Automatic</div>
+    </div>
+  </div>
+
+  <!-- Bottom feature strip -->
+  <div style="display:flex;gap:0;border:1px solid var(--border-hi);border-radius:20px;overflow:hidden;background:var(--bg-s);width:1260px;">
+    <div style="flex:1;padding:28px 32px;border-right:1px solid var(--border);">
+      <div style="font-size:32px;margin-bottom:10px;">🔍</div>
+      <div style="font-size:16px;font-weight:700;color:var(--txt);margin-bottom:6px;">Reads before planning</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.5;">AI checks your calendar first — your plan fits around what's already there</div>
+    </div>
+    <div style="flex:1;padding:28px 32px;border-right:1px solid var(--border);">
+      <div style="font-size:32px;margin-bottom:10px;">💾</div>
+      <div style="font-size:16px;font-weight:700;color:var(--txt);margin-bottom:6px;">Saves back with one tap</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.5;">Push the entire AI-generated plan to your calendar in a single click</div>
+    </div>
+    <div style="flex:1;padding:28px 32px;">
+      <div style="font-size:32px;margin-bottom:10px;">🔒</div>
+      <div style="font-size:16px;font-weight:700;color:var(--txt);margin-bottom:6px;">Private by design</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.5;">Calendar data stays on your Mac — never uploaded to any server</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════ SLIDE 4 ══════════════════════════ -->
+<div class="sw" id="s4">
+<div class="slide">
+  <div class="glow" style="width:700px;height:700px;background:#6d4cfa;opacity:0.13;top:100px;left:200px;"></div>
+  <div class="glow" style="width:500px;height:500px;background:#10b981;opacity:0.07;bottom:100px;right:200px;"></div>
+  <div style="position:absolute;top:80px;left:50%;transform:translateX(-50%);"><div class="badge">✦ One Click — Save Entire Plan to Calendar</div></div>
+
+  <div class="window" style="position:absolute;top:160px;left:50%;transform:translateX(-50%);width:1600px;height:1080px;display:flex;flex-direction:column;">
+    <div class="tb">
+      <div class="dot" style="background:#ff5f57;"></div><div class="dot" style="background:#febc2e;"></div><div class="dot" style="background:#28c840;"></div>
+      <div class="tbl">Flowline</div>
+    </div>
+    <div style="flex:1;padding:48px 60px;display:flex;gap:48px;overflow:hidden;">
+      <!-- Left: chat + save modal -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:22px;">
+        <div class="ai-card" style="max-width:100%;">
+          <div class="ai-lbl">✦ Flowline</div>
+          <div class="ai-txt" style="margin-bottom:16px;">Your Wednesday plan is ready — 6 blocks, 8.5 hours structured. Want to save it to your calendar?</div>
+          <div class="pb"><div class="pd" style="background:#6d4cfa;"></div><div class="pt">7:00 – 8:00</div><div class="pn">Morning routine</div></div>
+          <div class="pb"><div class="pd" style="background:#3b82f6;"></div><div class="pt">8:30 – 12:00</div><div class="pn">Deep work sprint</div></div>
+          <div class="pb"><div class="pd" style="background:#10b981;"></div><div class="pt">12:00 – 13:00</div><div class="pn">Lunch + walk</div></div>
+          <div class="pb"><div class="pd" style="background:#f59e0b;"></div><div class="pt">14:00 – 15:30</div><div class="pn">Meetings block</div></div>
+          <div class="pb"><div class="pd" style="background:#3b82f6;"></div><div class="pt">16:00 – 17:30</div><div class="pn">Review &amp; wrap-up</div></div>
+          <div class="pb"><div class="pd" style="background:#ef4444;"></div><div class="pt">18:30 – 20:00</div><div class="pn">Gym + dinner</div></div>
+        </div>
+        <!-- Save modal -->
+        <div style="background:var(--bg-t);border:1px solid var(--accent);border-radius:18px;padding:28px;box-shadow:0 0 60px rgba(109,76,250,0.25);">
+          <div style="font-size:17px;font-weight:700;color:var(--txt);margin-bottom:6px;">Save to calendar</div>
+          <div style="font-size:14px;color:var(--txt2);margin-bottom:22px;">Choose where to add your 6 plan blocks</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px;">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.35);border-radius:12px;">
+              <div style="font-size:20px;font-weight:900;color:#4285f4;width:28px;text-align:center;">G</div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:600;color:var(--txt);">Personal (Google)</div><div style="font-size:12px;color:var(--txt2);">alex@gmail.com</div></div>
+              <div style="width:20px;height:20px;background:#4285f4;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                <svg width="11" height="9" fill="none" viewBox="0 0 11 9"><path d="M1 4.5l3.5 3.5 5.5-7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:12px;">
+              <div style="font-size:18px;">📅</div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:500;color:var(--txt2);">Home (iCloud)</div></div>
+            </div>
+          </div>
+          <button style="width:100%;background:var(--accent);border:none;color:white;font-size:15px;font-weight:700;padding:15px;border-radius:12px;cursor:pointer;letter-spacing:0.2px;">Add 6 events to Google Calendar →</button>
+        </div>
+      </div>
+      <!-- Right: mini calendar preview -->
+      <div style="width:460px;flex-shrink:0;">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;height:100%;">
+          <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:15px;font-weight:700;color:var(--txt);">Wednesday, Mar 20</div>
+            <div style="font-size:12px;color:var(--accent-hi);font-weight:600;background:rgba(109,76,250,0.15);padding:4px 12px;border-radius:20px;">Today</div>
+          </div>
+          <div style="padding:16px;position:relative;height:850px;">
+            <div style="position:absolute;left:20px;right:20px;top:0;height:72px;background:rgba(109,76,250,0.2);border-left:3px solid #6d4cfa;border-radius:0 10px 10px 0;padding:8px 12px;">
+              <div style="font-size:13px;font-weight:600;color:#8b6dff;">Morning routine</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">7:00 – 8:00 AM</div>
+            </div>
+            <div style="position:absolute;left:20px;right:20px;top:84px;height:198px;background:rgba(59,130,246,0.2);border-left:3px solid #3b82f6;border-radius:0 10px 10px 0;padding:8px 12px;">
+              <div style="font-size:13px;font-weight:600;color:#60a5fa;">Deep work sprint</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">8:30 AM – 12:00 PM</div>
+            </div>
+            <div style="position:absolute;left:20px;right:20px;top:294px;height:72px;background:rgba(16,185,129,0.2);border-left:3px solid #10b981;border-radius:0 10px 10px 0;padding:8px 12px;">
+              <div style="font-size:13px;font-weight:600;color:#34d399;">Lunch + walk</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">12:00 – 1:00 PM</div>
+            </div>
+            <div style="position:absolute;left:20px;right:20px;top:378px;height:108px;background:rgba(245,158,11,0.2);border-left:3px solid #f59e0b;border-radius:0 10px 10px 0;padding:8px 12px;">
+              <div style="font-size:13px;font-weight:600;color:#fbbf24;">Meetings block</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">2:00 – 3:30 PM</div>
+            </div>
+            <div style="position:absolute;left:20px;right:20px;top:498px;height:108px;background:rgba(59,130,246,0.2);border-left:3px solid #3b82f6;border-radius:0 10px 10px 0;padding:8px 12px;">
+              <div style="font-size:13px;font-weight:600;color:#60a5fa;">Review &amp; wrap-up</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">4:00 – 5:30 PM</div>
+            </div>
+            <div style="position:absolute;left:20px;right:20px;top:618px;height:108px;background:rgba(239,68,68,0.2);border-left:3px solid #ef4444;border-radius:0 10px 10px 0;padding:8px 12px;">
+              <div style="font-size:13px;font-weight:600;color:#f87171;">Gym + dinner</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">6:30 – 8:00 PM</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shl" style="bottom:60px;">
+    <div class="h1">Plan done?<br><span>Save with one tap.</span></div>
+    <div class="sub">Push every block straight to Google or Apple Calendar</div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════ SLIDE 5 ══════════════════════════ -->
+<div class="sw" id="s5">
+<div class="slide">
+  <div class="glow" style="width:900px;height:500px;background:#6d4cfa;opacity:0.12;top:100px;left:50%;transform:translateX(-50%);"></div>
+  <div style="position:absolute;top:80px;left:50%;transform:translateX(-50%);"><div class="badge">✦ Lives in Your Menubar — Always One Click Away</div></div>
+
+  <!-- macOS menu bar -->
+  <div style="position:absolute;top:160px;left:0;right:0;height:40px;background:rgba(20,20,40,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:10;">
+    <div style="display:flex;align-items:center;gap:20px;">
+      <span style="font-size:15px;font-weight:700;color:var(--txt);">🍎</span>
+      <span style="font-size:13px;color:var(--txt);font-weight:500;">Finder</span>
+      <span style="font-size:13px;color:var(--txt2);">File</span>
+      <span style="font-size:13px;color:var(--txt2);">Edit</span>
+      <span style="font-size:13px;color:var(--txt2);">View</span>
+      <span style="font-size:13px;color:var(--txt2);">Go</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <span style="font-size:12px;color:var(--txt2);">Sat 10:42 AM</span>
+      <span style="font-size:12px;color:var(--txt2);">🔋 92%</span>
+      <div style="background:rgba(109,76,250,0.25);border:1px solid rgba(109,76,250,0.6);border-radius:6px;padding:3px 12px;font-size:12px;font-weight:700;color:var(--accent-hi);">✦</div>
+    </div>
+  </div>
+
+  <!-- Menubar dropdown -->
+  <div class="window" style="position:absolute;top:202px;right:320px;width:440px;">
+    <div style="padding:0;">
+      <div style="padding:20px 18px 16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:700;color:var(--txt);">✦ Flowline</div>
+          <div style="font-size:12px;color:var(--txt2);">Thu, Mar 21</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px 12px;border:1px solid var(--border);">
+            <div style="font-size:10px;color:var(--txt2);margin-bottom:3px;">Next up</div>
+            <div style="font-size:13px;color:var(--txt);font-weight:600;">Team standup</div>
+            <div style="font-size:11px;color:var(--accent-hi);margin-top:2px;">in 18 min</div>
+          </div>
+          <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px 12px;border:1px solid var(--border);">
+            <div style="font-size:10px;color:var(--txt2);margin-bottom:3px;">Blocks left</div>
+            <div style="font-size:24px;color:var(--accent-hi);font-weight:800;margin-top:2px;">5</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:14px 16px;">
+        <div style="font-size:11px;color:var(--txt3);font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px;">Today</div>
+        <!-- Done -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;margin-bottom:5px;opacity:0.45;">
+          <div style="width:9px;height:9px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>
+          <div style="flex:1;font-size:12px;text-decoration:line-through;color:var(--txt3);">Morning routine</div>
+          <div style="font-size:10px;color:var(--txt3);">7–8am</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;margin-bottom:5px;opacity:0.45;">
+          <div style="width:9px;height:9px;border-radius:50%;background:#3b82f6;flex-shrink:0;"></div>
+          <div style="flex:1;font-size:12px;text-decoration:line-through;color:var(--txt3);">Deep work sprint</div>
+          <div style="font-size:10px;color:var(--txt3);">8:30–10am</div>
+        </div>
+        <!-- Active -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;margin-bottom:5px;background:rgba(109,76,250,0.12);border:1px solid rgba(109,76,250,0.3);">
+          <div style="width:9px;height:9px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div>
+          <div style="flex:1;font-size:12px;color:var(--txt);font-weight:600;">Team standup</div>
+          <div style="font-size:10px;color:var(--accent-hi);font-weight:600;">NOW</div>
+        </div>
+        <!-- Upcoming -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;margin-bottom:5px;">
+          <div style="width:9px;height:9px;border-radius:50%;background:#3b82f6;flex-shrink:0;"></div>
+          <div style="flex:1;font-size:12px;color:var(--txt);">Deep work (cont.)</div>
+          <div style="font-size:10px;color:var(--txt3);">10:45–1pm</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;margin-bottom:5px;">
+          <div style="width:9px;height:9px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>
+          <div style="flex:1;font-size:12px;color:var(--txt);">Lunch break</div>
+          <div style="font-size:10px;color:var(--txt3);">1–1:45pm</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;">
+          <div style="width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;"></div>
+          <div style="flex:1;font-size:12px;color:var(--txt);">Gym</div>
+          <div style="font-size:10px;color:var(--txt3);">6–7:30pm</div>
+        </div>
+      </div>
+      <div style="padding:10px 16px 18px;border-top:1px solid var(--border);display:flex;gap:8px;">
+        <button style="flex:1;background:var(--accent);border:none;color:white;font-size:13px;font-weight:600;padding:10px;border-radius:9px;cursor:pointer;">+ New plan</button>
+        <button style="flex:1;background:var(--bg-t);border:1px solid var(--border-hi);color:var(--txt2);font-size:13px;font-weight:500;padding:10px;border-radius:9px;cursor:pointer;">Open app</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Background blurred app window -->
+  <div class="window" style="position:absolute;top:220px;left:180px;width:1400px;height:960px;opacity:0.3;filter:blur(3px);">
+    <div class="tb">
+      <div class="dot" style="background:#ff5f57;"></div><div class="dot" style="background:#febc2e;"></div><div class="dot" style="background:#28c840;"></div>
+      <div class="tbl">Flowline</div>
+    </div>
+    <div style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;">
+      <div class="ub">Plan my day — gym, 2 meetings, finish the report</div>
+      <div class="ai-card" style="max-width:760px;">
+        <div class="ai-lbl">✦ Flowline</div>
+        <div class="ai-txt">Here's a structured plan for your day. I've balanced deep work and meetings to maximize your focus time...</div>
+      </div>
+      <div class="ai-card" style="max-width:760px;margin-top:8px;">
+        <div class="ai-lbl">✦ Flowline</div>
+        <div class="pb"><div class="pd" style="background:#3b82f6;"></div><div class="pt">8:00 – 10:30</div><div class="pn">Deep work — Report writing</div></div>
+        <div class="pb"><div class="pd" style="background:#f59e0b;"></div><div class="pt">11:00 – 11:30</div><div class="pn">Team meeting</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shl" style="bottom:60px;">
+    <div class="h1">Lives in your <span>menubar.</span><br>Always one click away.</div>
+    <div class="sub">Track your day without ever opening the full app</div>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

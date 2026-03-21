@@ -77,6 +77,8 @@ struct TaskInboxView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             FlowLineTheme.mainBg.ignoresSafeArea()
+            CosmosBackground()
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // ── Header ─────────────────────────────────────────────

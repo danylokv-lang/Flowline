@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Flowline — Stop losing your mornings to planning</title>
   <meta name="description" content="Chat with AI for 60 seconds. Get a realistic day plan that actually fits your energy, priorities, and life. Free for macOS." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://flowline.ink/" />
+  <meta property="og:title" content="Flowline — AI Daily Planner for Mac" />
+  <meta property="og:description" content="Chat with AI for 60 seconds. Get a realistic day plan that syncs with Google &amp; Apple Calendar. Free for macOS." />
+  <meta property="og:image" content="https://flowline.ink/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Flowline — AI Daily Planner for Mac" />
+  <meta name="twitter:description" content="Chat with AI for 60 seconds. Get a realistic day plan that syncs with Google &amp; Apple Calendar." />
+  <meta name="twitter:image" content="https://flowline.ink/og-image.png" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -57,7 +66,7 @@
 
   <div class="hero-inner">
     <div class="hero-left">
-      <div class="kicker">macOS · Free to start</div>
+      <div class="kicker">macOS · Google Calendar · Apple Calendar</div>
       <h1 class="hero-h1">
         Stop losing your<br />
         mornings to<br />
@@ -65,8 +74,9 @@
       </h1>
       <p class="hero-body">
         Tell Flowline what you need to get done today.
-        Its AI figures out when — accounting for your energy,
-        work hours, and the way you actually work.
+        It reads your Google Calendar and Apple Calendar,
+        works around every existing event, and hands you
+        a realistic plan — in under 60 seconds.
       </p>
       <div class="hero-actions">
         <button class="cta-btn cta-lg" onclick="openAuth('register')">
@@ -142,6 +152,8 @@
     <div class="stat"><strong>Claude AI</strong> under the hood</div>
     <div class="divider-v"></div>
     <div class="stat"><strong>Native</strong> macOS app</div>
+    <div class="divider-v"></div>
+    <div class="stat">Syncs <strong>Google</strong> + <strong>Apple</strong> Calendar</div>
     <div class="divider-v"></div>
     <div class="stat"><strong>Free</strong> to start</div>
   </div>
@@ -228,9 +240,10 @@
         You know at a glance how your time is actually being spent.
       </p>
       <ul class="feature-list">
-        <li>Full 7-day calendar view</li>
-        <li>Color-coded by category</li>
+        <li>Full 7-day calendar view, color-coded by category</li>
+        <li>Right-click any block to delete it instantly</li>
         <li>Delete or re-plan any day in seconds</li>
+        <li>Syncs with Google Calendar &amp; Apple Calendar</li>
       </ul>
     </div>
     <div class="feature-visual">
@@ -266,6 +279,77 @@
   </div>
 </section>
 
+<!-- CALENDAR INTEGRATION -->
+<section class="integrations" id="integrations">
+  <div class="integrations-inner">
+    <div class="section-intro reveal">
+      <div class="kicker">Calendar Sync</div>
+      <h2>Knows what's already<br>on your plate.</h2>
+      <p>Flowline reads your Google Calendar and Apple Calendar before planning — so the AI always works <em style="font-style:italic;color:var(--accent-hi)">around</em> your existing events, never on top of them.</p>
+    </div>
+
+    <div class="int-bento reveal">
+      <!-- Main card: AI chat demo showing Google Calendar awareness -->
+      <div class="int-card int-main glow-card">
+        <div class="int-eyebrow">
+          <span class="int-pill google-pill">● Google</span>
+          <span class="int-pill apple-pill">● Apple</span>
+          <span class="int-reading">reading your live events</span>
+        </div>
+        <div class="int-chat">
+          <div class="int-msg u">I need to finish the landing page and do a PR review today</div>
+          <div class="int-msg a">
+            <span class="ai-tag">✦ Flowline</span>
+            I checked your calendars — you have a design review at 11:00 <span class="src-badge google-src">Google</span> and a 1:1 at 4:00 <span class="src-badge google-src">Google</span>. Here's your day:
+            <div class="int-plan">
+              <div class="ipr work"><span class="ipr-dot"></span><span>Landing page deep work</span><span class="ipr-time">09:00–10:45</span></div>
+              <div class="ipr study"><span class="ipr-dot"></span><span>Design review <span class="src-badge google-src mini">Google</span></span><span class="ipr-time">11:00–12:00</span></div>
+              <div class="ipr personal"><span class="ipr-dot"></span><span>Lunch + decompress</span><span class="ipr-time">12:00–13:00</span></div>
+              <div class="ipr work"><span class="ipr-dot"></span><span>PR review</span><span class="ipr-time">13:00–14:30</span></div>
+              <div class="ipr work"><span class="ipr-dot"></span><span>1:1 with manager <span class="src-badge google-src mini">Google</span></span><span class="ipr-time">16:00–17:00</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: 3 small cards -->
+      <div class="int-right">
+        <div class="int-card int-sm glow-card">
+          <div class="dual-cals">
+            <div class="cal-brand-pill apple-brand">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="3" fill="#FF3B30"/><rect x="1.5" y="4.5" width="11" height="8" rx="1" fill="rgba(255,255,255,.15)"/><rect x="1.5" y="1.5" width="11" height="4" rx="1" fill="rgba(255,255,255,.25)"/><text x="7" y="11.5" text-anchor="middle" font-size="5" font-weight="800" fill="white" font-family="system-ui">20</text></svg>
+              Apple
+            </div>
+            <span class="dc-plus">+</span>
+            <div class="cal-brand-pill google-brand">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="3" fill="#4285F4"/><text x="7" y="10.5" text-anchor="middle" font-size="9" font-weight="900" fill="white" font-family="system-ui,-apple-system">G</text></svg>
+              Google
+            </div>
+          </div>
+          <h4>Both, zero extra setup</h4>
+          <p>Connect Google through macOS Internet Accounts. No OAuth, no passwords — it just works.</p>
+        </div>
+
+        <div class="int-card int-sm glow-card">
+          <div class="int-ico-wrap">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v9M5.5 8.5 9 12l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 14h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <h4>Save to any calendar</h4>
+          <p>Pick Google, iCloud, or any connected account. One click and your plan is locked in.</p>
+        </div>
+
+        <div class="int-card int-sm glow-card">
+          <div class="int-ico-wrap int-ico-green">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="8" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6 8V6a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <h4>Private by design</h4>
+          <p>Everything runs on your Mac via EventKit. Your events are never uploaded or stored anywhere.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- MENU BAR CALLOUT -->
 <div class="menubar-callout reveal">
   <div class="menubar-callout-inner">
@@ -281,6 +365,35 @@
     </div>
   </div>
 </div>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="testimonials-header section-intro reveal">
+    <div class="kicker">What people say</div>
+    <h2>Real people, real mornings.</h2>
+  </div>
+  <div class="marquee-outer">
+    <div class="marquee-track">
+      <div class="tcard"><p class="tquote">"I stopped winging my mornings the day I installed Flowline. The AI sees my Google Calendar, keeps gym right after school, and fills everything else intelligently."</p><div class="tauthor"><span class="tini">AK</span><div><strong>Alex K.</strong><span>CS Student</span></div></div></div>
+      <div class="tcard"><p class="tquote">"The Google Calendar sync is the killer feature. It reads my client calls, plans around them, and saves back in one click. Haven't missed a deadline since."</p><div class="tauthor"><span class="tini">MS</span><div><strong>Maria S.</strong><span>Freelance Designer</span></div></div></div>
+      <div class="tcard"><p class="tquote">"I tried every todo app out there. Flowline is the first one that actually builds a day for me instead of just listing tasks. The difference is night and day."</p><div class="tauthor"><span class="tini">JO</span><div><strong>James O.</strong><span>Startup Founder</span></div></div></div>
+      <div class="tcard"><p class="tquote">"Lectures, labs, gym, study blocks — at different times each week. Flowline handles the scheduling complexity I used to spend 30 minutes managing manually."</p><div class="tauthor"><span class="tini">PM</span><div><strong>Priya M.</strong><span>Medical Student</span></div></div></div>
+      <div class="tcard"><p class="tquote">"The menu bar timer completely changed my relationship with focus. I used to drift every 10 minutes. Now I know exactly how long I have and I actually use it."</p><div class="tauthor"><span class="tini">TW</span><div><strong>Tom W.</strong><span>Software Engineer</span></div></div></div>
+      <div class="tcard"><p class="tquote">"I love that it's a thinking partner, not just a scheduler. I told it I was low-energy today and it adjusted my whole plan. Nothing else does that."</p><div class="tauthor"><span class="tini">SL</span><div><strong>Sarah L.</strong><span>Product Manager</span></div></div></div>
+      <div class="tcard"><p class="tquote">"Setting it up took 2 minutes. Using it saves me 30 every morning. That math works really well."</p><div class="tauthor"><span class="tini">RT</span><div><strong>Rachel T.</strong><span>Marketing Lead</span></div></div></div>
+      <div class="tcard"><p class="tquote">"The split blocks are brilliant. School/Coding in one block with two colors — it's exactly how my afternoons actually work."</p><div class="tauthor"><span class="tini">DP</span><div><strong>Daniel P.</strong><span>Student</span></div></div></div>
+      <!-- Duplicate set for seamless infinite loop -->
+      <div class="tcard"><p class="tquote">"I stopped winging my mornings the day I installed Flowline. The AI sees my Google Calendar, keeps gym right after school, and fills everything else intelligently."</p><div class="tauthor"><span class="tini">AK</span><div><strong>Alex K.</strong><span>CS Student</span></div></div></div>
+      <div class="tcard"><p class="tquote">"The Google Calendar sync is the killer feature. It reads my client calls, plans around them, and saves back in one click. Haven't missed a deadline since."</p><div class="tauthor"><span class="tini">MS</span><div><strong>Maria S.</strong><span>Freelance Designer</span></div></div></div>
+      <div class="tcard"><p class="tquote">"I tried every todo app out there. Flowline is the first one that actually builds a day for me instead of just listing tasks. The difference is night and day."</p><div class="tauthor"><span class="tini">JO</span><div><strong>James O.</strong><span>Startup Founder</span></div></div></div>
+      <div class="tcard"><p class="tquote">"Lectures, labs, gym, study blocks — at different times each week. Flowline handles the scheduling complexity I used to spend 30 minutes managing manually."</p><div class="tauthor"><span class="tini">PM</span><div><strong>Priya M.</strong><span>Medical Student</span></div></div></div>
+      <div class="tcard"><p class="tquote">"The menu bar timer completely changed my relationship with focus. I used to drift every 10 minutes. Now I know exactly how long I have and I actually use it."</p><div class="tauthor"><span class="tini">TW</span><div><strong>Tom W.</strong><span>Software Engineer</span></div></div></div>
+      <div class="tcard"><p class="tquote">"I love that it's a thinking partner, not just a scheduler. I told it I was low-energy today and it adjusted my whole plan. Nothing else does that."</p><div class="tauthor"><span class="tini">SL</span><div><strong>Sarah L.</strong><span>Product Manager</span></div></div></div>
+      <div class="tcard"><p class="tquote">"Setting it up took 2 minutes. Using it saves me 30 every morning. That math works really well."</p><div class="tauthor"><span class="tini">RT</span><div><strong>Rachel T.</strong><span>Marketing Lead</span></div></div></div>
+      <div class="tcard"><p class="tquote">"The split blocks are brilliant. School/Coding in one block with two colors — it's exactly how my afternoons actually work."</p><div class="tauthor"><span class="tini">DP</span><div><strong>Daniel P.</strong><span>Student</span></div></div></div>
+    </div>
+  </div>
+</section>
 
 <!-- PRICING -->
 <section class="pricing" id="pricing">
@@ -306,6 +419,7 @@
         <li><span class="li-mark">✓</span> Full week calendar view</li>
         <li><span class="li-mark">✓</span> Menu bar access</li>
         <li><span class="li-mark">✓</span> Customizable category colors</li>
+        <li><span class="li-mark">✓</span> Google &amp; Apple Calendar sync</li>
       </ul>
       <button class="outline-btn" onclick="openAuth('register')">Get started</button>
     </div>

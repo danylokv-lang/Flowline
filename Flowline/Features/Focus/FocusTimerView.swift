@@ -12,6 +12,8 @@ struct FocusTimerView: View {
     var body: some View {
         ZStack {
             FlowLineTheme.mainBg.ignoresSafeArea()
+            CosmosBackground()
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
 
@@ -23,7 +25,12 @@ struct FocusTimerView: View {
                         .foregroundColor(FlowLineTheme.secondTxt)
                     Text("Deep work mode")
                         .font(.system(size: 26, weight: .black))
-                        .foregroundColor(FlowLineTheme.mainTxt)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd").opacity(0.85)],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
@@ -89,21 +96,35 @@ struct FocusTimerView: View {
 
         return VStack(spacing: 16) {
             ZStack {
+                // Track ring
                 Circle()
-                    .stroke(FlowLineTheme.borderHi, lineWidth: 10)
+                    .stroke(Color.white.opacity(0.07), lineWidth: 10)
                     .frame(width: 215, height: 215)
 
+                // Progress arc with glow
                 Circle()
                     .trim(from: 0, to: timerManager.progress)
                     .stroke(blockColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .frame(width: 200, height: 200)
                     .rotationEffect(.degrees(-90))
+                    .shadow(color: blockColor.opacity(0.65), radius: 10, x: 0, y: 0)
                     .animation(.linear(duration: 1), value: timerManager.progress)
+
+                // Soft inner background glow
+                Circle()
+                    .fill(blockColor.opacity(0.06))
+                    .frame(width: 185, height: 185)
 
                 VStack(spacing: 4) {
                     Text(timerManager.timeString())
                         .font(.system(size: 40, weight: .black, design: .monospaced))
-                        .foregroundColor(FlowLineTheme.mainTxt)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [FlowLineTheme.mainTxt, blockColor.opacity(0.85)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: blockColor.opacity(0.25), radius: 6, x: 0, y: 2)
 
                     if let block = timerManager.selectedBlock {
                         Text(block.title)
@@ -143,15 +164,25 @@ struct FocusTimerView: View {
                 else { timerManager.start() }
             } label: {
                 ZStack {
-                    Circle()
-                        .fill(timerManager.selectedBlock != nil
-                              ? FlowLineTheme.accent
-                              : FlowLineTheme.border)
-                        .frame(width: 68, height: 68)
+                    if timerManager.selectedBlock != nil {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 68, height: 68)
+                            .shadow(color: FlowLineTheme.accent.opacity(0.55), radius: 14, x: 0, y: 4)
+                    } else {
+                        Circle()
+                            .fill(FlowLineTheme.border)
+                            .frame(width: 68, height: 68)
+                    }
                     Image(systemName: timerManager.isRunning ? "pause.fill" : "play.fill")
                         .font(.system(size: 24))
                         .foregroundColor(timerManager.selectedBlock != nil
-                                         ? FlowLineTheme.mainBg
+                                         ? .white
                                          : FlowLineTheme.secondTxt.opacity(0.3))
                 }
             }
@@ -214,13 +245,27 @@ struct FocusTimerView: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected
-                          ? FlowLineTheme.tertiaryBg
-                          : FlowLineTheme.tertiaryBg)
+                    .fill(
+                        isSelected
+                            ? LinearGradient(
+                                colors: [color.opacity(0.15), FlowLineTheme.tertiaryBg],
+                                startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(
+                                colors: [FlowLineTheme.tertiaryBg, FlowLineTheme.tertiaryBg],
+                                startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(isSelected ? color.opacity(0.3) : Color.clear, lineWidth: 1)
+                            .stroke(
+                                isSelected
+                                    ? AnyShapeStyle(LinearGradient(
+                                        colors: [color.opacity(0.55), color.opacity(0.20)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    : AnyShapeStyle(Color.white.opacity(0.07)),
+                                lineWidth: 1
+                            )
                     )
+                    .shadow(color: isSelected ? color.opacity(0.25) : Color.clear, radius: 8, x: 0, y: 3)
             )
             .padding(.horizontal, 16)
         }

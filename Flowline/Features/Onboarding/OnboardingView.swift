@@ -18,11 +18,12 @@ struct OnboardingView: View {
     @State private var workEnd = Calendar.current.date(from: DateComponents(hour: 17, minute: 0))!
     @State private var bio: String = ""
 
-    private let totalSteps = 4
+    private let totalSteps = 5
 
     var body: some View {
         ZStack {
             FlowLineTheme.mainBg.ignoresSafeArea()
+            CosmosBackground().ignoresSafeArea()
 
             // Watermark step number
             Text(String(format: "%02d", currentStep + 1))
@@ -39,7 +40,11 @@ struct OnboardingView: View {
                 HStack(spacing: 6) {
                     ForEach(0..<totalSteps, id: \.self) { i in
                         Capsule()
-                            .fill(i <= currentStep ? FlowLineTheme.accent : FlowLineTheme.borderHi)
+                            .fill(i <= currentStep
+                                  ? AnyShapeStyle(LinearGradient(
+                                        colors: [FlowLineTheme.accent, Color(hex: "#c4b5fd")],
+                                        startPoint: .leading, endPoint: .trailing))
+                                  : AnyShapeStyle(FlowLineTheme.borderHi))
                             .frame(height: 3)
                             .animation(.easeInOut(duration: 0.3), value: currentStep)
                     }
@@ -56,6 +61,7 @@ struct OnboardingView: View {
                     case 1: scheduleStep
                     case 2: workHoursStep
                     case 3: bioStep
+                    case 4: calendarStep
                     default: EmptyView()
                     }
                 }
@@ -100,11 +106,27 @@ struct OnboardingView: View {
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
                         .background(
-                            currentStep == 0 && name.trimmingCharacters(in: .whitespaces).isEmpty
-                                ? FlowLineTheme.accent.opacity(0.3)
-                                : FlowLineTheme.accent
+                            Group {
+                                if currentStep == 0 && name.trimmingCharacters(in: .whitespaces).isEmpty {
+                                    LinearGradient(
+                                        colors: [FlowLineTheme.accent.opacity(0.3), Color(hex: "#8b6dff").opacity(0.3)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    )
+                                } else {
+                                    LinearGradient(
+                                        colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    )
+                                }
+                            }
                         )
                         .clipShape(Capsule())
+                        .shadow(
+                            color: (currentStep == 0 && name.trimmingCharacters(in: .whitespaces).isEmpty)
+                                ? .clear
+                                : FlowLineTheme.accent.opacity(0.55),
+                            radius: 14, y: 5
+                        )
                     }
                     .buttonStyle(.plain)
                     .disabled(currentStep == 0 && name.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -139,7 +161,9 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("What should\nwe call you?")
                     .font(.system(size: 32, weight: .black))
-                    .foregroundColor(FlowLineTheme.mainTxt)
+                    .foregroundStyle(LinearGradient(
+                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd")],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
                     .lineSpacing(2)
 
                 Text("Your profile name")
@@ -182,7 +206,9 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Your daily\nrhythm")
                     .font(.system(size: 32, weight: .black))
-                    .foregroundColor(FlowLineTheme.mainTxt)
+                    .foregroundStyle(LinearGradient(
+                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd")],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
                     .lineSpacing(2)
 
                 Text("When do you wake and sleep?")
@@ -205,7 +231,9 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Fixed\ncommitments?")
                     .font(.system(size: 32, weight: .black))
-                    .foregroundColor(FlowLineTheme.mainTxt)
+                    .foregroundStyle(LinearGradient(
+                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd")],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
                     .lineSpacing(2)
 
                 Text("School, work, or regular blocks")
@@ -243,7 +271,9 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Tell the AI\nabout you")
                     .font(.system(size: 32, weight: .black))
-                    .foregroundColor(FlowLineTheme.mainTxt)
+                    .foregroundStyle(LinearGradient(
+                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd")],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
                     .lineSpacing(2)
 
                 Text("The more context, the smarter your plans")
@@ -277,6 +307,101 @@ struct OnboardingView: View {
                     .frame(height: 1.5)
                     .animation(.easeInOut(duration: 0.2), value: bio.isEmpty)
             }
+        }
+        .padding(.horizontal, 28)
+    }
+
+    // MARK: - Step 5: Calendar Integration
+
+    private var calendarStep: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Your calendars,\nconnected.")
+                    .font(.system(size: 32, weight: .black))
+                    .foregroundStyle(LinearGradient(
+                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd")],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .lineSpacing(2)
+
+                Text("AI reads your events before planning — never double-books you")
+                    .font(.system(size: 14))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+            }
+
+            VStack(spacing: 10) {
+                // Apple Calendar
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.red.opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "calendar")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.red)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Apple Calendar")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(FlowLineTheme.mainTxt)
+                        Text("iCloud, local calendars & Exchange")
+                            .font(.system(size: 12))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                    }
+                    Spacer()
+                    Label("Automatic", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color(hex: "#2ecc71"))
+                }
+                .padding(14)
+                .background(FlowLineTheme.tertiaryBg)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(FlowLineTheme.borderHi, lineWidth: 1)
+                )
+
+                // Google Calendar
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(hex: "#4285f4").opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        Text("G")
+                            .font(.system(size: 22, weight: .black))
+                            .foregroundColor(Color(hex: "#4285f4"))
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Google Calendar")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(FlowLineTheme.mainTxt)
+                        Text("System Settings → Internet Accounts → Google")
+                            .font(.system(size: 12))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                    }
+                    Spacer()
+                }
+                .padding(14)
+                .background(FlowLineTheme.tertiaryBg)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(FlowLineTheme.borderHi, lineWidth: 1)
+                )
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                    .padding(.top, 1)
+                Text("Flowline also saves your AI-generated plans directly to any connected calendar — with one click.")
+                    .font(.system(size: 12.5))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .background(FlowLineTheme.tertiaryBg.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .padding(.horizontal, 28)
     }

@@ -19,6 +19,8 @@ struct CalendarView: View {
     var body: some View {
         ZStack {
             FlowLineTheme.mainBg.ignoresSafeArea()
+            CosmosBackground()
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // ── Header ──────────────────────────────────────────────
@@ -31,7 +33,12 @@ struct CalendarView: View {
                                 .foregroundColor(FlowLineTheme.secondTxt)
                             Text(weekRangeString)
                                 .font(.system(size: 22, weight: .black))
-                                .foregroundColor(FlowLineTheme.mainTxt)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd").opacity(0.85)],
+                                        startPoint: .leading, endPoint: .trailing
+                                    )
+                                )
                         }
 
                         Spacer()
@@ -58,11 +65,17 @@ struct CalendarView: View {
                             } label: {
                                 Text("Today")
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(FlowLineTheme.mainBg)
+                                    .foregroundColor(.white)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 5)
-                                    .background(FlowLineTheme.accent)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                                            startPoint: .leading, endPoint: .trailing
+                                        )
+                                    )
                                     .clipShape(Capsule())
+                                    .shadow(color: FlowLineTheme.accent.opacity(0.4), radius: 6, x: 0, y: 2)
                             }
                             .buttonStyle(.plain)
 
@@ -212,8 +225,13 @@ struct CalendarView: View {
                 ZStack(alignment: .topLeading) {
                     // Today column tint
                     if isToday {
-                        Rectangle()
-                            .fill(FlowLineTheme.accent.opacity(0.03))
+                        LinearGradient(
+                            colors: [
+                                FlowLineTheme.accent.opacity(0.10),
+                                FlowLineTheme.accent.opacity(0.04)
+                            ],
+                            startPoint: .top, endPoint: .bottom
+                        )
                     }
 
                     // Hour lines
@@ -236,12 +254,19 @@ struct CalendarView: View {
 
                         ZStack(alignment: .leading) {
                             Rectangle()
-                                .fill(FlowLineTheme.accent.opacity(0.6))
-                                .frame(height: 1)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [FlowLineTheme.accentHi, FlowLineTheme.accent.opacity(0.4)],
+                                        startPoint: .leading, endPoint: .trailing
+                                    )
+                                )
+                                .frame(height: 1.5)
+                                .shadow(color: FlowLineTheme.accent.opacity(0.7), radius: 4, x: 0, y: 0)
                             Circle()
-                                .fill(FlowLineTheme.accent)
-                                .frame(width: 6, height: 6)
-                                .offset(x: -3)
+                                .fill(FlowLineTheme.accentHi)
+                                .frame(width: 7, height: 7)
+                                .shadow(color: FlowLineTheme.accent.opacity(0.9), radius: 5, x: 0, y: 0)
+                                .offset(x: -3.5)
                         }
                         .offset(y: yNow)
                     }
@@ -356,11 +381,23 @@ struct CalendarView: View {
 
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(color.opacity(0.18))
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.22), color.opacity(0.10)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .stroke(color.opacity(0.90), lineWidth: 1.5)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [color.opacity(1.0), color.opacity(0.55)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.5
+                            )
                     )
+                    .shadow(color: color.opacity(0.30), radius: 6, x: 0, y: 2)
 
                 HStack(spacing: 0) {
                     RoundedRectangle(cornerRadius: 2, style: .continuous)

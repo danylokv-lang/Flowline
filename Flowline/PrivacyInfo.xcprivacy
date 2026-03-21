@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	    Flowline Privacy Manifest
+	    Required by Apple for all apps submitted to the Mac App Store.
+	    https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
+	-->
+
+	<!-- Flowline does NOT do cross-app/cross-site tracking -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+
+	<!-- No tracking domains -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!--
+	    Required-reason APIs used by Flowline:
+
+	    NSPrivacyAccessedAPICategoryUserDefaults
+	    - Used by @AppStorage to persist onboarding state, selected tab,
+	      streak data, and user preferences across launches.
+	    - Reason CA92.1: Accessed to read/write data that the app itself
+	      wrote and that is not shared with third parties.
+	-->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+
+	<!--
+	    Data Flowline collects:
+
+	    1. Name — provided voluntarily by the user during onboarding.
+	       Stored locally on-device only. Not linked to identity beyond
+	       the device. Used solely to personalise the AI planning prompt.
+
+	    2. Usage data — anonymous crash/purchase signals via RevenueCat.
+	       Not linked to the user's identity.
+	-->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!-- User-provided name -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Anonymous purchase / crash data via RevenueCat -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherDiagnosticData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+
+</dict>
+</plist>

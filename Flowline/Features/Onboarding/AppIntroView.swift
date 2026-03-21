@@ -25,17 +25,21 @@ struct AppIntroView: View {
                 // ── Base background ────────────────────────────────────
                 FlowLineTheme.mainBg.ignoresSafeArea()
 
+                // ── Cosmos star field ──────────────────────────────────
+                CosmosBackground()
+                    .ignoresSafeArea()
+
                 // ── Ambient glow that shifts with the page accent ──────
                 RadialGradient(
-                    colors: [accent.opacity(0.14), .clear],
+                    colors: [accent.opacity(0.22), .clear],
                     center: .init(x: 0.5, y: 0.3),
                     startRadius: 0,
-                    endRadius: geo.size.width * 0.7
+                    endRadius: geo.size.width * 0.8
                 )
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.7), value: page)
 
-                // ── Floating particle layer ────────────────────────────
+                // ── Floating accent particle layer ─────────────────────
                 IntroParticles(accent: accent)
                     .ignoresSafeArea()
 
@@ -89,7 +93,12 @@ struct AppIntroView: View {
                     VStack(spacing: 10) {
                         Text(title(for: page))
                             .font(.system(size: clamp(geo.size.width * 0.058, lo: 24, hi: 36), weight: .black))
-                            .foregroundColor(FlowLineTheme.mainTxt)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd").opacity(0.9)],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
+                            )
                             .multilineTextAlignment(.center)
                             .lineSpacing(1)
 
@@ -154,9 +163,15 @@ struct AppIntroView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 26)
                             .padding(.vertical, 13)
-                            .background(accent)
+                            .background(
+                                LinearGradient(
+                                    colors: [accent, accent.opacity(0.75)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
                             .clipShape(Capsule())
-                            .shadow(color: accent.opacity(0.45), radius: 14, y: 5)
+                            .shadow(color: accent.opacity(0.60), radius: 16, y: 6)
+                            .shadow(color: accent.opacity(0.25), radius: 4,  y: 2)
                         }
                         .buttonStyle(.plain)
                         .animation(.easeInOut(duration: 0.3), value: page)
@@ -231,7 +246,7 @@ private struct IntroParticles: View {
                     let x = (sin(fi * 1.23 + t * 0.18) * 0.5 + 0.5) * size.width
                     let y = (cos(fi * 0.87 + t * 0.13) * 0.5 + 0.5) * size.height
                     let r  = 1.5 + sin(fi * 2.1 + t * 0.6) * 1.2
-                    let op = 0.12 + sin(fi * 1.7 + t * 0.4) * 0.10
+                    let op = 0.22 + sin(fi * 1.7 + t * 0.4) * 0.16
                     ctx.fill(
                         Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
                         with: .color(accent.opacity(max(0, op)))

@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import EventKit
 import Foundation
@@ -21,6 +22,18 @@ final class CalendarService: ObservableObject {
     @Published private(set) var isAuthorized = false
 
     private init() {
+        refreshAuthStatus()
+        // Re-check whenever the app becomes active (user may have changed
+        // permission in System Preferences while the app was in the background)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(refreshAuthStatus),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    @objc private func refreshAuthStatus() {
         if #available(macOS 14.0, iOS 17.0, *) {
             isAuthorized = EKEventStore.authorizationStatus(for: .event) == .fullAccess
         } else {
@@ -170,11 +183,12 @@ final class CalendarService: ObservableObject {
     }
 
     /// Saves plan blocks to the chosen calendar (by identifier) or falls back to the
-    /// dedicated "Flowline" calendar. Deletes existing events on affected dates first.
+    /// dedicated "Flowline" calendar. Deletes all previously Flowline-tagged events on
+    /// affected dates across ALL writable calendars before writing the new ones.
     func savePlan(_ plan: GeneratedPlan, toCalendarID calendarID: String? = nil) throws {
         guard isAuthorized else { return }
 
-        // Prefer the user-picked calendar (an existing one, avoids CalDAV create issues)
+        // Resolve target calendar
         let flCal: EKCalendar
         if let id = calendarID,
            let picked = store.calendar(withIdentifier: id),
@@ -191,20 +205,26 @@ final class CalendarService: ObservableObject {
         timeFmt.dateFormat = "HH:mm"
         let cal = Calendar.current
 
-        // Collect all dates affected by this plan
+        // All dates this plan touches
         let affectedDates = Set(plan.blocks.compactMap { $0.date })
 
-        // Delete existing Flowline events on those dates
+        // All writable calendars — so we can delete old Flowline events regardless of
+        // which calendar they were saved to last time (e.g. user switched Google → iCloud).
+        let allWritable = store.calendars(for: .event).filter { $0.allowsContentModifications }
+
+        // Delete every Flowline-tagged event on affected dates across all calendars.
+        // We check the notes tag so we never accidentally delete the user's own events.
         for dateStr in affectedDates {
             guard let day = dateFmt.date(from: dateStr) else { continue }
             let start = cal.startOfDay(for: day)
             let end   = cal.date(byAdding: .day, value: 1, to: start)!
-            let pred  = store.predicateForEvents(withStart: start, end: end, calendars: [flCal])
+            let pred  = store.predicateForEvents(withStart: start, end: end, calendars: allWritable)
             store.events(matching: pred)
+                .filter { $0.notes?.contains("Added by Flowline") == true }
                 .forEach { try? store.remove($0, span: .thisEvent, commit: false) }
         }
 
-        // Create new events
+        // Write new events to the chosen calendar
         for block in plan.blocks {
             guard let dateStr = block.date,
                   let day     = dateFmt.date(from: dateStr),
@@ -230,6 +250,7 @@ final class CalendarService: ObservableObject {
             try store.save(event, span: .thisEvent, commit: false)
         }
 
+        // Single commit — deletes and inserts land together
         try store.commit()
     }
 }
