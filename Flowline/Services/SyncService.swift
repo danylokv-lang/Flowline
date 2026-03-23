@@ -12,8 +12,7 @@ final class SyncService {
     static let shared = SyncService()
     private init() {}
 
-    private let base      = "https://claude-proxy.danylokv.workers.dev"
-    private let appSecret = Config.appSecret ?? ""
+    private let base      = Config.proxyURL
     private let hhmmFmt: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "HH:mm"; return f
     }()
@@ -297,7 +296,6 @@ final class SyncService {
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue(appSecret,         forHTTPHeaderField: "x-app-secret")
         if let body {
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")

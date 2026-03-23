@@ -328,19 +328,16 @@ Today is \(dateString).
     // MARK: - Private
 
     private func performRequest(body: [String: Any]) async throws -> Data {
-        // Use proxy in production, direct API in development
-        let endpoint: String
         var request: URLRequest
 
-        if Config.usesProxy, let proxyURL = Config.proxyURL, let secret = Config.appSecret {
-            endpoint = proxyURL
-            request = URLRequest(url: URL(string: endpoint)!)
+        // Always use proxy in production
+        if let proxyURL = URL(string: Config.proxyURL) {
+            request = URLRequest(url: proxyURL)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "content-type")
-            request.setValue(secret, forHTTPHeaderField: "x-app-secret")
         } else {
-            endpoint = "https://api.anthropic.com/v1/messages"
-            request = URLRequest(url: URL(string: endpoint)!)
+            let directURL = URL(string: "https://api.anthropic.com/v1/messages")!
+            request = URLRequest(url: directURL)
             request.httpMethod = "POST"
             request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")

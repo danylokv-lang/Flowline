@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		971EAD322F7097B2006D2662 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 971EAD342F7097B2006D2662 /* RevenueCat */; };
-		971EAD332F7097B2006D2662 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 971EAD352F7097B2006D2662 /* RevenueCatUI */; };
-		977D71612F6CB6E90009D589 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 977D71602F6CB6E90009D589 /* RevenueCat */; };
-		977D71632F6CB6E90009D589 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 977D71622F6CB6E90009D589 /* RevenueCatUI */; };
+		977B71872F7205D100538EC7 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 977B71862F7205D100538EC7 /* RevenueCat */; };
+		977B71892F7205D100538EC7 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 977B71882F7205D100538EC7 /* RevenueCatUI */; };
+		977B718C2F7205F300538EC7 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 977B718B2F7205F300538EC7 /* RevenueCat */; };
+		977B718E2F7205F900538EC7 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 977B718D2F7205F900538EC7 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -91,8 +91,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				971EAD322F7097B2006D2662 /* RevenueCat in Frameworks */,
-				971EAD332F7097B2006D2662 /* RevenueCatUI in Frameworks */,
+				977B71892F7205D100538EC7 /* RevenueCatUI in Frameworks */,
+				977B71872F7205D100538EC7 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,8 +114,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				977D71632F6CB6E90009D589 /* RevenueCatUI in Frameworks */,
-				977D71612F6CB6E90009D589 /* RevenueCat in Frameworks */,
+				977B718E2F7205F900538EC7 /* RevenueCatUI in Frameworks */,
+				977B718C2F7205F300538EC7 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -145,6 +145,7 @@
 				971EAD0A2F7097B1006D2662 /* Flowline_iOS */,
 				971EAD1A2F7097B2006D2662 /* Flowline_iOSTests */,
 				971EAD242F7097B2006D2662 /* Flowline_iOSUITests */,
+				977B718A2F7205F300538EC7 /* Frameworks */,
 				9752E0132F6704A700CBF252 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -160,6 +161,13 @@
 				971EAD212F7097B2006D2662 /* Flowline_iOSUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		977B718A2F7205F300538EC7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -183,8 +191,8 @@
 			);
 			name = Flowline_iOS;
 			packageProductDependencies = (
-				971EAD342F7097B2006D2662 /* RevenueCat */,
-				971EAD352F7097B2006D2662 /* RevenueCatUI */,
+				977B71862F7205D100538EC7 /* RevenueCat */,
+				977B71882F7205D100538EC7 /* RevenueCatUI */,
 			);
 			productName = Flowline_iOS;
 			productReference = 971EAD092F7097B1006D2662 /* Flowline_iOS.app */;
@@ -253,8 +261,8 @@
 			);
 			name = Flowline;
 			packageProductDependencies = (
-				977D71602F6CB6E90009D589 /* RevenueCat */,
-				977D71622F6CB6E90009D589 /* RevenueCatUI */,
+				977B718B2F7205F300538EC7 /* RevenueCat */,
+				977B718D2F7205F900538EC7 /* RevenueCatUI */,
 			);
 			productName = Flowline;
 			productReference = 9752E0122F6704A700CBF252 /* Flowline.app */;
@@ -350,7 +358,7 @@
 			mainGroup = 9752E0092F6704A700CBF252;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				977D715F2F6CB6E90009D589 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				977B71852F7205D100538EC7 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9752E0132F6704A700CBF252 /* Products */;
@@ -507,12 +515,16 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -542,12 +554,16 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -819,14 +835,13 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = macosx;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Debug;
@@ -878,14 +893,13 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = macosx;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;
@@ -1061,9 +1075,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		977D715F2F6CB6E90009D589 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+		977B71852F7205D100538EC7 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 5.66.0;
@@ -1072,24 +1086,24 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		971EAD342F7097B2006D2662 /* RevenueCat */ = {
+		977B71862F7205D100538EC7 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 977D715F2F6CB6E90009D589 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			package = 977B71852F7205D100538EC7 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCat;
 		};
-		971EAD352F7097B2006D2662 /* RevenueCatUI */ = {
+		977B71882F7205D100538EC7 /* RevenueCatUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 977D715F2F6CB6E90009D589 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			package = 977B71852F7205D100538EC7 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCatUI;
 		};
-		977D71602F6CB6E90009D589 /* RevenueCat */ = {
+		977B718B2F7205F300538EC7 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 977D715F2F6CB6E90009D589 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			package = 977B71852F7205D100538EC7 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCat;
 		};
-		977D71622F6CB6E90009D589 /* RevenueCatUI */ = {
+		977B718D2F7205F900538EC7 /* RevenueCatUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 977D715F2F6CB6E90009D589 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			package = 977B71852F7205D100538EC7 /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
