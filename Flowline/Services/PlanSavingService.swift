@@ -97,7 +97,9 @@ struct PlanSavingService {
             for planBlock in planBlocks {
                 guard let startParsed = timeFormatter.date(from: planBlock.startTime),
                       let endParsed = timeFormatter.date(from: planBlock.endTime) else {
+                    #if DEBUG
                     print("⚠️ Could not parse time for block:", planBlock.title, planBlock.startTime, planBlock.endTime)
+                    #endif
                     continue
                 }
 
@@ -136,12 +138,16 @@ struct PlanSavingService {
                     endTime: block.endTime
                 )
                 dayPlan.blocks.append(schedBlock)
+                #if DEBUG
                 print("✅ Saved block:", block.title, "for", startOfDay)
+                #endif
             }
         }
 
         try context.save()
+        #if DEBUG
         print("✅ Plan saved, total days:", blocksByDate.count)
+        #endif
     }
 
     func calendarContext(forWeekOf date: Date, context: ModelContext) throws -> String {
