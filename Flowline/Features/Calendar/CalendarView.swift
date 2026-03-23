@@ -5,9 +5,11 @@ struct CalendarView: View {
     @Query private var dayPlans: [DayPlan]
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var colorManager: CategoryColorManager
+    @EnvironmentObject private var authService: AuthService
     @State private var currentWeekStart: Date = CalendarView.mondayOfCurrentWeek()
     @State private var confirmDeleteDay: Date? = nil
     @State private var confirmDeleteWeek = false
+    @State private var checkInTarget: ScheduleBlock? = nil
 
     // iOS-only: which single day is currently displayed
     #if os(iOS)
@@ -31,6 +33,28 @@ struct CalendarView: View {
 
             #if os(iOS)
             iOSContent
+                .confirmationDialog(
+                    checkInTarget.map { $0.endTime <= Date() ? "How did this block go?" : $0.title } ?? "",
+                    isPresented: Binding(
+                        get: { checkInTarget != nil },
+                        set: { if !$0 { checkInTarget = nil } }
+                    ),
+                    titleVisibility: .visible
+                ) {
+                    if let block = checkInTarget {
+                        // Check-in options — only for past blocks
+                        if block.endTime <= Date() {
+                            Button("Done ✓")     { setCheckIn(.done,    for: block); checkInTarget = nil }
+                            Button("Partly ~")   { setCheckIn(.partly,  for: block); checkInTarget = nil }
+                            Button("Skipped ✕")  { setCheckIn(.skipped, for: block); checkInTarget = nil }
+                        }
+                        Button("Delete block", role: .destructive) {
+                            deleteBlock(block)
+                            checkInTarget = nil
+                        }
+                    }
+                    Button("Cancel", role: .cancel) { checkInTarget = nil }
+                }
             #else
             macOSContent
             #endif
@@ -299,10 +323,11 @@ struct CalendarView: View {
                                 .frame(height: max(height, 14))
                                 .padding(.horizontal, 4)
                                 .offset(y: top)
-                                .contextMenu {
-                                    Button(role: .destructive) { deleteBlock(block) } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
+                                // iOS: tap opens action sheet — no context menu to avoid the
+                                // native "lift + disappear" peek animation on long press.
+                                // Fire for ALL blocks so future blocks can also be deleted.
+                                .onTapGesture {
+                                    checkInTarget = block
                                 }
                         }
                     }
@@ -577,6 +602,12 @@ struct CalendarView: View {
                             .padding(.horizontal, 2)
                             .offset(y: top)
                             .contextMenu {
+                                if block.endTime <= Date() {
+                                    Button { setCheckIn(.done,    for: block) } label: { Label("Done ✓",    systemImage: "checkmark.circle.fill") }
+                                    Button { setCheckIn(.partly,  for: block) } label: { Label("Partly ⚡", systemImage: "bolt.circle.fill") }
+                                    Button { setCheckIn(.skipped, for: block) } label: { Label("Skipped ✗", systemImage: "xmark.circle.fill") }
+                                    Divider()
+                                }
                                 Button(role: .destructive) { deleteBlock(block) } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -605,104 +636,16 @@ struct CalendarView: View {
 
     // MARK: - Block rendering (shared)
 
+    /// Thin wrapper so the proper View struct is instantiated, enabling SwiftData observation.
     @ViewBuilder
     private func blockView(for block: ScheduleBlock, height: CGFloat) -> some View {
-        let isSplit = block.title.contains("/")
-
-        if isSplit {
-            let parts  = block.title.split(separator: "/", maxSplits: 1)
-                                    .map { String($0).trimmingCharacters(in: .whitespaces) }
-            let title1 = parts[0]
-            let title2 = parts.count > 1 ? parts[1] : ""
-            let color1 = colorForCategory(block.category)
-            let color2 = colorForCategory(guessCategory(from: title2))
-
-            ZStack(alignment: .topLeading) {
-                HStack(spacing: 0) {
-                    Rectangle().fill(color1.opacity(0.18))
-                    Rectangle().fill(color2.opacity(0.18))
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .stroke(
-                        LinearGradient(colors: [color1.opacity(0.9), color2.opacity(0.9)],
-                                       startPoint: .leading, endPoint: .trailing),
-                        lineWidth: 1.5
-                    )
-
-                HStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color1).frame(width: 3)
-                    Spacer()
-                }
-
-                GeometryReader { geo in
-                    Rectangle()
-                        .fill(LinearGradient(colors: [color1.opacity(0.35), color2.opacity(0.35)],
-                                             startPoint: .top, endPoint: .bottom))
-                        .frame(width: 1)
-                        .offset(x: geo.size.width / 2)
-                }
-
-                HStack(alignment: .top, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(title1)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(color1)
-                            .lineLimit(height > 40 ? 2 : 1)
-                        if height > 36 {
-                            Text(timeRangeString(start: block.startTime, end: block.endTime))
-                                .font(.system(size: 8, design: .monospaced))
-                                .foregroundColor(color1.opacity(0.75))
-                        }
-                    }
-                    .padding(.leading, 7).padding(.trailing, 3).padding(.vertical, 3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(title2)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(color2)
-                            .lineLimit(height > 40 ? 2 : 1)
-                    }
-                    .padding(.horizontal, 5).padding(.vertical, 3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        } else {
-            let color = colorForCategory(block.category)
-
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(LinearGradient(colors: [color.opacity(0.22), color.opacity(0.10)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .stroke(LinearGradient(colors: [color.opacity(1.0), color.opacity(0.55)],
-                                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                                    lineWidth: 1.5)
-                    )
-                    .shadow(color: color.opacity(0.30), radius: 6, x: 0, y: 2)
-
-                HStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color).frame(width: 3)
-                    Spacer()
-                }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(block.title)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(color)
-                        .lineLimit(height > 40 ? 2 : 1)
-                    if height > 36 {
-                        Text(timeRangeString(start: block.startTime, end: block.endTime))
-                            .font(.system(size: 8, design: .monospaced))
-                            .foregroundColor(color.opacity(0.75))
-                    }
-                }
-                .padding(.leading, 7).padding(.trailing, 5).padding(.vertical, 3)
-            }
-        }
+        CalendarBlockBody(
+            block: block,
+            height: height,
+            color: colorForCategory(block.category),
+            guessedColor: { colorForCategory(guessCategory(from: $0)) },
+            timeRange: timeRangeString(start: block.startTime, end: block.endTime)
+        )
     }
 
     // MARK: - Shared helpers
@@ -756,6 +699,16 @@ struct CalendarView: View {
         colorManager.color(for: category)
     }
 
+    // MARK: - Check-in (sets result + pushes day to server)
+
+    private func setCheckIn(_ result: CheckInResult, for block: ScheduleBlock) {
+        block.checkInResult = result
+        guard let token = authService.token, !token.isEmpty else { return }
+        if let plan = dayPlans.first(where: { $0.blocks.contains(where: { $0.persistentModelID == block.persistentModelID }) }) {
+            Task { await SyncService.shared.pushDay(plan, token: token) }
+        }
+    }
+
     // MARK: - Delete
 
     private func deleteDay(_ day: Date) {
@@ -787,6 +740,193 @@ struct CalendarView: View {
         let weekday = cal.component(.weekday, from: today)
         let delta   = (weekday == 1) ? -6 : -(weekday - 2)
         return cal.startOfDay(for: cal.date(byAdding: .day, value: delta, to: today)!)
+    }
+}
+
+// MARK: - CalendarBlockBody
+// Separate View struct so SwiftData's @Observable wiring fires on checkInResult changes.
+
+private struct CalendarBlockBody: View {
+    let block: ScheduleBlock
+    let height: CGFloat
+    let color: Color
+    let guessedColor: (String) -> Color
+    let timeRange: String
+
+    var body: some View {
+        if block.title.contains("/") {
+            splitBlock
+        } else {
+            singleBlock
+        }
+    }
+
+    // MARK: Split block (A / B)
+    private var splitBlock: some View {
+        let parts  = block.title.split(separator: "/", maxSplits: 1)
+                                .map { String($0).trimmingCharacters(in: .whitespaces) }
+        let title1 = parts[0]
+        let title2 = parts.count > 1 ? parts[1] : ""
+        let color2 = guessedColor(title2)
+
+        // Apply same check-in opacity as single blocks
+        let blockOpacity: Double = block.checkInResult == .skipped ? 0.55
+                                 : (block.checkInResult == nil && block.endTime <= Date()) ? 0.75
+                                 : 1.0
+
+        return ZStack(alignment: .topLeading) {
+            HStack(spacing: 0) {
+                Rectangle().fill(color.opacity(0.18))
+                Rectangle().fill(color2.opacity(0.18))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .stroke(
+                    LinearGradient(colors: [color.opacity(0.9), color2.opacity(0.9)],
+                                   startPoint: .leading, endPoint: .trailing),
+                    lineWidth: 1.5
+                )
+
+            HStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color).frame(width: 3)
+                Spacer()
+            }
+
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(LinearGradient(colors: [color.opacity(0.35), color2.opacity(0.35)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(width: 1)
+                    .offset(x: geo.size.width / 2)
+            }
+
+            HStack(alignment: .top, spacing: 0) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title1)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(color)
+                        .lineLimit(height > 40 ? 2 : 1)
+                        .strikethrough(block.checkInResult == .skipped, color: color.opacity(0.7))
+                    if height > 36 {
+                        Text(timeRange)
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(color.opacity(0.75))
+                    }
+                }
+                .padding(.leading, 7).padding(.trailing, 3).padding(.vertical, 3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title2)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(color2)
+                        .lineLimit(height > 40 ? 2 : 1)
+                        .strikethrough(block.checkInResult == .skipped, color: color2.opacity(0.7))
+                }
+                .padding(.horizontal, 5).padding(.vertical, 3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        // Badge — same as single blocks
+        .overlay(alignment: .bottomTrailing) {
+            if let result = block.checkInResult {
+                checkInBadge(result)
+                    .padding(3)
+            }
+        }
+        .opacity(blockOpacity)
+    }
+
+    // MARK: Single block — reacts to checkInResult via @Observable
+    private var singleBlock: some View {
+        // Derived colors based on live checkInResult
+        let accentColor: Color = {
+            switch block.checkInResult {
+            case .done:    return .green
+            case .partly:  return .orange
+            case .skipped: return Color(hex: "#ef4444")
+            case .none:    return color
+            }
+        }()
+        let bgFill: LinearGradient = {
+            switch block.checkInResult {
+            case .done:
+                return LinearGradient(colors: [Color.green.opacity(0.14), Color.green.opacity(0.07)],
+                                      startPoint: .topLeading, endPoint: .bottomTrailing)
+            case .partly:
+                return LinearGradient(colors: [Color.orange.opacity(0.14), Color.orange.opacity(0.07)],
+                                      startPoint: .topLeading, endPoint: .bottomTrailing)
+            case .skipped:
+                return LinearGradient(colors: [Color(hex: "#ef4444").opacity(0.10), Color(hex: "#ef4444").opacity(0.05)],
+                                      startPoint: .topLeading, endPoint: .bottomTrailing)
+            case .none:
+                return LinearGradient(colors: [color.opacity(0.22), color.opacity(0.10)],
+                                      startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
+        }()
+        let blockOpacity: Double = block.checkInResult == .skipped ? 0.55
+                                 : (block.checkInResult == nil && block.endTime <= Date()) ? 0.75
+                                 : 1.0
+
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(bgFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [accentColor.opacity(1.0), accentColor.opacity(0.55)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                )
+                .shadow(color: accentColor.opacity(0.25), radius: 5, x: 0, y: 2)
+
+            HStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(accentColor)
+                    .frame(width: 3)
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(block.title)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(accentColor)
+                    .lineLimit(height > 40 ? 2 : 1)
+                    .strikethrough(block.checkInResult == .skipped, color: accentColor.opacity(0.7))
+                if height > 36 {
+                    Text(timeRange)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(accentColor.opacity(0.75))
+                }
+            }
+            .padding(.leading, 7).padding(.trailing, 5).padding(.vertical, 3)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let result = block.checkInResult {
+                checkInBadge(result)
+                    .padding(3)
+            }
+        }
+        .opacity(blockOpacity)
+    }
+
+    private func checkInBadge(_ result: CheckInResult) -> some View {
+        // ⚡ is an emoji and ignores foregroundColor — use unicode glyphs that render white
+        let (symbol, bg): (String, Color) = switch result {
+            case .done:    ("✓", Color.green)
+            case .partly:  ("~", Color.orange)   // ~ = "roughly / partly done"
+            case .skipped: ("✕", Color(hex: "#ef4444"))
+        }
+        return Text(symbol)
+            .font(.system(size: 9, weight: .black))
+            .foregroundColor(.white)
+            .frame(width: 16, height: 16)
+            .background(Circle().fill(bg))
+            .shadow(color: bg.opacity(0.6), radius: 4, x: 0, y: 1)
     }
 }
 

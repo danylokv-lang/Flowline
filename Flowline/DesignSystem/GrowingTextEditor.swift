@@ -107,6 +107,9 @@ struct GrowingTextEditor: UIViewRepresentable {
         tv.textContainerInset = .zero
         tv.textContainer.lineFragmentPadding = 0
         tv.returnKeyType = .send
+        // Prevent the text view from expanding horizontally — forces wrapping instead
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        tv.setContentHuggingPriority(.defaultLow, for: .horizontal)
         return tv
     }
 
