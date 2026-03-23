@@ -2,8 +2,60 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 import EventKit
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
+
+// Shared helper — wraps .navigationBarTitleDisplayMode(.inline) which is iOS-only
+private extension View {
+    func inlineNavTitle() -> some View {
+        #if os(iOS)
+        return self.navigationBarTitleDisplayMode(.inline)
+        #else
+        return self
+        #endif
+    }
+}
+
+// Shared helper — opens a URL on any platform
+private func openSystemURL(_ url: URL) {
+    #if os(macOS)
+    NSWorkspace.shared.open(url)
+    #else
+    UIApplication.shared.open(url)
+    #endif
+}
+
+// ── Settings entry point ─────────────────────────────────────────────────────
 
 struct SettingsView: View {
+    var body: some View {
+        #if os(macOS)
+        macOSSettingsRoot()
+        #else
+        iOSSettingsRoot()
+        #endif
+    }
+}
+
+// MARK: - macOS Settings (native TabView)
+
+#if os(macOS)
+private struct macOSSettingsRoot: View {
+    @EnvironmentObject private var authService: AuthService
+    @Environment(\.modelContext) private var context
+    @Query private var messages: [ChatMessage]
+    @Query private var dayPlans: [DayPlan]
+    @Query private var capturedTasks: [CapturedTask]
+    @Query private var profiles: [UserProfile]
+    @AppStorage("hasSeenIntro")           private var hasSeenIntro = true
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
+    @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
+    @State private var showLogoutConfirm = false
+    @State private var showDeleteConfirm = false
+
     var body: some View {
         TabView {
             ProfileSettingsTab()
@@ -23,10 +75,296 @@ struct SettingsView: View {
 
             DataSettingsTab()
                 .tabItem { Label("Data", systemImage: "externaldrive") }
+
+            accountTab
+                .tabItem { Label("Account", systemImage: "person.crop.circle.badge.checkmark") }
         }
-        .frame(width: 460, height: 480)
+        .frame(width: 500, height: 440)
+        .confirmationDialog("Log out of Flowline?",
+                            isPresented: $showLogoutConfirm,
+                            titleVisibility: .visible) {
+            Button("Log Out", role: .destructive) { authService.logout() }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Delete your account?",
+                            isPresented: $showDeleteConfirm,
+                            titleVisibility: .visible) {
+            Button("Delete Everything & Sign Out", role: .destructive) { deleteAll() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All data — chats, calendar blocks, and your profile — will be permanently erased.")
+        }
+    }
+
+    private var accountTab: some View {
+        Form {
+            if let user = authService.currentUser {
+                Section("Signed In As") {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.purple.opacity(0.18))
+                                .frame(width: 40, height: 40)
+                            Text(String(user.name.prefix(1)).uppercased())
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(.purple)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 6) {
+                                Text(user.name)
+                                    .font(.system(size: 13, weight: .semibold))
+                                if user.isPro {
+                                    Text("PRO")
+                                        .font(.system(size: 9, weight: .heavy))
+                                        .tracking(1)
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(Color.purple.opacity(0.18))
+                                        .foregroundColor(.purple)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            Text(user.email)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            Section {
+                Button("Log Out") { showLogoutConfirm = true }
+                    .foregroundColor(.red)
+                Button("Delete Account…") { showDeleteConfirm = true }
+                    .foregroundColor(.red)
+            } footer: {
+                Text("Deleting your account removes all local data and signs you out.")
+                    .font(.system(size: 11)).foregroundColor(.secondary)
+            }
+            Section("About") {
+                infoRow("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                infoRow("Build",   value: Bundle.main.infoDictionary?["CFBundleVersion"]            as? String ?? "1")
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func infoRow(_ label: String, value: String) -> some View {
+        HStack { Text(label); Spacer(); Text(value).foregroundColor(.secondary) }
+    }
+
+    private func deleteAll() {
+        messages.forEach { context.delete($0) }
+        dayPlans.forEach { context.delete($0) }
+        capturedTasks.forEach { context.delete($0) }
+        profiles.forEach { context.delete($0) }
+        hasSeenIntro = false
+        hasCompletedOnboarding = false
+        lastLoggedInUserId = ""
+        authService.logout()
     }
 }
+#endif
+
+// MARK: - iOS Settings (navigation list)
+
+#if os(iOS)
+private struct iOSSettingsRoot: View {
+    @EnvironmentObject private var authService: AuthService
+    @Environment(\.modelContext) private var context
+    @Query private var messages: [ChatMessage]
+    @Query private var dayPlans: [DayPlan]
+    @Query private var capturedTasks: [CapturedTask]
+    @Query private var profiles: [UserProfile]
+    @AppStorage("hasSeenIntro")           private var hasSeenIntro = true
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
+    @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
+
+    @State private var showLogoutConfirm = false
+    @State private var showDeleteConfirm = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                // ── Personalisation ──────────────────────────────────────────
+                Section {
+                    NavigationLink {
+                        ProfileSettingsTab()
+                            .navigationTitle("Profile")
+                            .inlineNavTitle()
+                    } label: {
+                        settingsRow(icon: "person.crop.circle", color: .blue, title: "Profile")
+                    }
+
+                    NavigationLink {
+                        AppearanceSettingsTab()
+                            .navigationTitle("Appearance")
+                            .inlineNavTitle()
+                    } label: {
+                        settingsRow(icon: "paintpalette", color: .purple, title: "Appearance")
+                    }
+                }
+
+                // ── App features ─────────────────────────────────────────────
+                Section {
+                    NavigationLink {
+                        NotificationSettingsTab()
+                            .navigationTitle("Notifications")
+                            .inlineNavTitle()
+                    } label: {
+                        settingsRow(icon: "bell.badge", color: .red, title: "Notifications")
+                    }
+
+                    NavigationLink {
+                        FocusSettingsTab()
+                            .navigationTitle("Focus Timer")
+                            .inlineNavTitle()
+                    } label: {
+                        settingsRow(icon: "timer", color: .orange, title: "Focus Timer")
+                    }
+
+                    NavigationLink {
+                        CalendarSettingsTab()
+                            .navigationTitle("Calendars")
+                            .inlineNavTitle()
+                    } label: {
+                        settingsRow(icon: "calendar", color: .red, title: "Calendars")
+                    }
+                }
+
+                // ── Data & Storage ───────────────────────────────────────────
+                Section {
+                    NavigationLink {
+                        DataSettingsTab()
+                            .navigationTitle("Data & Storage")
+                            .inlineNavTitle()
+                    } label: {
+                        settingsRow(icon: "externaldrive", color: .gray, title: "Data & Storage")
+                    }
+                }
+
+                // ── Account ──────────────────────────────────────────────────
+                Section {
+                    if let user = authService.currentUser {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.purple.opacity(0.18))
+                                    .frame(width: 36, height: 36)
+                                Text(String(user.name.prefix(1)).uppercased())
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.purple)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(user.name)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                Text(user.email)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if user.isPro {
+                                Text("PRO")
+                                    .font(.system(size: 9, weight: .heavy))
+                                    .tracking(1)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(Color.purple.opacity(0.18))
+                                    .foregroundColor(.purple)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+
+                    Button {
+                        showLogoutConfirm = true
+                    } label: {
+                        Label("Log Out", systemImage: "arrow.right.square")
+                            .foregroundColor(.red)
+                    }
+
+                    Button {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete Account", systemImage: "trash")
+                            .foregroundColor(.red)
+                    }
+                } header: {
+                    Text("Account")
+                } footer: {
+                    Text("Deleting your account removes all local data and signs you out.")
+                        .font(.system(size: 11))
+                }
+
+                // ── About ────────────────────────────────────────────────────
+                Section("About") {
+                    HStack {
+                        Text("Version")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                            .foregroundColor(.secondary)
+                    }
+                    HStack {
+                        Text("Build")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Settings")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+            #endif
+        }
+        .confirmationDialog("Log out of Flowline?",
+                            isPresented: $showLogoutConfirm,
+                            titleVisibility: .visible) {
+            Button("Log Out", role: .destructive) { authService.logout() }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Delete your account?",
+                            isPresented: $showDeleteConfirm,
+                            titleVisibility: .visible) {
+            Button("Delete Everything & Sign Out", role: .destructive) { deleteAll() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All data — chats, calendar blocks, and your profile — will be permanently erased.")
+        }
+    }
+
+    // ── Row helper ────────────────────────────────────────────────────────────
+    private func settingsRow(icon: String, color: Color, title: String) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(color)
+                    .frame(width: 30, height: 30)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            Text(title)
+                .foregroundColor(.primary)
+        }
+    }
+
+    // ── Delete all local data + sign out ──────────────────────────────────────
+    private func deleteAll() {
+        messages.forEach { context.delete($0) }
+        dayPlans.forEach { context.delete($0) }
+        capturedTasks.forEach { context.delete($0) }
+        profiles.forEach { context.delete($0) }
+        hasSeenIntro = false
+        hasCompletedOnboarding = false
+        lastLoggedInUserId = ""
+        authService.logout()
+    }
+}
+#endif
 
 // MARK: - Profile Tab
 
@@ -74,12 +412,23 @@ private struct ProfileForm: View {
                     .onChange(of: sleepTime) { profile.sleepTime = sleepTime }
 
                 Toggle("Fixed work hours", isOn: $profile.hasWorkHours)
+                    .onChange(of: profile.hasWorkHours) {
+                        UserDefaults.standard.set(profile.hasWorkHours, forKey: "profile.hasWorkHours")
+                    }
 
                 if profile.hasWorkHours {
                     DatePicker("Work starts", selection: $workStart, displayedComponents: .hourAndMinute)
-                        .onChange(of: workStart) { profile.workStartTime = workStart }
+                        .onChange(of: workStart) {
+                            profile.workStartTime = workStart
+                            let h = Calendar.current.component(.hour, from: workStart)
+                            UserDefaults.standard.set(h, forKey: "profile.workStartHour")
+                        }
                     DatePicker("Work ends", selection: $workEnd, displayedComponents: .hourAndMinute)
-                        .onChange(of: workEnd) { profile.workEndTime = workEnd }
+                        .onChange(of: workEnd) {
+                            profile.workEndTime = workEnd
+                            let h = Calendar.current.component(.hour, from: workEnd)
+                            UserDefaults.standard.set(h, forKey: "profile.workEndHour")
+                        }
                 }
             }
 
@@ -88,7 +437,7 @@ private struct ProfileForm: View {
                     .font(.system(size: 13))
                     .frame(height: 80)
                     .scrollContentBackground(.hidden)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(FlowLineTheme.tertiaryBg)
                     .cornerRadius(6)
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
@@ -178,10 +527,12 @@ private struct NotificationSettingsTab: View {
                         .font(.system(size: 12))
                     Spacer()
                     if permissionStatus == .denied {
-                        Button("Open System Settings") {
-                            NSWorkspace.shared.open(
-                                URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!
-                            )
+                        Button("Open Settings") {
+                            #if os(iOS)
+                            openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                            #else
+                            openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
+                            #endif
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -193,7 +544,6 @@ private struct NotificationSettingsTab: View {
         .padding(.vertical, 8)
         .onAppear {
             checkPermission()
-            // Restore time picker to saved value
             var comps        = DateComponents()
             comps.hour       = dailyReminderHour
             comps.minute     = dailyReminderMinute
@@ -214,7 +564,7 @@ private struct NotificationSettingsTab: View {
     private var statusText: String {
         switch permissionStatus {
         case .authorized:    return "Notifications allowed"
-        case .denied:        return "Notifications blocked — enable in System Settings"
+        case .denied:        return "Notifications blocked — enable in Settings"
         case .notDetermined: return "Permission not requested yet"
         default:             return "Unknown status"
         }
@@ -265,7 +615,6 @@ private struct NotificationSettingsTab: View {
     private func updateBreakNotifications() {
         guard breakRemindersEnabled else {
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-            // Re-add daily reminder if it was active
             if dailyReminderEnabled { scheduleDailyReminder() }
             return
         }
@@ -298,10 +647,12 @@ private struct FocusSettingsTab: View {
                     .help("Automatically begins a break timer when your focus block finishes")
             }
 
+            #if os(macOS)
             Section("Menu Bar") {
                 Toggle("Show countdown in menu bar", isOn: $showTimerInMenuBar)
                     .help("Displays live timer in the menu bar while a session is active")
             }
+            #endif
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
@@ -440,19 +791,16 @@ private struct DataSettingsTab: View {
 
 private struct CalendarSettingsTab: View {
     @AppStorage("saveCalendarSourceTitle") private var saveSourceTitle: String = ""
-    @State private var authStatus: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
-    @State private var googleConnected = false
+    @ObservedObject private var calService = CalendarService.shared
+    @State private var googleConnected  = false
     @State private var availableSources: [String] = []
-
-    private var isAuthorized: Bool {
-        authStatus == .fullAccess || authStatus == .authorized
-    }
+    @State private var isLoading        = true
 
     var body: some View {
         Form {
-            // ── Access + connected accounts ───────────────────────────────
+            // ── Access + connected accounts ───────────────────────────────────
             Section("Accounts") {
-                // Calendar access row
+                // Apple Calendar
                 HStack {
                     Image(systemName: "apple.logo")
                         .frame(width: 18)
@@ -460,16 +808,18 @@ private struct CalendarSettingsTab: View {
                     Text("Apple Calendar")
                         .font(.system(size: 13))
                     Spacer()
-                    if isAuthorized {
+                    if calService.isAuthorized {
                         HStack(spacing: 8) {
                             Label("Connected", systemImage: "checkmark.circle.fill")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.green)
                                 .labelStyle(.titleAndIcon)
                             Button("Revoke") {
-                                NSWorkspace.shared.open(
-                                    URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!
-                                )
+                                #if os(macOS)
+                                openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
+                                #else
+                                openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                                #endif
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
@@ -477,16 +827,28 @@ private struct CalendarSettingsTab: View {
                         }
                     } else {
                         Button("Allow Access") {
-                            NSWorkspace.shared.open(
-                                URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!
-                            )
+                            #if os(macOS)
+                            // macOS: always go to System Settings
+                            openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
+                            #else
+                            // iOS: show system dialog if not determined yet, else open Settings
+                            let status = EKEventStore.authorizationStatus(for: .event)
+                            if status == .notDetermined {
+                                Task {
+                                    await calService.requestAccess()
+                                    await MainActor.run { refresh() }
+                                }
+                            } else {
+                                openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                            }
+                            #endif
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                     }
                 }
 
-                // Google Calendar row
+                // Google Calendar
                 HStack {
                     Text("G")
                         .font(.system(size: 13, weight: .bold))
@@ -506,18 +868,22 @@ private struct CalendarSettingsTab: View {
                                 .foregroundColor(.green)
                                 .labelStyle(.titleAndIcon)
                             Button("Manage") {
-                                NSWorkspace.shared.open(
-                                    URL(string: "x-apple.systempreferences:com.apple.preferences.internetaccounts")!
-                                )
+                                #if os(macOS)
+                                openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preferences.internetaccounts")!)
+                                #else
+                                openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                                #endif
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                         }
                     } else {
                         Button("Connect") {
-                            NSWorkspace.shared.open(
-                                URL(string: "x-apple.systempreferences:com.apple.preferences.internetaccounts")!
-                            )
+                            #if os(macOS)
+                            openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preferences.internetaccounts")!)
+                            #else
+                            openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                            #endif
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -525,41 +891,67 @@ private struct CalendarSettingsTab: View {
                 }
             }
 
-            // ── Default save destination ──────────────────────────────────
-            if isAuthorized && !availableSources.isEmpty {
+            #if os(iOS)
+            Section {
+                Text("To add Google Calendar on iPhone, go to **Settings → Calendar → Accounts → Add Account → Google**.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            #endif
+
+            // ── Default save destination ──────────────────────────────────────
+            if calService.isAuthorized {
                 Section("Default Save Account") {
-                    Picker("Account", selection: $saveSourceTitle) {
-                        Text("System default").tag("")
-                        ForEach(availableSources, id: \.self) { src in
-                            Text(src).tag(src)
+                    if isLoading {
+                        HStack {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Loading accounts…")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
                         }
+                    } else if availableSources.isEmpty {
+                        Text("No calendar accounts found.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Picker("Account", selection: $saveSourceTitle) {
+                            Text("System default").tag("")
+                            ForEach(availableSources, id: \.self) { src in
+                                Text(src).tag(src)
+                            }
+                        }
+                        .pickerStyle(.menu)
                     }
-                    .pickerStyle(.menu)
                 }
             }
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
-        .onAppear { refresh() }
+        .onAppear {
+            // Small delay so EKEventStore finishes loading sources
+            // before we read them (avoids the "nothing connected" flash)
+            Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                await MainActor.run { refresh() }
+            }
+        }
+        .onChange(of: calService.isAuthorized) { _, authorized in
+            if authorized { refresh() }
+        }
     }
 
     private func refresh() {
-        authStatus = EKEventStore.authorizationStatus(for: .event)
-        guard isAuthorized else { googleConnected = false; availableSources = []; return }
-
-        let store = EKEventStore()
-
-        googleConnected = store.sources.contains {
-            $0.sourceType == .calDAV &&
-            ($0.title.lowercased().contains("google") ||
-             $0.title.lowercased().contains("gmail") ||
-             $0.title.contains("@gmail"))
+        guard calService.isAuthorized else {
+            googleConnected  = false
+            availableSources = []
+            isLoading        = false
+            return
         }
-
-        availableSources = store.sources
-            .filter { [.local, .calDAV, .exchange, .mobileMe].contains($0.sourceType) }
-            .map(\.title)
-            .sorted()
+        let sources = calService.availableSourceTitles()
+        googleConnected  = calService.isGoogleCalendarConnected()
+        availableSources = sources
+        isLoading        = false
     }
 }
 
@@ -598,7 +990,6 @@ private struct AppearanceSettingsTab: View {
 
     private func colorRow(label: String, description: String, color: Binding<Color>) -> some View {
         HStack(spacing: 12) {
-            // Preview swatch
             RoundedRectangle(cornerRadius: 4)
                 .fill(color.wrappedValue)
                 .frame(width: 22, height: 22)

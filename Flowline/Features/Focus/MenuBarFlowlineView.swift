@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import SwiftData
 
@@ -465,3 +466,4 @@ private struct MiniTextField: NSViewRepresentable {
         }
     }
 }
+#endif

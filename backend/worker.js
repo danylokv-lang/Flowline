@@ -331,7 +331,7 @@ async function handleGetProfile(userId, env) {
   const [user, profile] = await Promise.all([
     env.DB.prepare("SELECT id, name, email, is_pro, pro_expires_at FROM users WHERE id = ?")
       .bind(userId).first(),
-    env.DB.prepare("SELECT wake_time, sleep_time, work_start, work_end, has_work_hours, bio FROM profiles WHERE user_id = ?")
+    env.DB.prepare("SELECT wake_time, sleep_time, work_start, work_end, has_work_hours, bio, onboarding_done FROM profiles WHERE user_id = ?")
       .bind(userId).first(),
   ]);
   if (!user) return res({ error: "User not found" }, 404);
@@ -354,18 +354,20 @@ async function handleUpdateProfile(userId, req, env) {
     const p = body.profile;
     await env.DB.prepare(`
       UPDATE profiles SET
-        wake_time      = COALESCE(?, wake_time),
-        sleep_time     = COALESCE(?, sleep_time),
-        work_start     = COALESCE(?, work_start),
-        work_end       = COALESCE(?, work_end),
-        has_work_hours = COALESCE(?, has_work_hours),
-        bio            = COALESCE(?, bio),
-        updated_at     = ?
+        wake_time       = COALESCE(?, wake_time),
+        sleep_time      = COALESCE(?, sleep_time),
+        work_start      = COALESCE(?, work_start),
+        work_end        = COALESCE(?, work_end),
+        has_work_hours  = COALESCE(?, has_work_hours),
+        bio             = COALESCE(?, bio),
+        onboarding_done = COALESCE(?, onboarding_done),
+        updated_at      = ?
       WHERE user_id = ?
     `).bind(
       p.wakeTime ?? null, p.sleepTime ?? null,
       p.workStart ?? null, p.workEnd ?? null,
       p.hasWorkHours ?? null, p.bio ?? null,
+      p.onboardingDone ?? null,
       ts, userId
     ).run();
   }
@@ -411,6 +413,46 @@ async function handleAI(userId, req, env) {
 
   const data = await upstream.json();
   return res(data, upstream.status);
+}
+
+// ── Chat: Get Messages ─────────────────────────────────────────────────────
+
+async function handleGetChats(userId, url, env) {
+  const since = parseInt(url.searchParams.get("since") ?? "0");
+
+  const result = await env.DB.prepare(`
+    SELECT id, session_id, session_date, role, content, timestamp
+    FROM chat_messages
+    WHERE user_id = ? AND timestamp > ?
+    ORDER BY timestamp ASC
+    LIMIT 1000
+  `).bind(userId, since).all();
+
+  return res({ messages: result.results ?? [] });
+}
+
+// ── Chat: Sync Messages ────────────────────────────────────────────────────
+
+async function handleSyncChats(userId, req, env) {
+  const { messages } = await req.json();
+  if (!Array.isArray(messages)) return res({ error: "messages array required" }, 400);
+
+  for (const msg of messages) {
+    if (!msg.id || !msg.sessionId || !msg.role || !msg.content) continue;
+    // INSERT OR IGNORE — never overwrite an existing message (they're immutable)
+    await env.DB.prepare(`
+      INSERT OR IGNORE INTO chat_messages
+        (id, user_id, session_id, session_date, role, content, timestamp)
+      VALUES (?,?,?,?,?,?,?)
+    `).bind(
+      msg.id, userId, msg.sessionId,
+      msg.sessionDate ?? "",
+      msg.role, msg.content,
+      msg.timestamp ?? now()
+    ).run();
+  }
+
+  return res({ success: true, synced: messages.length });
 }
 
 // ── Calendar: Get Week ─────────────────────────────────────────────────────
@@ -535,6 +577,8 @@ export default {
       if (path === "/ai"                && method === "POST") return handleAI(userId, request, env);
       if (path === "/calendar"          && method === "GET") return handleGetCalendar(userId, url, env);
       if (path === "/calendar/sync"     && method === "POST") return handleSyncCalendar(userId, request, env);
+      if (path === "/chats"             && method === "GET") return handleGetChats(userId, url, env);
+      if (path === "/chats/sync"        && method === "POST") return handleSyncChats(userId, request, env);
 
       return res({ error: "Not found" }, 404);
     } catch (err) {

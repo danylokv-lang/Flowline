@@ -41,6 +41,28 @@ enum FlowLineTheme {
     static let accentBg    = Color(hex: "#6d4cfa").opacity(0.10)
 }
 
+// MARK: - Keyboard dismiss helper (iOS only)
+
+#if os(iOS)
+import UIKit
+#endif
+
+extension View {
+    /// Tapping anywhere on the background dismisses the software keyboard.
+    func hideKeyboardOnTap() -> some View {
+        #if os(iOS)
+        return self.onTapGesture {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil, from: nil, for: nil
+            )
+        }
+        #else
+        return self
+        #endif
+    }
+}
+
 // MARK: - Color(hex:) initialiser
 
 extension Color {

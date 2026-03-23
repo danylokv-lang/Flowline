@@ -18,17 +18,31 @@ final class StreakManager: ObservableObject {
     @Published private(set) var longestStreak: Int = 0
     @Published private(set) var totalPlansCreated: Int = 0
 
-    // ── UserDefaults keys ─────────────────────────────────────────────────────
-    private let kStreak      = "streak.current"
-    private let kLongest     = "streak.longest"
-    private let kLastPlanned = "streak.lastPlannedDate"
-    private let kTotalPlans  = "streak.totalPlans"
-    private let kReviewAsked = "streak.reviewAsked"
+    // ── UserDefaults keys (scoped per user) ─────────────────────────────────
+    private var userSuffix: String = ""
+
+    private var kStreak:      String { "streak.current\(userSuffix)" }
+    private var kLongest:     String { "streak.longest\(userSuffix)" }
+    private var kLastPlanned: String { "streak.lastPlannedDate\(userSuffix)" }
+    private var kTotalPlans:  String { "streak.totalPlans\(userSuffix)" }
+    private var kReviewAsked: String { "streak.reviewAsked\(userSuffix)" }
 
     private let defaults = UserDefaults.standard
     private let cal      = Calendar.current
 
     private init() {
+        // Keys are global until configure(userId:) is called on first login
+        currentStreak     = defaults.integer(forKey: kStreak)
+        longestStreak     = defaults.integer(forKey: kLongest)
+        totalPlansCreated = defaults.integer(forKey: kTotalPlans)
+    }
+
+    /// Call immediately after login / account switch.
+    /// Loads streak from user-scoped keys so each account has its own streak.
+    func configure(userId: String) {
+        let newSuffix = userId.isEmpty ? "" : ".\(userId)"
+        guard newSuffix != userSuffix else { return }
+        userSuffix        = newSuffix
         currentStreak     = defaults.integer(forKey: kStreak)
         longestStreak     = defaults.integer(forKey: kLongest)
         totalPlansCreated = defaults.integer(forKey: kTotalPlans)
@@ -59,6 +73,42 @@ final class StreakManager: ObservableObject {
 
         maybeRequestReview()
     }
+
+    // ── Account switch reset ─────────────────────────────────────────────────
+
+    /// Reset in-memory counters when switching accounts.
+    /// The on-disk data is preserved under the old user-scoped keys
+    /// so switching back restores the correct streak.
+    func resetForAccountSwitch() {
+        currentStreak     = 0
+        longestStreak     = 0
+        totalPlansCreated = 0
+    }
+
+    // ── Debug helpers (remove before shipping) ───────────────────────────────
+
+    #if DEBUG
+    /// Simulates having planned yesterday — call this, then call recordPlan()
+    /// to verify the streak increments correctly.
+    func debugSetLastPlannedToYesterday() {
+        let yesterday = cal.date(byAdding: .day, value: -1, to: cal.startOfDay(for: Date()))!
+        defaults.set(yesterday, forKey: kLastPlanned)
+    }
+
+    /// Wipes all streak data so you can start fresh.
+    func debugReset() {
+        defaults.removeObject(forKey: kStreak)
+        defaults.removeObject(forKey: kLongest)
+        defaults.removeObject(forKey: kLastPlanned)
+        defaults.removeObject(forKey: kTotalPlans)
+        defaults.removeObject(forKey: kReviewAsked)
+        currentStreak = 0
+        longestStreak = 0
+        totalPlansCreated = 0
+    }
+    #endif
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     /// True if the user has already created a plan today
     var plannedToday: Bool {

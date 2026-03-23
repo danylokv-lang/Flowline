@@ -48,6 +48,17 @@ CREATE TABLE IF NOT EXISTS schedule_blocks (
   created_at INTEGER NOT NULL
 );
 
+-- ── Chat Messages ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id           TEXT    PRIMARY KEY,                  -- stable UUID generated on-device
+  user_id      TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  session_id   TEXT    NOT NULL,                     -- groups messages into one conversation
+  session_date TEXT    NOT NULL,                     -- yyyy-MM-dd of the session
+  role         TEXT    NOT NULL,                     -- "user" | "assistant"
+  content      TEXT    NOT NULL,
+  timestamp    INTEGER NOT NULL                      -- Unix timestamp (seconds)
+);
+
 -- ── Password Reset Tokens ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   token       TEXT    PRIMARY KEY,
@@ -65,3 +76,6 @@ CREATE INDEX IF NOT EXISTS idx_blocks_day ON schedule_blocks(day_id);
 
 -- Fast "delete all blocks for user" on account deletion
 CREATE INDEX IF NOT EXISTS idx_blocks_user ON schedule_blocks(user_id);
+
+-- Fast chat history queries: "give me all messages for user X since timestamp T"
+CREATE INDEX IF NOT EXISTS idx_chat_user_ts ON chat_messages(user_id, timestamp);

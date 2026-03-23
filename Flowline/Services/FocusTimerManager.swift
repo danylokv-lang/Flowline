@@ -149,8 +149,16 @@ final class FocusTimerManager: ObservableObject {
 
     private func scheduleHourlyBreaks() {
         let center = UNUserNotificationCenter.current()
-        // Remove old ones first
-        center.removePendingNotificationRequests(withIdentifiers: [kHourlyBreakID])
+        center.removePendingNotificationRequests(
+            withIdentifiers: (0..<8).map { "\(kHourlyBreakID)_\($0)" }
+        )
+
+        // Read work hours from UserDefaults (written by SyncService / ProfileForm)
+        let ud = UserDefaults.standard
+        let hasWorkHours = ud.bool(forKey: "profile.hasWorkHours")
+        let startHour    = hasWorkHours ? ud.integer(forKey: "profile.workStartHour") : 9
+        let rawEndHour   = hasWorkHours ? ud.integer(forKey: "profile.workEndHour") : 18
+        let endHour      = max(rawEndHour, startHour + 1)
 
         let bodies = [
             "Coffee break? ☕️",
@@ -160,24 +168,33 @@ final class FocusTimerManager: ObservableObject {
             "Time to breathe. Take a moment."
         ]
 
-        // Schedule 8 hourly notifications (covers a full work day)
-        for hour in 0..<8 {
+        let cal = Calendar.current
+        let now = Date()
+        var scheduled = 0
+
+        // Look ahead up to 16 hours; only schedule within the work window
+        for hoursAhead in 1...16 {
+            guard scheduled < 8 else { break }
+            guard let fireDate = cal.date(byAdding: .hour, value: hoursAhead, to: now) else { continue }
+            let hour = cal.component(.hour, from: fireDate)
+            guard hour >= startHour && hour < endHour else { continue }
+
             let content = UNMutableNotificationContent()
             content.title = "Break time 🌿"
-            content.body  = bodies[hour % bodies.count]
+            content.body  = bodies[scheduled % bodies.count]
             content.sound = .default
             content.categoryIdentifier = kBreakCategory
 
-            var components = DateComponents()
-            components.minute = 0
-            // Fire at the top of each hour, starting from the next full hour
             let trigger = UNTimeIntervalNotificationTrigger(
-                timeInterval: TimeInterval((hour + 1) * 3600),
+                timeInterval: TimeInterval(hoursAhead * 3600),
                 repeats: false
             )
-            let id = "\(kHourlyBreakID)_\(hour)"
-            let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-            center.add(request)
+            center.add(UNNotificationRequest(
+                identifier: "\(kHourlyBreakID)_\(scheduled)",
+                content: content,
+                trigger: trigger
+            ))
+            scheduled += 1
         }
     }
 

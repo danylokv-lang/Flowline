@@ -53,11 +53,16 @@ final class CategoryColorManager: ObservableObject {
 
     // MARK: - Persistence
     private func save(_ color: Color, key: String) {
+        #if os(macOS)
         guard let ns = NSColor(color).usingColorSpace(.deviceRGB) else { return }
-        UserDefaults.standard.set(
-            [ns.redComponent, ns.greenComponent, ns.blueComponent],
-            forKey: key
-        )
+        let components = [ns.redComponent, ns.greenComponent, ns.blueComponent]
+        #else
+        let ui = UIColor(color)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let components = [Double(r), Double(g), Double(b)]
+        #endif
+        UserDefaults.standard.set(components, forKey: key)
     }
 
     private static func load(_ key: String) -> Color? {

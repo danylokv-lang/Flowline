@@ -48,7 +48,9 @@ struct ShimmerModifier: ViewModifier {
 
 struct PlanningChatView: View {
     @Environment(\.modelContext) private var modelContext
+    #if os(macOS)
     @Environment(\.openSettings) private var openSettings
+    #endif
     @Query(sort: \ChatMessage.timestamp) private var savedMessages: [ChatMessage]
     @Query private var profiles: [UserProfile]
     @Query(filter: #Predicate<CapturedTask> { !$0.isScheduled }, sort: \CapturedTask.createdAt)
@@ -57,6 +59,7 @@ struct PlanningChatView: View {
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
     @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var authService: AuthService
     @State private var isLoading: Bool = false
     @State private var isSaving: Bool = false
     @State private var didLoadHistory = false
@@ -380,6 +383,7 @@ struct PlanningChatView: View {
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showSidebar)
+        .hideKeyboardOnTap()
         .sheet(isPresented: $showCalendarPicker) {
             CalendarPickerSheet(
                 calendars: calendarPickerItems,
@@ -472,7 +476,9 @@ struct PlanningChatView: View {
             // ── Profile quality nudge (shown only when bio is empty) ─────────
             if profiles.first?.bio.isEmpty ?? true {
                 Button {
+                    #if os(macOS)
                     openSettings()
+                    #endif
                 } label: {
                     HStack(spacing: 7) {
                         Image(systemName: "person.crop.circle.badge.plus")
@@ -843,6 +849,9 @@ After planning, tell the user which inbox tasks you included):
                 if let jsonData = response.data(using: .utf8),
                    let plan = try? JSONDecoder().decode(GeneratedPlan.self, from: jsonData) {
                     try? planSaver.save(plan: plan, for: Date(), context: modelContext)
+                    if let token = authService.token {
+                        _Concurrency.Task { await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext) }
+                    }
                     if let index = messages.lastIndex(where: { $0.isThinking }) {
                         messages[index] = Message(role: .assistant, content: plan.summary, isSavedPlan: true)
                     }
@@ -905,6 +914,10 @@ After planning, tell the user which inbox tasks you included):
             sessionID: currentSessionID
         )
         modelContext.insert(chatMsg)
+        // Push to server so the same chat appears on other devices
+        if let token = authService.token {
+            _Concurrency.Task { await SyncService.shared.pushMessages([chatMsg], token: token) }
+        }
     }
 
     // MARK: - Save Plan
@@ -926,6 +939,9 @@ After planning, tell the user which inbox tasks you included):
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                if let token = authService.token {
+                    await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
+                }
                 try calendarService.savePlan(plan, toCalendarID: calendarID)
                 // Remember the calendar the user picked
                 if let id = calendarID, !id.isEmpty {
@@ -992,8 +1008,8 @@ After planning, tell the user which inbox tasks you included):
             // Header
             HStack {
                 Text("CHATS")
-                    .font(.system(size: 10, weight: .heavy))
-                    .tracking(4)
+                    .font(.system(size: 13, weight: .heavy))
+                    .tracking(3)
                     .foregroundColor(FlowLineTheme.secondTxt)
                 Spacer()
                 Button {
@@ -1005,7 +1021,7 @@ After planning, tell the user which inbox tasks you included):
                     }
                 } label: {
                     Image(systemName: "square.and.pencil")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                         .foregroundColor(FlowLineTheme.accent)
                 }
                 .buttonStyle(.plain)
@@ -1032,14 +1048,14 @@ After planning, tell the user which inbox tasks you included):
                             } label: {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(session.date, style: .date)
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 14, weight: .bold))
                                         .foregroundColor(
                                             session.id == currentSessionID
                                                 ? FlowLineTheme.accent
                                                 : FlowLineTheme.mainTxt
                                         )
                                     Text(session.preview)
-                                        .font(.system(size: 12))
+                                        .font(.system(size: 13))
                                         .foregroundColor(FlowLineTheme.secondTxt)
                                         .lineLimit(2)
                                 }
@@ -1051,7 +1067,7 @@ After planning, tell the user which inbox tasks you included):
 
                             Button { deleteSession(id: session.id) } label: {
                                 Image(systemName: "xmark")
-                                    .font(.system(size: 10, weight: .medium))
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(FlowLineTheme.secondTxt.opacity(0.4))
                                     .padding(.trailing, 16)
                             }

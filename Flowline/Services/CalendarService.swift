@@ -1,7 +1,11 @@
-import AppKit
 import Combine
 import EventKit
 import Foundation
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 // MARK: - Writable calendar info (used by the in-chat picker)
 
@@ -25,10 +29,15 @@ final class CalendarService: ObservableObject {
         refreshAuthStatus()
         // Re-check whenever the app becomes active (user may have changed
         // permission in System Preferences while the app was in the background)
+        #if os(macOS)
+        let activeNotification = NSApplication.didBecomeActiveNotification
+        #else
+        let activeNotification = UIApplication.didBecomeActiveNotification
+        #endif
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(refreshAuthStatus),
-            name: NSApplication.didBecomeActiveNotification,
+            name: activeNotification,
             object: nil
         )
     }
@@ -122,6 +131,26 @@ final class CalendarService: ObservableObject {
     }
 
     // MARK: - Calendar discovery
+
+    /// Sorted list of source account titles (iCloud, Google, Exchange, etc.)
+    func availableSourceTitles() -> [String] {
+        guard isAuthorized else { return [] }
+        return store.sources
+            .filter { [.local, .calDAV, .exchange, .mobileMe].contains($0.sourceType) }
+            .map(\.title)
+            .sorted()
+    }
+
+    /// True if a Google / Gmail CalDAV source is connected.
+    func isGoogleCalendarConnected() -> Bool {
+        guard isAuthorized else { return false }
+        return store.sources.contains {
+            $0.sourceType == .calDAV &&
+            ($0.title.lowercased().contains("google") ||
+             $0.title.lowercased().contains("gmail") ||
+             $0.title.contains("@gmail"))
+        }
+    }
 
     /// All calendars the user can write events to, sorted by source name.
     func writableCalendars() -> [WritableCalendarInfo] {

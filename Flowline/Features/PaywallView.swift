@@ -251,9 +251,15 @@ struct FlowlineCustomerCenter: View {
                     .padding(.horizontal)
 
                 Button("Open App Store Subscriptions") {
+                    #if os(macOS)
                     if let url = URL(string: "macappstore://showManageSubscriptions") {
                         NSWorkspace.shared.open(url)
                     }
+                    #else
+                    if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
+                        UIApplication.shared.open(url)
+                    }
+                    #endif
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color(hex: "#6d4cfa"))

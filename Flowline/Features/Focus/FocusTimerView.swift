@@ -91,6 +91,21 @@ struct FocusTimerView: View {
 
     // MARK: - Timer Ring
 
+    // MARK: - Platform-adaptive sizes
+    #if os(iOS)
+    private let ringOuter: CGFloat  = 170
+    private let ringInner: CGFloat  = 156
+    private let ringGlow:  CGFloat  = 143
+    private let ringLine:  CGFloat  = 9
+    private let timeFontSize: CGFloat = 32
+    #else
+    private let ringOuter: CGFloat  = 215
+    private let ringInner: CGFloat  = 200
+    private let ringGlow:  CGFloat  = 185
+    private let ringLine:  CGFloat  = 10
+    private let timeFontSize: CGFloat = 40
+    #endif
+
     private var timerRing: some View {
         let blockColor = colorForBlock(timerManager.selectedBlock)
 
@@ -98,14 +113,14 @@ struct FocusTimerView: View {
             ZStack {
                 // Track ring
                 Circle()
-                    .stroke(Color.white.opacity(0.07), lineWidth: 10)
-                    .frame(width: 215, height: 215)
+                    .stroke(Color.white.opacity(0.07), lineWidth: ringLine)
+                    .frame(width: ringOuter, height: ringOuter)
 
                 // Progress arc with glow
                 Circle()
                     .trim(from: 0, to: timerManager.progress)
-                    .stroke(blockColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                    .frame(width: 200, height: 200)
+                    .stroke(blockColor, style: StrokeStyle(lineWidth: ringLine, lineCap: .round))
+                    .frame(width: ringInner, height: ringInner)
                     .rotationEffect(.degrees(-90))
                     .shadow(color: blockColor.opacity(0.65), radius: 10, x: 0, y: 0)
                     .animation(.linear(duration: 1), value: timerManager.progress)
@@ -113,11 +128,11 @@ struct FocusTimerView: View {
                 // Soft inner background glow
                 Circle()
                     .fill(blockColor.opacity(0.06))
-                    .frame(width: 185, height: 185)
+                    .frame(width: ringGlow, height: ringGlow)
 
                 VStack(spacing: 4) {
                     Text(timerManager.timeString())
-                        .font(.system(size: 40, weight: .black, design: .monospaced))
+                        .font(.system(size: timeFontSize, weight: .black, design: .monospaced))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [FlowLineTheme.mainTxt, blockColor.opacity(0.85)],
@@ -144,15 +159,27 @@ struct FocusTimerView: View {
     // MARK: - Controls
 
     private var controls: some View {
-        HStack(spacing: 16) {
+        #if os(iOS)
+        let sideSize: CGFloat  = 44
+        let mainSize: CGFloat  = 58
+        let sideIcon: CGFloat  = 16
+        let mainIcon: CGFloat  = 20
+        #else
+        let sideSize: CGFloat  = 52
+        let mainSize: CGFloat  = 68
+        let sideIcon: CGFloat  = 18
+        let mainIcon: CGFloat  = 24
+        #endif
+
+        return HStack(spacing: 16) {
             if timerManager.isRunning || timerManager.isPaused {
                 Button { timerManager.stop() } label: {
                     ZStack {
                         Circle()
                             .fill(FlowLineTheme.borderHi)
-                            .frame(width: 52, height: 52)
+                            .frame(width: sideSize, height: sideSize)
                         Image(systemName: "stop.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: sideIcon))
                             .foregroundColor(FlowLineTheme.secondTxt)
                     }
                 }
@@ -172,15 +199,15 @@ struct FocusTimerView: View {
                                     startPoint: .topLeading, endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: 68, height: 68)
+                            .frame(width: mainSize, height: mainSize)
                             .shadow(color: FlowLineTheme.accent.opacity(0.55), radius: 14, x: 0, y: 4)
                     } else {
                         Circle()
                             .fill(FlowLineTheme.border)
-                            .frame(width: 68, height: 68)
+                            .frame(width: mainSize, height: mainSize)
                     }
                     Image(systemName: timerManager.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: mainIcon))
                         .foregroundColor(timerManager.selectedBlock != nil
                                          ? .white
                                          : FlowLineTheme.secondTxt.opacity(0.3))
@@ -194,9 +221,9 @@ struct FocusTimerView: View {
                     ZStack {
                         Circle()
                             .fill(FlowLineTheme.borderHi)
-                            .frame(width: 52, height: 52)
+                            .frame(width: sideSize, height: sideSize)
                         Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 18))
+                            .font(.system(size: sideIcon))
                             .foregroundColor(FlowLineTheme.secondTxt)
                     }
                 }

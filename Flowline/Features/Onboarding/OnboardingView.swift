@@ -6,6 +6,7 @@ struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var authService: AuthService
     var isInitialOnboarding: Bool = true
     @State private var currentStep = 0
     @State private var showPaywall = false
@@ -54,23 +55,25 @@ struct OnboardingView: View {
 
                 Spacer()
 
-                // Step content
-                Group {
-                    switch currentStep {
-                    case 0: nameStep
-                    case 1: scheduleStep
-                    case 2: workHoursStep
-                    case 3: bioStep
-                    case 4: calendarStep
-                    default: EmptyView()
+                // Step content — wrapped in ScrollView so it never clips on small screens
+                ScrollView(showsIndicators: false) {
+                    Group {
+                        switch currentStep {
+                        case 0: nameStep
+                        case 1: scheduleStep
+                        case 2: workHoursStep
+                        case 3: bioStep
+                        case 4: calendarStep
+                        default: EmptyView()
+                        }
                     }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
                 }
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .leading).combined(with: .opacity)
-                ))
 
-                Spacer()
+                Spacer(minLength: 16)
 
                 // Navigation
                 HStack {
@@ -130,7 +133,9 @@ struct OnboardingView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(currentStep == 0 && name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    #if os(macOS)
                     .keyboardShortcut(.return, modifiers: [])
+                    #endif
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 40)
@@ -374,9 +379,15 @@ struct OnboardingView: View {
                         Text("Google Calendar")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(FlowLineTheme.mainTxt)
+                        #if os(iOS)
+                        Text("Settings → Calendar → Accounts → Add Account")
+                            .font(.system(size: 12))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                        #else
                         Text("System Settings → Internet Accounts → Google")
                             .font(.system(size: 12))
                             .foregroundColor(FlowLineTheme.secondTxt)
+                        #endif
                     }
                     Spacer()
                 }
@@ -451,6 +462,10 @@ struct OnboardingView: View {
     private func finishOnboarding() {
         subscriptionManager.startTrialIfNeeded()
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        // Tell the server onboarding is done so other devices skip it
+        if let token = authService.token {
+            Task { await SyncService.shared.markOnboardingDone(token: token) }
+        }
     }
 }
 

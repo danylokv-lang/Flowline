@@ -14,7 +14,10 @@ struct FlowlineApp: App {
     @StateObject private var subscriptionManager = SubscriptionManager()
     @StateObject private var colorManager = CategoryColorManager()
     @StateObject private var authService = AuthService()
+
+    #if os(macOS)
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
+    #endif
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -57,23 +60,32 @@ struct FlowlineApp: App {
                         .environmentObject(authService)
                         .environmentObject(subscriptionManager)
                 }
-                // Wire delegate on first render, not on state change
                 appSetup
             }
-            // When the logged-in user changes, wipe local profile data
-            // so the new account starts with a clean slate
             .onChange(of: authService.currentUser?.userId) { _, newUserId in
                 guard let newUserId else { return }
+                // Scope streak data to this user — must happen before clearLocalUserData
+                StreakManager.shared.configure(userId: newUserId)
                 if newUserId != lastLoggedInUserId {
                     clearLocalUserData()
                     lastLoggedInUserId = newUserId
+                    // Pull fresh data from server after switching accounts
+                    if let token = authService.token {
+                        Task { await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext) }
+                    }
                 }
-                // Start 3-day trial on first login
                 subscriptionManager.startTrialIfNeeded()
+            }
+            .task {
+                // Pull on every app launch if already logged in
+                if authService.isLoggedIn, let token = authService.token {
+                    await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext)
+                }
             }
         }
         .modelContainer(sharedModelContainer)
 
+        #if os(macOS)
         // ── Settings (Cmd+,) ──────────────────────────────────────────────
         Settings {
             SettingsView()
@@ -98,15 +110,15 @@ struct FlowlineApp: App {
             }
         }
         .menuBarExtraStyle(.window)
+        #endif
     }
 
-    // Wire delegate immediately — not dependent on any state change
     private func wireDelegate() {
+        #if os(macOS)
         appDelegate.timerManager = timerManager
+        #endif
     }
 
-    /// Wipe ALL local SwiftData when a different account logs in.
-    /// This ensures no data leaks between accounts on the same device.
     private func clearLocalUserData() {
         let ctx = sharedModelContainer.mainContext
         if let items = try? ctx.fetch(FetchDescriptor<UserProfile>())    { items.forEach { ctx.delete($0) } }
@@ -115,18 +127,22 @@ struct FlowlineApp: App {
         if let items = try? ctx.fetch(FetchDescriptor<CapturedTask>())   { items.forEach { ctx.delete($0) } }
         if let items = try? ctx.fetch(FetchDescriptor<FlowTask>())       { items.forEach { ctx.delete($0) } }
         try? ctx.save()
-        // Reset onboarding so the new user sets up their profile
         hasCompletedOnboarding = false
+        StreakManager.shared.resetForAccountSwitch()
+        // Reset daily AI usage so the new account starts fresh
+        UserDefaults.standard.removeObject(forKey: "usage_count")
+        UserDefaults.standard.removeObject(forKey: "usage_date")
+        UserDefaults.standard.removeObject(forKey: "chats.lastSyncTimestamp")
     }
 
     private var appSetup: some View {
-        Color.clear
-            .onAppear { wireDelegate() }
+        Color.clear.onAppear { wireDelegate() }
     }
 }
 
-// MARK: - AppDelegate for notification actions
+// MARK: - AppDelegate (macOS only)
 
+#if os(macOS)
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate,
                          @unchecked Sendable {
     static var shared: AppDelegate?
@@ -134,15 +150,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
-        // timerManager is wired immediately after launch via AppDelegate.shared
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // Clean up pending hourly notifications on quit so they reschedule fresh on next launch
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
 
-    // Called when user taps a notification action
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                  didReceive response: UNNotificationResponse,
                                  withCompletionHandler completionHandler: @escaping () -> Void) {
@@ -152,7 +165,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
     }
 
-    // Show notifications even when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                  willPresent notification: UNNotification,
                                  withCompletionHandler completionHandler:
@@ -160,3 +172,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         completionHandler([.banner, .sound])
     }
 }
+#endif

@@ -155,7 +155,10 @@ private func toastGlowColor(streak: Int) -> Color {
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showStreakToast = false
+    @ObservedObject private var streakManager = StreakManager.shared
+    #if os(macOS)
     @Environment(\.openSettings) private var openSettings
+    #endif
 
     @Query(filter: #Predicate<CapturedTask> { !$0.isScheduled })
     private var pendingTasks: [CapturedTask]
@@ -182,8 +185,15 @@ struct MainTabView: View {
                     .badge(pendingCount > 0 ? pendingCount : 0)
                     .help("Capture tasks here — the AI will slot them into your plan when you ask")
                     .tag(3)
+
+                #if os(iOS)
+                SettingsView()
+                    .tabItem { Label("Settings", systemImage: "gearshape") }
+                    .tag(4)
+                #endif
             }
             .tint(FlowLineTheme.accent)
+            #if os(macOS)
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button { openSettings() } label: {
@@ -193,6 +203,7 @@ struct MainTabView: View {
                     .help("Settings  ⌘,")
                 }
             }
+            #endif
 
             // ── Streak launch toast ────────────────────────────────────────
             if showStreakToast {
@@ -200,25 +211,34 @@ struct MainTabView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .zIndex(100)
             }
+
+
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                    showStreakToast = true
-                }
-                // Auto-dismiss after 6s if user doesn't tap
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                    withAnimation(.easeOut(duration: 0.35)) {
-                        showStreakToast = false
-                    }
-                }
+                showStreakToastBriefly()
             }
+        }
+        // Re-show the toast whenever the streak increments (e.g. after recordPlan())
+        .onChange(of: streakManager.currentStreak) { _, _ in
+            showStreakToastBriefly()
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showStreakToast)
     }
 
+    private func showStreakToastBriefly() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            showStreakToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+            withAnimation(.easeOut(duration: 0.35)) {
+                showStreakToast = false
+            }
+        }
+    }
+
     private var streakToast: some View {
-        let raw    = StreakManager.shared.currentStreak
+        let raw    = streakManager.currentStreak
         let streak = max(raw, 1)                              // always at least day 1
         let glow   = toastGlowColor(streak: streak)
         let fireW  = 28.0 + streakSizeScale(for: streak) * 12.0
