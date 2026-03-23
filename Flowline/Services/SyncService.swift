@@ -81,6 +81,16 @@ final class SyncService {
     }
 
     /// Mark onboarding as completed on the server so other devices can skip it.
+    /// Send an end-of-day plan review rating to the server.
+    func pushReview(rating: Int, planDate: Date, token: String) async {
+        guard !token.isEmpty else { return }
+        let body: [String: Any] = [
+            "rating": rating,
+            "planDate": dateFmt.string(from: planDate)
+        ]
+        _ = try? await request("POST", "/reviews", body: body, token: token)
+    }
+
     func markOnboardingDone(token: String) async {
         guard !token.isEmpty else { return }
         let body: [String: Any] = ["profile": ["onboardingDone": 1]]

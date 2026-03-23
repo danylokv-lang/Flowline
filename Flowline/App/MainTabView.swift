@@ -223,6 +223,10 @@ struct MainTabView: View {
         .onChange(of: streakManager.currentStreak) { _, _ in
             showStreakToastBriefly()
         }
+        // Switch to chat tab when user taps a planning notification
+        .onReceive(NotificationCenter.default.publisher(for: .flowlineOpenChat)) { _ in
+            withAnimation { selectedTab = 0 }
+        }
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showStreakToast)
     }
 

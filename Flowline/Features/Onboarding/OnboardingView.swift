@@ -466,6 +466,17 @@ struct OnboardingView: View {
         if let token = authService.token {
             Task { await SyncService.shared.markOnboardingDone(token: token) }
         }
+        // Schedule morning + evening planning reminders
+        let displayName = name.trimmingCharacters(in: .whitespaces)
+        let wake = wakeTime
+        let sleep = sleepTime
+        Task {
+            await NotificationManager.shared.requestAndSchedule(
+                name: displayName.isEmpty ? "there" : displayName,
+                wakeTime: wake,
+                sleepTime: sleep
+            )
+        }
     }
 }
 

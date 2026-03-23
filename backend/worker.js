@@ -455,6 +455,76 @@ async function handleSyncChats(userId, req, env) {
   return res({ success: true, synced: messages.length });
 }
 
+// ── Reviews: Submit ───────────────────────────────────────────────────────
+
+async function handleSubmitReview(userId, req, env) {
+  const { rating, planDate } = await req.json();
+
+  if (!rating || rating < 1 || rating > 5) return res({ error: "rating must be 1–5" }, 400);
+  if (!planDate) return res({ error: "planDate required (yyyy-MM-dd)" }, 400);
+
+  const id = crypto.randomUUID();
+  await env.DB.prepare(`
+    INSERT INTO plan_reviews (id, user_id, rating, plan_date, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).bind(id, userId, rating, planDate, now()).run();
+
+  return res({ success: true });
+}
+
+// ── Reviews: Admin Stats ──────────────────────────────────────────────────
+// Protected by ADMIN_SECRET env var header: X-Admin-Key
+
+async function handleAdminStats(request, env) {
+  const adminKey = request.headers.get("x-admin-key");
+  if (!adminKey || adminKey !== env.ADMIN_SECRET) {
+    return res({ error: "Forbidden" }, 403);
+  }
+
+  const [total, dist, daily, recent, users] = await Promise.all([
+    // Total reviews
+    env.DB.prepare("SELECT COUNT(*) as count, AVG(rating) as avg FROM plan_reviews").first(),
+
+    // Rating distribution
+    env.DB.prepare(`
+      SELECT rating, COUNT(*) as count
+      FROM plan_reviews
+      GROUP BY rating ORDER BY rating
+    `).all(),
+
+    // Daily averages — last 30 days
+    env.DB.prepare(`
+      SELECT plan_date, ROUND(AVG(rating), 2) as avg, COUNT(*) as count
+      FROM plan_reviews
+      WHERE created_at > ?
+      GROUP BY plan_date
+      ORDER BY plan_date DESC
+      LIMIT 30
+    `).bind(now() - 30 * 86400).all(),
+
+    // 20 most recent reviews
+    env.DB.prepare(`
+      SELECT r.plan_date, r.rating, r.created_at, u.email
+      FROM plan_reviews r
+      JOIN users u ON u.id = r.user_id
+      ORDER BY r.created_at DESC
+      LIMIT 20
+    `).all(),
+
+    // Unique reviewers count
+    env.DB.prepare("SELECT COUNT(DISTINCT user_id) as count FROM plan_reviews").first(),
+  ]);
+
+  return res({
+    totalReviews:  total?.count ?? 0,
+    averageRating: total?.avg ? Math.round(total.avg * 10) / 10 : null,
+    uniqueReviewers: users?.count ?? 0,
+    distribution: dist.results ?? [],
+    dailyAverages: daily.results ?? [],
+    recentReviews: recent.results ?? [],
+  });
+}
+
 // ── Calendar: Get Week ─────────────────────────────────────────────────────
 
 async function handleGetCalendar(userId, url, env) {
@@ -544,6 +614,9 @@ export default {
       if (path === "/auth/forgot-password" && method === "POST") return handleForgotPassword(request, env);
       if (path === "/auth/reset-password"  && method === "POST") return handleResetPassword(request, env);
 
+      // ── Admin routes — protected by ADMIN_SECRET, callable from browser/curl ──
+      if (path === "/admin/stats" && method === "GET") return handleAdminStats(request, env);
+
       // All other routes require the app secret (iOS only)
       const appSecret = request.headers.get("x-app-secret");
       if (!appSecret || appSecret !== env.APP_SECRET) {
@@ -579,6 +652,7 @@ export default {
       if (path === "/calendar/sync"     && method === "POST") return handleSyncCalendar(userId, request, env);
       if (path === "/chats"             && method === "GET") return handleGetChats(userId, url, env);
       if (path === "/chats/sync"        && method === "POST") return handleSyncChats(userId, request, env);
+      if (path === "/reviews"           && method === "POST") return handleSubmitReview(userId, request, env);
 
       return res({ error: "Not found" }, 404);
     } catch (err) {

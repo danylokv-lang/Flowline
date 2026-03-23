@@ -17,6 +17,8 @@ struct FlowlineApp: App {
 
     #if os(macOS)
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
+    #elseif os(iOS)
+    @UIApplicationDelegateAdaptor private var iosDelegate: IOSAppDelegate
     #endif
 
     var sharedModelContainer: ModelContainer = {
@@ -139,6 +141,46 @@ struct FlowlineApp: App {
         Color.clear.onAppear { wireDelegate() }
     }
 }
+
+// MARK: - AppDelegate (iOS)
+
+#if os(iOS)
+final class IOSAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate,
+                            @unchecked Sendable {
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
+    // Called when the user taps a notification while the app is in background or closed
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let prompt = response.notification.request.content.userInfo["prompt"] as? String
+        // Post to main thread so SwiftUI views can react
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .flowlineOpenChat, object: prompt)
+        }
+        completionHandler()
+    }
+
+    // Called when a notification arrives while the app is in the foreground
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler:
+            @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+}
+#endif
 
 // MARK: - AppDelegate (macOS only)
 

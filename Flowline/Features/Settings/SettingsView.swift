@@ -406,10 +406,18 @@ private struct ProfileForm: View {
 
             Section("Schedule") {
                 DatePicker("Wake up", selection: $wakeTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: wakeTime) { profile.wakeTime = wakeTime }
+                    .onChange(of: wakeTime) {
+                        profile.wakeTime = wakeTime
+                        NotificationManager.shared.reschedule(
+                            name: profile.name, wakeTime: wakeTime, sleepTime: sleepTime)
+                    }
 
                 DatePicker("Bedtime", selection: $sleepTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: sleepTime) { profile.sleepTime = sleepTime }
+                    .onChange(of: sleepTime) {
+                        profile.sleepTime = sleepTime
+                        NotificationManager.shared.reschedule(
+                            name: profile.name, wakeTime: wakeTime, sleepTime: sleepTime)
+                    }
 
                 Toggle("Fixed work hours", isOn: $profile.hasWorkHours)
                     .onChange(of: profile.hasWorkHours) {
@@ -443,6 +451,35 @@ private struct ProfileForm: View {
                         RoundedRectangle(cornerRadius: 6)
                             .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
                     )
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("One commitment per line. The AI will always include these — no need to mention them every time.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    ZStack(alignment: .topLeading) {
+                        if profile.recurringCommitments.isEmpty {
+                            Text("Standup 9:00–9:30 Mon–Fri\nGym 6pm Mon/Wed/Fri\nClass 8am–2pm Tue/Thu")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary.opacity(0.5))
+                                .padding(.top, 1)
+                                .allowsHitTesting(false)
+                        }
+                        TextEditor(text: $profile.recurringCommitments)
+                            .font(.system(size: 13))
+                            .frame(minHeight: 80)
+                            .scrollContentBackground(.hidden)
+                            .background(FlowLineTheme.tertiaryBg)
+                    }
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+                }
+            } header: {
+                Text("Recurring commitments — AI always includes these")
             }
         }
         .formStyle(.grouped)

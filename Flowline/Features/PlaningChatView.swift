@@ -86,6 +86,13 @@ struct PlanningChatView: View {
     @State private var emptyGlow = false
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @AppStorage("lastUsedCalendarID") private var lastUsedCalendarID: String = ""
+    @AppStorage("lastPlanDate") private var lastPlanDate: String = ""
+    // End-of-day review
+    @AppStorage("lastReviewDate")   private var lastReviewDate: String = ""
+    @AppStorage("lastReviewRating") private var lastReviewRating: Int = 0
+    @State private var showReviewCard = false
+    // Paywall timing
+    @AppStorage("paywallShownAfterFirstPlan") private var paywallShownAfterFirstPlan = false
     @StateObject private var aiService = ClaudePlanningService(apiKey: "")
     @StateObject private var streak = StreakManager.shared
     private let planSaver = PlanSavingService()
@@ -193,6 +200,12 @@ struct PlanningChatView: View {
                             }
                         }
                     }
+                }
+
+                // ── End-of-day review card ───────────────────────────────
+                if showReviewCard {
+                    reviewCard
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
                 // ── Input bar ────────────────────────────────────────────
@@ -373,13 +386,21 @@ struct PlanningChatView: View {
                     await calendarService.requestAccess()
                     refreshSystemPrompt() // re-run after calendar access granted
                 }
+                checkReviewPrompt()
             }
             .onChange(of: profiles.first?.name) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.bio) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.wakeTime) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.sleepTime) { refreshSystemPrompt() }
             .onChange(of: profiles.first?.hasWorkHours) { refreshSystemPrompt() }
+            .onChange(of: profiles.first?.recurringCommitments) { refreshSystemPrompt() }
             .flowlinePaywall(isPresented: $showPaywall, subscriptionManager: subscriptionManager)
+            // Handle notification deep-link (morning / evening tap)
+            .onReceive(NotificationCenter.default.publisher(for: .flowlineOpenChat)) { note in
+                if let prompt = note.object as? String, !prompt.isEmpty {
+                    sendMessage(prompt)
+                }
+            }
 
             // ── Sidebar ──────────────────────────────────────────────
             if showSidebar {
@@ -409,7 +430,120 @@ struct PlanningChatView: View {
         }
     }
 
+    // MARK: - End-of-Day Review
+
+    private var reviewCard: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Text("How did today's plan go?")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+                Spacer()
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showReviewCard = false }
+                    lastReviewDate = todayKey   // dismiss without rating = skip
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(FlowLineTheme.dimTxt)
+                        .padding(6)
+                        .background(FlowLineTheme.tertiaryBg)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 10) {
+                ForEach(1...5, id: \.self) { rating in
+                    Button {
+                        submitReview(rating: rating)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(reviewEmoji(rating))
+                                .font(.system(size: 26))
+                            Text("\(rating)")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(FlowLineTheme.secondTxt)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            lastReviewRating == rating && lastReviewDate == todayKey
+                                ? FlowLineTheme.accent.opacity(0.18)
+                                : FlowLineTheme.tertiaryBg
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(
+                                    lastReviewRating == rating && lastReviewDate == todayKey
+                                        ? FlowLineTheme.accent.opacity(0.5)
+                                        : FlowLineTheme.borderHi,
+                                    lineWidth: 1
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(FlowLineTheme.secondBg)
+        .overlay(alignment: .top) {
+            Rectangle().fill(FlowLineTheme.border).frame(height: 0.5)
+        }
+    }
+
+    private func reviewEmoji(_ rating: Int) -> String {
+        switch rating {
+        case 1: return "😩"
+        case 2: return "😕"
+        case 3: return "😐"
+        case 4: return "😊"
+        default: return "🎯"
+        }
+    }
+
+    private func checkReviewPrompt() {
+        let hour = Calendar.current.component(.hour, from: Date())
+        // Show after 5pm, if today was planned, and not yet reviewed today
+        guard hour >= 17,
+              lastPlanDate == todayKey,
+              lastReviewDate != todayKey else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeOut(duration: 0.25)) { showReviewCard = true }
+        }
+    }
+
+    private func submitReview(rating: Int) {
+        lastReviewRating = rating
+        lastReviewDate = todayKey
+        withAnimation(.easeOut(duration: 0.2)) { showReviewCard = false }
+        // Feed rating back into next prompt so AI improves
+        refreshSystemPrompt()
+        // Send to server so you can track ratings across all users
+        if let token = authService.token {
+            Task { await SyncService.shared.pushReview(rating: rating, planDate: Date(), token: token) }
+        }
+        // If rating is low, prompt user to refine
+        if rating <= 2 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                sendMessage("My plan today was rated \(rating)/5 — it didn't work well. What could we do differently tomorrow?")
+            }
+        }
+    }
+
     // MARK: - Empty State
+
+    // ── Today's date string for new-day detection ─────────────────────────────
+    private var todayKey: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
+    private var isNewDay: Bool { lastPlanDate != todayKey }
 
     // ── Smart time-aware empty state ──────────────────────────────────────────
     private var emptyState: some View {
@@ -418,12 +552,10 @@ struct PlanningChatView: View {
             // ── Icon + streak badge ───────────────────────────────────────────
             ZStack(alignment: .bottomTrailing) {
                 ZStack {
-                    // Outer pulsing glow ring
                     Circle()
                         .fill(FlowLineTheme.accent.opacity(emptyGlow ? 0.12 : 0.04))
                         .frame(width: emptyGlow ? 96 : 80, height: emptyGlow ? 96 : 80)
                         .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: emptyGlow)
-                    // Mid ring
                     Circle()
                         .stroke(
                             LinearGradient(
@@ -433,7 +565,6 @@ struct PlanningChatView: View {
                             lineWidth: 1.5
                         )
                         .frame(width: 72, height: 72)
-                    // Inner fill
                     Circle()
                         .fill(
                             LinearGradient(
@@ -485,8 +616,43 @@ struct PlanningChatView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // ── Profile quality nudge (shown only when bio is empty) ─────────
-            if profiles.first?.bio.isEmpty ?? true {
+            // ── Hero "Plan my day" button (new day) / profile nudge ──────────
+            if isNewDay {
+                // Prominent one-tap hero button shown when it's a fresh day
+                Button {
+                    lastPlanDate = todayKey
+                    sendMessage(heroPlanPrompt)
+                } label: {
+                    HStack(spacing: 14) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Plan my whole day")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("Full time-blocked schedule, built now →")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.75))
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(
+                        LinearGradient(
+                            colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: FlowLineTheme.accent.opacity(0.45), radius: 16, x: 0, y: 6)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: 340)
+                .disabled(isLoading || isSaving)
+            } else if profiles.first?.bio.isEmpty ?? true {
+                // Profile nudge when bio is empty and today already planned
                 Button {
                     #if os(macOS)
                     openSettings()
@@ -517,12 +683,11 @@ struct PlanningChatView: View {
                 .frame(maxWidth: 320)
             }
 
-            // ── Quick-start chips ─────────────────────────────────────────────
+            // ── Secondary quick-start chips ───────────────────────────────────
             VStack(spacing: 8) {
                 ForEach(quickPrompts, id: \.self) { prompt in
                     Button {
-                        inputText = prompt
-                        sendMessage()
+                        sendMessage(prompt)
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.up.right")
@@ -572,6 +737,23 @@ struct PlanningChatView: View {
         .padding(.horizontal, 32)
     }
 
+    // ── Hero prompt: rich enough that the AI builds a plan without asking ─────
+    private var heroPlanPrompt: String {
+        let df = DateFormatter()
+        df.dateFormat = "EEEE, MMMM d"
+        let dateStr = df.string(from: Date())
+        let tf = DateFormatter()
+        tf.timeStyle = .short
+        let timeStr = tf.string(from: Date())
+
+        var extras = ""
+        if !inboxTasks.isEmpty {
+            let list = inboxTasks.prefix(5).map { "• \($0.text)" }.joined(separator: "\n")
+            extras = "\n\nI have these tasks in my inbox to slot in:\n\(list)"
+        }
+        return "Plan my whole day for \(dateStr). Current time is \(timeStr). Build a complete, realistic time-blocked schedule.\(extras)"
+    }
+
     private var timeGreeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
@@ -599,20 +781,17 @@ struct PlanningChatView: View {
         let hour = Calendar.current.component(.hour, from: Date())
         if hour < 12 {
             return [
-                "Plan my whole day",
                 "Deep work morning + meetings afternoon",
                 "Light day — just the essentials"
             ]
         } else if hour < 17 {
             return [
                 "Structure the rest of my day",
-                "I have 3 hours left — what should I do?",
                 "Plan tomorrow"
             ]
         } else {
             return [
                 "Plan tomorrow",
-                "Evening wind-down + tomorrow prep",
                 "Quick end-of-day review"
             ]
         }
@@ -825,7 +1004,23 @@ After planning, tell the user which inbox tasks you included):
         }
 
         let combined = sections.isEmpty ? nil : sections.joined(separator: "\n\n")
-        aiService.updateSystemPrompt(from: profile, calendarContext: combined)
+
+        // Section 4: recent review rating feedback
+        var reviewCtx: String? = nil
+        if lastReviewRating > 0 {
+            let label: String
+            switch lastReviewRating {
+            case 1: label = "very poorly (1/5) — the plan was unrealistic or too packed"
+            case 2: label = "poorly (2/5) — they fell behind and couldn't keep up"
+            case 3: label = "okay (3/5) — followed it partially"
+            case 4: label = "well (4/5) — mostly stuck to it with minor deviations"
+            default: label = "perfectly (5/5) — nailed every block"
+            }
+            let wasToday = lastReviewDate == todayKey
+            reviewCtx = "RECENT FEEDBACK: The user rated their \(wasToday ? "today's" : "last") plan \(label). Adjust your next plan accordingly — \(lastReviewRating <= 2 ? "fewer tasks, more breathing room, be realistic" : lastReviewRating == 3 ? "slightly lighter load and clearer priorities" : "keep the same style, it's working")."
+        }
+
+        aiService.updateSystemPrompt(from: profile, calendarContext: combined, reviewContext: reviewCtx)
     }
 
     // MARK: - Send
@@ -966,6 +1161,12 @@ After planning, tell the user which inbox tasks you included):
                         content: "Plan saved \u{2713}\n\n\(plan.summary)",
                         isSavedPlan: true
                     )
+                }
+                // Show paywall at the happiest moment — right after their first plan is saved
+                if !subscriptionManager.isPro && !paywallShownAfterFirstPlan {
+                    paywallShownAfterFirstPlan = true
+                    try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_500_000_000)
+                    showPaywall = true
                 }
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {

@@ -19,7 +19,7 @@ final class ClaudePlanningService: AIPlanning, ObservableObject {
         self.session = session
     }
 
-    func updateSystemPrompt(from profile: UserProfile, calendarContext: String? = nil) {
+    func updateSystemPrompt(from profile: UserProfile, calendarContext: String? = nil, reviewContext: String? = nil) {
         let timeFormatter = DateFormatter()
         timeFormatter.timeStyle = .short
 
@@ -48,6 +48,14 @@ USER SCHEDULE FOUNDATION:
 
         if !profile.bio.isEmpty {
             prompt += "- Context: \(profile.bio)\n"
+        }
+
+        if !profile.recurringCommitments.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            prompt += """
+
+RECURRING COMMITMENTS — these repeat every week. Always include them on the correct days. Never remove, move, or question them:
+\(profile.recurringCommitments.trimmingCharacters(in: .whitespacesAndNewlines))
+"""
         }
 
         prompt += """
@@ -162,6 +170,10 @@ Rules for this context:
 - FLOWLINE SAVED BLOCKS are what the user already planned in the app. Don't regenerate days that already have blocks unless the user asks.
 - Use this context proactively: if asked "what do I have next week?" — answer from the calendar context. If asked to "plan around my busy week" — reference the real appointments from all sources.
 """
+        }
+
+        if let reviewContext {
+            prompt += "\n\n\(reviewContext)"
         }
 
         prompt += "\nALWAYS respond in the same language the user writes in."

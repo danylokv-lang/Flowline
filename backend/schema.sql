@@ -67,6 +67,18 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   used        INTEGER NOT NULL DEFAULT 0          -- 0 = unused, 1 = already used
 );
 
+-- ── Plan Reviews ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS plan_reviews (
+  id           TEXT    PRIMARY KEY,   -- UUID
+  user_id      TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  rating       INTEGER NOT NULL,      -- 1–5
+  plan_date    TEXT    NOT NULL,      -- yyyy-MM-dd — which day's plan was reviewed
+  created_at   INTEGER NOT NULL       -- Unix timestamp
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_user ON plan_reviews(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_reviews_date ON plan_reviews(plan_date);
+
 -- ── Indexes ────────────────────────────────────────────────────────────────
 -- Fast week queries: "give me all days for user X between date A and B"
 CREATE INDEX IF NOT EXISTS idx_calendar_user_date ON calendar_days(user_id, date);
