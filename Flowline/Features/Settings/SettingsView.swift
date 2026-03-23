@@ -795,11 +795,12 @@ private struct CalendarSettingsTab: View {
     @State private var googleConnected  = false
     @State private var availableSources: [String] = []
     @State private var isLoading        = true
+    @State private var appleAuthStatus: EKAuthorizationStatus = .notDetermined
 
     var body: some View {
         Form {
             // ── Access + connected accounts ───────────────────────────────────
-            Section("Accounts") {
+            Section {
                 // Apple Calendar
                 HStack {
                     Image(systemName: "apple.logo")
@@ -826,25 +827,27 @@ private struct CalendarSettingsTab: View {
                             .tint(.red)
                         }
                     } else {
+                        #if os(macOS)
                         Button("Allow Access") {
-                            #if os(macOS)
-                            // macOS: always go to System Settings
                             openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
-                            #else
-                            // iOS: show system dialog if not determined yet, else open Settings
-                            let status = EKEventStore.authorizationStatus(for: .event)
-                            if status == .notDetermined {
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        #else
+                        Button(appleAuthStatus == .notDetermined ? "Allow Access" : "Open Settings") {
+                            if appleAuthStatus == .notDetermined {
                                 Task {
                                     await calService.requestAccess()
-                                    await MainActor.run { refresh() }
+                                    appleAuthStatus = EKEventStore.authorizationStatus(for: .event)
+                                    refresh()
                                 }
                             } else {
                                 openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
                             }
-                            #endif
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        #endif
                     }
                 }
 
@@ -878,24 +881,62 @@ private struct CalendarSettingsTab: View {
                             .controlSize(.small)
                         }
                     } else {
+                        #if os(macOS)
                         Button("Connect") {
-                            #if os(macOS)
                             openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preferences.internetaccounts")!)
-                            #else
-                            openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
-                            #endif
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        #else
+                        Button("How to Connect") {
+                            openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        #endif
                     }
                 }
+            } header: {
+                Text("Accounts")
+            } footer: {
+                #if os(iOS)
+                if !calService.isAuthorized {
+                    if appleAuthStatus == .denied {
+                        Text("Calendar access was denied. Tap \"Open Settings\" → enable **Calendars** for Flowline.")
+                            .font(.system(size: 11))
+                    } else {
+                        Text("Tap **Allow Access** to let Flowline read your calendar and plan around your existing events.")
+                            .font(.system(size: 11))
+                    }
+                }
+                #endif
             }
 
             #if os(iOS)
-            Section {
-                Text("To add Google Calendar on iPhone, go to **Settings → Calendar → Accounts → Add Account → Google**.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+            if !googleConnected {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("How to add Google Calendar", systemImage: "info.circle")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Text("Go to **Calendar → Accounts → Add Account → Google** and sign in.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Button {
+                            // Deep-link directly to Calendar settings (Settings → Calendar)
+                            let calendarPrefs = URL(string: "App-prefs:root=CALENDAR")
+                            let fallback = URL(string: UIApplication.openSettingsURLString)!
+                            openSystemURL(calendarPrefs ?? fallback)
+                        } label: {
+                            Label("Open Calendar Settings", systemImage: "arrow.up.right.square")
+                                .font(.system(size: 13))
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .padding(.top, 2)
+                    }
+                    .padding(.vertical, 4)
+                }
             }
             #endif
 
@@ -929,6 +970,7 @@ private struct CalendarSettingsTab: View {
         .formStyle(.grouped)
         .padding(.vertical, 8)
         .onAppear {
+            appleAuthStatus = EKEventStore.authorizationStatus(for: .event)
             // Small delay so EKEventStore finishes loading sources
             // before we read them (avoids the "nothing connected" flash)
             Task {
@@ -937,6 +979,7 @@ private struct CalendarSettingsTab: View {
             }
         }
         .onChange(of: calService.isAuthorized) { _, authorized in
+            appleAuthStatus = EKEventStore.authorizationStatus(for: .event)
             if authorized { refresh() }
         }
     }

@@ -398,7 +398,7 @@ struct PlanningChatView: View {
         .hideKeyboardOnTap()
         .sheet(isPresented: $showCalendarPicker) {
             CalendarPickerSheet(
-                calendars: calendarPickerItems,
+                initialCalendars: calendarPickerItems,
                 selectedID: $selectedCalendarID,
                 onSave: {
                     showCalendarPicker = false
@@ -1108,15 +1108,20 @@ After planning, tell the user which inbox tasks you included):
 // MARK: - Calendar Picker Sheet
 
 private struct CalendarPickerSheet: View {
-    let calendars: [WritableCalendarInfo]
+    let initialCalendars: [WritableCalendarInfo]
     @Binding var selectedID: String
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    @ObservedObject private var calService = CalendarService.shared
+    @State private var liveCalendars: [WritableCalendarInfo] = []
+    @State private var authStatus: EKAuthorizationStatus = .notDetermined
+    @State private var isRequestingAccess = false
+
     // Group calendars by source name
     private var grouped: [(sourceName: String, isGoogle: Bool, items: [WritableCalendarInfo])] {
         var map: [String: (isGoogle: Bool, items: [WritableCalendarInfo])] = [:]
-        for cal in calendars {
+        for cal in liveCalendars {
             if map[cal.sourceName] == nil {
                 map[cal.sourceName] = (isGoogle: cal.isGoogle, items: [])
             }
@@ -1150,41 +1155,51 @@ private struct CalendarPickerSheet: View {
                 .background(FlowLineTheme.border)
 
             // ── Calendar list ─────────────────────────────────────────────
-            if calendars.isEmpty {
+            if liveCalendars.isEmpty {
                 VStack(spacing: 16) {
-                    Image(systemName: "calendar.badge.exclamationmark")
-                        .font(.system(size: 32))
-                        .foregroundColor(FlowLineTheme.secondTxt)
-                    Text("No calendar access")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(FlowLineTheme.mainTxt)
-                    Text("Flowline needs access to your calendar to save your plan blocks.")
-                        .font(.system(size: 12))
-                        .foregroundColor(FlowLineTheme.secondTxt)
-                        .multilineTextAlignment(.center)
-                    Button {
-                        #if os(iOS)
-                        let status = EKEventStore.authorizationStatus(for: .event)
-                        if status == .notDetermined {
-                            Task { await CalendarService.shared.requestAccess() }
-                        } else {
-                            openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                    if isRequestingAccess {
+                        ProgressView()
+                            .controlSize(.large)
+                    } else {
+                        Image(systemName: "calendar.badge.exclamationmark")
+                            .font(.system(size: 32))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                        Text("No calendar access")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(FlowLineTheme.mainTxt)
+                        Text(authStatus == .denied
+                             ? "Calendar access was denied. Open Settings and enable Calendars for Flowline."
+                             : "Flowline needs calendar access to save your plan blocks.")
+                            .font(.system(size: 12))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                            .multilineTextAlignment(.center)
+                        Button {
+                            #if os(iOS)
+                            if authStatus == .notDetermined {
+                                isRequestingAccess = true
+                                Task {
+                                    await calService.requestAccess()
+                                    authStatus = EKEventStore.authorizationStatus(for: .event)
+                                    reloadCalendars()
+                                    isRequestingAccess = false
+                                }
+                            } else {
+                                openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                            }
+                            #else
+                            openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
+                            #endif
+                        } label: {
+                            Text(authStatus == .notDetermined ? "Allow Access" : "Open Settings")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 9)
+                                .background(FlowLineTheme.accent)
+                                .clipShape(Capsule())
                         }
-                        #else
-                        openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
-                        #endif
-                    } label: {
-                        Text(EKEventStore.authorizationStatus(for: .event) == .notDetermined
-                             ? "Allow Access"
-                             : "Open Settings")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 9)
-                            .background(FlowLineTheme.accent)
-                            .clipShape(Capsule())
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(28)
@@ -1291,6 +1306,26 @@ private struct CalendarPickerSheet: View {
         .presentationDragIndicator(.visible)
         #endif
         .background(FlowLineTheme.mainBg)
+        .onAppear {
+            authStatus = EKEventStore.authorizationStatus(for: .event)
+            liveCalendars = initialCalendars
+            // If calendars are empty but service says authorized, reload (handles race on first open)
+            if liveCalendars.isEmpty && calService.isAuthorized {
+                reloadCalendars()
+            }
+        }
+        .onChange(of: calService.isAuthorized) { _, authorized in
+            authStatus = EKEventStore.authorizationStatus(for: .event)
+            if authorized { reloadCalendars() }
+        }
+    }
+
+    private func reloadCalendars() {
+        let cals = calService.writableCalendars()
+        liveCalendars = cals
+        if selectedID.isEmpty || !cals.contains(where: { $0.id == selectedID }) {
+            selectedID = cals.first?.id ?? ""
+        }
     }
 }
 
