@@ -176,7 +176,9 @@ struct FlowlinePaywallView: View {
                 }
             }
         }
+        #if os(macOS)
         .frame(width: 420, height: 680)
+        #endif
     }
 
     // MARK: - Sub-views

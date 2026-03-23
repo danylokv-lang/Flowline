@@ -55,7 +55,7 @@ struct AppIntroView: View {
                                 .animation(.spring(response: 0.35, dampingFraction: 0.75), value: page)
                         }
                     }
-                    .padding(.top, 32)
+                    .padding(.top, geo.safeAreaInsets.top > 20 ? 16 : 32)
 
                     Spacer(minLength: 20)
 
@@ -79,7 +79,7 @@ struct AppIntroView: View {
                         pageVisual(for: page, geo: geo)
                             .clipShape(RoundedRectangle(cornerRadius: 26))
                     }
-                    .frame(height: geo.size.height * 0.40)
+                    .frame(height: geo.size.height * (geo.size.width < 500 ? 0.34 : 0.40))
                     .padding(.horizontal, geo.size.width * 0.065)
                     .id("vis-\(page)")
                     .transition(.asymmetric(
@@ -178,11 +178,13 @@ struct AppIntroView: View {
                         .keyboardShortcut(.return, modifiers: [])
                     }
                     .padding(.horizontal, geo.size.width * 0.07)
-                    .padding(.bottom, 36)
+                    .padding(.bottom, geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 36)
                 }
             }
         }
+        #if os(macOS)
         .frame(minWidth: 600, minHeight: 560)
+        #endif
     }
 
     // MARK: - Helpers
@@ -323,7 +325,7 @@ private struct IntroWelcomePage: View {
                     HStack(spacing: 8) {
                         Circle().fill(Color.green).frame(width: 7, height: 7)
                             .shadow(color: .green.opacity(0.6), radius: 4)
-                        Text("AI Day Planner for Mac")
+                        Text("AI Day Planner for Mac & iPhone")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(FlowLineTheme.secondTxt)
                     }

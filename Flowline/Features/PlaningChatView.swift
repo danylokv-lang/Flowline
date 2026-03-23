@@ -1,6 +1,18 @@
 import SwiftUI
 import Combine
 import SwiftData
+import EventKit
+#if os(iOS)
+import UIKit
+#endif
+
+private func openSystemURL(_ url: URL) {
+    #if os(macOS)
+    NSWorkspace.shared.open(url)
+    #else
+    UIApplication.shared.open(url)
+    #endif
+}
 
 struct Message: Identifiable {
     let id = UUID()
@@ -1139,17 +1151,43 @@ private struct CalendarPickerSheet: View {
 
             // ── Calendar list ─────────────────────────────────────────────
             if calendars.isEmpty {
-                VStack(spacing: 10) {
+                VStack(spacing: 16) {
                     Image(systemName: "calendar.badge.exclamationmark")
-                        .font(.system(size: 28))
+                        .font(.system(size: 32))
                         .foregroundColor(FlowLineTheme.secondTxt)
-                    Text("No writable calendars found.\nGrant calendar access in Settings → Calendars.")
+                    Text("No calendar access")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                    Text("Flowline needs access to your calendar to save your plan blocks.")
                         .font(.system(size: 12))
                         .foregroundColor(FlowLineTheme.secondTxt)
                         .multilineTextAlignment(.center)
+                    Button {
+                        #if os(iOS)
+                        let status = EKEventStore.authorizationStatus(for: .event)
+                        if status == .notDetermined {
+                            Task { await CalendarService.shared.requestAccess() }
+                        } else {
+                            openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                        }
+                        #else
+                        openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
+                        #endif
+                    } label: {
+                        Text(EKEventStore.authorizationStatus(for: .event) == .notDetermined
+                             ? "Allow Access"
+                             : "Open Settings")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 9)
+                            .background(FlowLineTheme.accent)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(24)
+                .padding(28)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -1246,7 +1284,12 @@ private struct CalendarPickerSheet: View {
             .disabled(selectedID.isEmpty)
             .padding(16)
         }
+        #if os(macOS)
         .frame(width: 320, height: 420)
+        #else
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        #endif
         .background(FlowLineTheme.mainBg)
     }
 }
