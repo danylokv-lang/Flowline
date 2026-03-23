@@ -186,15 +186,10 @@ struct MainTabView: View {
                     .help("Capture tasks here — the AI will slot them into your plan when you ask")
                     .tag(3)
 
-                StatsView()
-                    .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
-                    .help("Your planning stats and insights")
-                    .tag(4)
-
                 #if os(iOS)
                 SettingsView()
                     .tabItem { Label("Settings", systemImage: "gearshape") }
-                    .tag(5)
+                    .tag(4)
                 #endif
             }
             .tint(FlowLineTheme.accent)

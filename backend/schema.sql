@@ -43,10 +43,9 @@ CREATE TABLE IF NOT EXISTS schedule_blocks (
   user_id    TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title      TEXT    NOT NULL,
   category   TEXT    NOT NULL,                    -- work | study | health | personal
-  start_time      TEXT    NOT NULL,               -- HH:mm
-  end_time        TEXT    NOT NULL,               -- HH:mm
-  check_in_result TEXT,                           -- done | partly | skipped | NULL
-  created_at      INTEGER NOT NULL
+  start_time TEXT    NOT NULL,                    -- HH:mm
+  end_time   TEXT    NOT NULL,                    -- HH:mm
+  created_at INTEGER NOT NULL
 );
 
 -- ── Chat Messages ─────────────────────────────────────────────────────────

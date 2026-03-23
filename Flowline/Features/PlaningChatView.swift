@@ -67,7 +67,6 @@ struct PlanningChatView: View {
     @Query private var profiles: [UserProfile]
     @Query(filter: #Predicate<CapturedTask> { !$0.isScheduled }, sort: \CapturedTask.createdAt)
     private var inboxTasks: [CapturedTask]
-    @Query private var dayPlans: [DayPlan]
     @Binding var selectedTab: Int
     @State private var messages: [Message] = []
     @State private var inputText: String = ""
@@ -306,45 +305,12 @@ struct PlanningChatView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
 
-                    // ── Replan button (shown mid-day when today is already planned) ──
-                    let nowHour = Calendar.current.component(.hour, from: Date())
-                    if !isNewDay && nowHour >= 9 && !isLoading && !isSaving {
-                        HStack {
-                            Button {
-                                sendMessage(replanPrompt)
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "arrow.trianglehead.2.counterclockwise.rotate.90")
-                                        .font(.system(size: 11, weight: .bold))
-                                    Text("Replan my day")
-                                        .font(.system(size: 12, weight: .semibold))
-                                }
-                                .foregroundColor(FlowLineTheme.accentHi)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(FlowLineTheme.accent.opacity(0.10))
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(FlowLineTheme.accent.opacity(0.25), lineWidth: 1)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(isLoading || isSaving)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-
                     HStack(alignment: .bottom, spacing: 10) {
                         ZStack(alignment: .topLeading) {
                             if inputText.isEmpty {
                                 Text("What's on your plate today...")
                                     .font(.system(size: 14))
                                     .foregroundColor(FlowLineTheme.secondTxt.opacity(0.4))
-                                    .padding(.top, 1)
                                     .allowsHitTesting(false)
                             }
                             GrowingTextEditor(
@@ -717,57 +683,6 @@ struct PlanningChatView: View {
                 .frame(maxWidth: 320)
             }
 
-            // ── Day templates ─────────────────────────────────────────────────
-            VStack(alignment: .leading, spacing: 10) {
-                Text("TEMPLATES")
-                    .font(.system(size: 9, weight: .bold))
-                    .tracking(2)
-                    .foregroundColor(FlowLineTheme.dimTxt)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                let templates: [(emoji: String, label: String, prompt: String)] = [
-                    ("📚", "School Day",
-                     "Plan a school day for \(heroPlanDateString). Classes, study blocks, breaks and meals. Keep afternoons for homework and review."),
-                    ("💻", "Deep Work",
-                     "Plan a deep work day for \(heroPlanDateString). Two 90-min focus blocks in the morning, protect from interruptions. Add short recharge breaks."),
-                    ("🧠", "Exam Day",
-                     "Plan an exam prep day for \(heroPlanDateString). Prioritise active recall and practice problems. Schedule breaks every 45–50 min. No social media blocks."),
-                    ("🌿", "Chill Day",
-                     "Plan a relaxed recovery day for \(heroPlanDateString). Light tasks only, self-care, hobbies, and recharging. No hard deadlines.")
-                ]
-
-                LazyVGrid(
-                    columns: [GridItem(.flexible()), GridItem(.flexible())],
-                    spacing: 8
-                ) {
-                    ForEach(templates, id: \.label) { tpl in
-                        Button {
-                            sendMessage(tpl.prompt)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Text(tpl.emoji)
-                                    .font(.system(size: 16))
-                                Text(tpl.label)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(FlowLineTheme.mainTxt)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 9)
-                            .background(FlowLineTheme.tertiaryBg.opacity(0.8))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(FlowLineTheme.borderHi.opacity(0.6), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(isLoading || isSaving)
-                    }
-                }
-            }
-            .frame(maxWidth: 320)
-
             // ── Secondary quick-start chips ───────────────────────────────────
             VStack(spacing: 8) {
                 ForEach(quickPrompts, id: \.self) { prompt in
@@ -823,67 +738,10 @@ struct PlanningChatView: View {
     }
 
     // ── Hero prompt: rich enough that the AI builds a plan without asking ─────
-
-    // ── Replan prompt: includes remaining blocks + check-in status ────────────
-    private var replanPrompt: String {
-        let tf = DateFormatter()
-        tf.timeStyle = .short
-        let now = tf.string(from: Date())
-
-        let cal = Calendar.current
-        let todayStart = cal.startOfDay(for: Date())
-        let todayEnd   = cal.date(byAdding: .day, value: 1, to: todayStart)!
-
-        let todayBlocks = dayPlans
-            .filter { let d = cal.startOfDay(for: $0.date); return d >= todayStart && d < todayEnd }
-            .flatMap { $0.blocks }
-            .sorted { $0.startTime < $1.startTime }
-
-        let remaining = todayBlocks.filter { $0.endTime > Date() }
-        let past      = todayBlocks.filter { $0.endTime <= Date() }
-
-        var lines: [String] = []
-
-        if !past.isEmpty {
-            lines.append("Completed blocks:")
-            for b in past {
-                let status: String
-                switch b.checkInResult {
-                case .done:    status = "✓ done"
-                case .partly:  status = "⚡ partly done"
-                case .skipped: status = "✗ skipped"
-                case .none:    status = "? unknown"
-                }
-                let bf = DateFormatter(); bf.dateFormat = "HH:mm"
-                lines.append("  • \(bf.string(from: b.startTime))–\(bf.string(from: b.endTime)) \(b.title) (\(status))")
-            }
-        }
-
-        if !remaining.isEmpty {
-            lines.append("Remaining blocks (to reschedule):")
-            for b in remaining {
-                let bf = DateFormatter(); bf.dateFormat = "HH:mm"
-                lines.append("  • \(bf.string(from: b.startTime))–\(bf.string(from: b.endTime)) \(b.title)")
-            }
-        }
-
-        let blockContext = lines.isEmpty ? "" : "\n\n\(lines.joined(separator: "\n"))"
-
-        if !remaining.isEmpty {
-            return "It's \(now). Please reshuffle the rest of my day — keep what makes sense, drop or compress what I've already missed.\(blockContext)"
-        } else {
-            return "It's \(now). My schedule for today is done. Suggest how I can make the most of the rest of the evening.\(blockContext)"
-        }
-    }
-
-    private var heroPlanDateString: String {
+    private var heroPlanPrompt: String {
         let df = DateFormatter()
         df.dateFormat = "EEEE, MMMM d"
-        return df.string(from: Date())
-    }
-
-    private var heroPlanPrompt: String {
-        let dateStr = heroPlanDateString
+        let dateStr = df.string(from: Date())
         let tf = DateFormatter()
         tf.timeStyle = .short
         let timeStr = tf.string(from: Date())

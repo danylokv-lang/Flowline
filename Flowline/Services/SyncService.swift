@@ -91,19 +91,6 @@ final class SyncService {
         _ = try? await request("POST", "/reviews", body: body, token: token)
     }
 
-    /// Permanently delete the account and all server data. Returns true on success.
-    @discardableResult
-    func deleteAccount(token: String) async -> Bool {
-        guard !token.isEmpty else { return false }
-        do {
-            let data = try await request("DELETE", "/user/account", body: nil, token: token)
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            return (json?["success"] as? Bool) == true
-        } catch {
-            return false
-        }
-    }
-
     func markOnboardingDone(token: String) async {
         guard !token.isEmpty else { return }
         let body: [String: Any] = ["profile": ["onboardingDone": 1]]
@@ -283,9 +270,6 @@ final class SyncService {
                 let block = ScheduleBlock(title: title, category: category,
                                           startTime: timeDate(startStr),
                                           endTime:   timeDate(endStr))
-                if let raw = b["checkInResult"] as? String {
-                    block.checkInResult = CheckInResult(rawValue: raw)
-                }
                 context.insert(block)
                 plan.blocks.append(block)
             }
@@ -296,16 +280,12 @@ final class SyncService {
     // MARK: - Helpers
 
     private func planToJSON(_ plan: DayPlan) -> [String: Any] {
-        let blocks: [[String: Any]] = plan.blocks.map { b in
-            var dict: [String: Any] = [
-                "title":     b.title,
-                "category":  b.category?.rawValue ?? "personal",
-                "startTime": hhmmFmt.string(from: b.startTime),
-                "endTime":   hhmmFmt.string(from: b.endTime),
-            ]
-            if let r = b.checkInResult { dict["checkInResult"] = r.rawValue }
-            return dict
-        }
+        let blocks: [[String: Any]] = plan.blocks.map { b in [
+            "title":     b.title,
+            "category":  b.category?.rawValue ?? "personal",
+            "startTime": hhmmFmt.string(from: b.startTime),
+            "endTime":   hhmmFmt.string(from: b.endTime),
+        ]}
         var day: [String: Any] = ["date": dateFmt.string(from: plan.date), "blocks": blocks]
         if let notes = plan.aiNotes { day["aiNotes"] = notes }
         return day

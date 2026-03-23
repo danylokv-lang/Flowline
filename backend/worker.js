@@ -12,7 +12,6 @@
  *   POST /ai                       — Claude proxy with per-user rate limit (JWT required)
  *   GET  /calendar                 — get week calendar (JWT required)
  *   POST /calendar/sync            — save/replace days (JWT required)
- *   DELETE /user/account          — permanently delete account + all data (JWT required)
  *
  * All routes require x-app-secret header (except /auth/*).
  * Authenticated routes also require Authorization: Bearer <token>
@@ -539,8 +538,7 @@ async function handleGetCalendar(userId, url, env) {
       cd.id, cd.date, cd.ai_notes,
       json_group_array(json_object(
         'id', sb.id, 'title', sb.title, 'category', sb.category,
-        'startTime', sb.start_time, 'endTime', sb.end_time,
-        'checkInResult', sb.check_in_result
+        'startTime', sb.start_time, 'endTime', sb.end_time
       )) AS blocks
     FROM calendar_days cd
     LEFT JOIN schedule_blocks sb ON sb.day_id = cd.id
@@ -587,23 +585,14 @@ async function handleSyncCalendar(userId, req, env) {
 
     for (const block of day.blocks ?? []) {
       await env.DB.prepare(`
-        INSERT INTO schedule_blocks (id, day_id, user_id, title, category, start_time, end_time, check_in_result, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?)
+        INSERT INTO schedule_blocks (id, day_id, user_id, title, category, start_time, end_time, created_at)
+        VALUES (?,?,?,?,?,?,?,?)
       `).bind(crypto.randomUUID(), dayId, userId, block.title, block.category,
-              block.startTime, block.endTime, block.checkInResult ?? null, ts).run();
+              block.startTime, block.endTime, ts).run();
     }
   }
 
   return res({ success: true, synced: days.length });
-}
-
-// ── Delete Account ─────────────────────────────────────────────────────────
-
-async function handleDeleteAccount(userId, env) {
-  // Cascade deletes in schema handle all child rows (profiles, calendar_days,
-  // schedule_blocks, chat_messages, plan_reviews, password_reset_tokens).
-  await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
-  return res({ success: true });
 }
 
 // ── Main Router ────────────────────────────────────────────────────────────
@@ -664,7 +653,6 @@ export default {
       if (path === "/chats"             && method === "GET") return handleGetChats(userId, url, env);
       if (path === "/chats/sync"        && method === "POST") return handleSyncChats(userId, request, env);
       if (path === "/reviews"           && method === "POST") return handleSubmitReview(userId, request, env);
-      if (path === "/user/account"      && method === "DELETE") return handleDeleteAccount(userId, env);
 
       return res({ error: "Not found" }, 404);
     } catch (err) {

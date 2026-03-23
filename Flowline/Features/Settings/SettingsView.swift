@@ -153,9 +153,6 @@ private struct macOSSettingsRoot: View {
     }
 
     private func deleteAll() {
-        if let token = authService.token {
-            Task { await SyncService.shared.deleteAccount(token: token) }
-        }
         messages.forEach { context.delete($0) }
         dayPlans.forEach { context.delete($0) }
         capturedTasks.forEach { context.delete($0) }
@@ -355,13 +352,8 @@ private struct iOSSettingsRoot: View {
         }
     }
 
-    // ── Delete all local data + server account + sign out ────────────────────
+    // ── Delete all local data + sign out ──────────────────────────────────────
     private func deleteAll() {
-        // Fire server deletion in background (best-effort)
-        if let token = authService.token {
-            Task { await SyncService.shared.deleteAccount(token: token) }
-        }
-        // Wipe local SwiftData
         messages.forEach { context.delete($0) }
         dayPlans.forEach { context.delete($0) }
         capturedTasks.forEach { context.delete($0) }
