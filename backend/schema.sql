@@ -91,3 +91,28 @@ CREATE INDEX IF NOT EXISTS idx_blocks_user ON schedule_blocks(user_id);
 
 -- Fast chat history queries: "give me all messages for user X since timestamp T"
 CREATE INDEX IF NOT EXISTS idx_chat_user_ts ON chat_messages(user_id, timestamp);
+
+-- ── Captured Tasks (Task Inbox) ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS captured_tasks (
+  id           TEXT    PRIMARY KEY,               -- stable UUID generated on-device
+  user_id      TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text         TEXT    NOT NULL,
+  category     TEXT    NOT NULL DEFAULT 'work',
+  is_scheduled INTEGER NOT NULL DEFAULT 0,
+  created_at   INTEGER NOT NULL                   -- Unix timestamp
+);
+
+CREATE INDEX IF NOT EXISTS idx_captured_tasks_user ON captured_tasks(user_id, created_at);
+
+-- ── Live DB Migrations ─────────────────────────────────────────────────────
+-- Run these once against the production DB via:
+--   wrangler d1 execute flowline-db --remote --command="..."
+--
+-- Batch 1 (2026-03-24): recurring_commitments, onboarding_done, captured_tasks
+--   ALTER TABLE profiles ADD COLUMN recurring_commitments TEXT NOT NULL DEFAULT '';
+--   ALTER TABLE profiles ADD COLUMN onboarding_done INTEGER NOT NULL DEFAULT 0;
+--   (+ CREATE TABLE captured_tasks above)
+--
+-- Batch 2 (today): server-side weekly plan-save counter
+--   ALTER TABLE profiles ADD COLUMN weekly_saves INTEGER NOT NULL DEFAULT 0;
+--   ALTER TABLE profiles ADD COLUMN weekly_saves_monday TEXT NOT NULL DEFAULT '';

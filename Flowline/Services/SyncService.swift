@@ -26,9 +26,9 @@ final class SyncService {
     // MARK: - Public API
 
     /// Pull profile + last 30 days + next 30 days + chats + inbox from the server.
-    func pullAll(token: String, context: ModelContext) async {
+    func pullAll(token: String, context: ModelContext, subscriptionManager: SubscriptionManager? = nil) async {
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.pullProfile(token: token, context: context) }
+            group.addTask { await self.pullProfile(token: token, context: context, subscriptionManager: subscriptionManager) }
             group.addTask { await self.pullCalendar(token: token, context: context) }
             group.addTask { await self.pullChats(token: token, context: context) }
             group.addTask { await self.pullInbox(token: token, context: context) }
@@ -115,6 +115,13 @@ final class SyncService {
         _ = try? await request("PUT", "/user/profile", body: body, token: token)
     }
 
+    /// Push the current week's plan-save count so other devices stay in sync.
+    func pushWeeklySaves(count: Int, monday: String, token: String) async {
+        guard !token.isEmpty else { return }
+        let body: [String: Any] = ["profile": ["weeklySaves": count, "weeklySavesMonday": monday]]
+        _ = try? await request("PUT", "/user/profile", body: body, token: token)
+    }
+
     /// Push captured inbox tasks to the server.
     func pushInbox(_ tasks: [CapturedTask], token: String) async {
         guard !token.isEmpty, !tasks.isEmpty else { return }
@@ -130,7 +137,7 @@ final class SyncService {
 
     // MARK: - Pull profile
 
-    private func pullProfile(token: String, context: ModelContext) async {
+    private func pullProfile(token: String, context: ModelContext, subscriptionManager: SubscriptionManager? = nil) async {
         guard let data = try? await request("GET", "/user/profile", body: nil, token: token),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let p    = json["profile"] as? [String: Any] else { return }
@@ -155,6 +162,8 @@ final class SyncService {
         let bio                   = p["bio"]                           as? String ?? ""
         let recurringCommitments  = p["recurring_commitments"]         as? String ?? ""
         let onboardingDone        = (p["onboarding_done"]              as? Int ?? 0) == 1
+        let weeklySaves           = p["weekly_saves"]                  as? Int    ?? 0
+        let weeklySavesMonday     = p["weekly_saves_monday"]           as? String ?? ""
 
         if let existing = (try? context.fetch(FetchDescriptor<UserProfile>()))?.first {
             existing.name                 = name
@@ -177,6 +186,9 @@ final class SyncService {
         if onboardingDone {
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         }
+
+        // Restore server-authoritative weekly save count (survives reinstalls + device switches)
+        subscriptionManager?.refreshFromServer(count: weeklySaves, monday: weeklySavesMonday)
 
         // Cache work hours for break notification scheduling
         let ud = UserDefaults.standard

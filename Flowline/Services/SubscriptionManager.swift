@@ -45,6 +45,7 @@ final class SubscriptionManager: ObservableObject {
 
     private let kTrialStart   = "trial_start_date"
     private let kPlansWeek    = "plans_this_week"
+    private let kWeekMonday   = "plans_week_monday"   // ISO date of the Monday that started this window
     private let kTotalSaves   = "total_plan_saves"
 
     var trialStartDate: Date? {
@@ -88,14 +89,50 @@ final class SubscriptionManager: ObservableObject {
         UserDefaults.standard.integer(forKey: kTotalSaves)
     }
 
-    /// Call once per successful plan save.
-    func recordPlanSave() {
+    /// Call once per successful plan save. Pass the auth token so the count is pushed to the server.
+    func recordPlanSave(token: String?) {
         resetIfNewWeek()
         plansThisWeek += 1
+        let monday = Self.currentMondayString()
         UserDefaults.standard.set(plansThisWeek, forKey: kPlansWeek)
+        UserDefaults.standard.set(monday,        forKey: kWeekMonday)
 
         let total = UserDefaults.standard.integer(forKey: kTotalSaves) + 1
         UserDefaults.standard.set(total, forKey: kTotalSaves)
+
+        // Persist the count server-side so it survives reinstalls and device switches
+        if let token, !token.isEmpty {
+            let count = plansThisWeek
+            Task {
+                await SyncService.shared.pushWeeklySaves(count: count, monday: monday, token: token)
+            }
+        }
+    }
+
+    /// Called by SyncService after pulling the profile — syncs server's authoritative count.
+    func refreshFromServer(count: Int, monday: String) {
+        // Empty monday means the DB migration hasn't run yet or no saves recorded —
+        // don't wipe the locally-tracked count.
+        guard !monday.isEmpty else { return }
+        let currentMonday = Self.currentMondayString()
+        if monday == currentMonday {
+            // Same week — server is authoritative
+            plansThisWeek = count
+            UserDefaults.standard.set(count,         forKey: kPlansWeek)
+            UserDefaults.standard.set(currentMonday, forKey: kWeekMonday)
+        } else {
+            // Server data is from a past week — current week starts at 0
+            plansThisWeek = 0
+            UserDefaults.standard.set(0,             forKey: kPlansWeek)
+            UserDefaults.standard.set(currentMonday, forKey: kWeekMonday)
+        }
+    }
+
+    /// Reset local weekly saves when switching accounts (server pull will restore the correct value).
+    func resetForAccountSwitch() {
+        plansThisWeek = 0
+        UserDefaults.standard.removeObject(forKey: kPlansWeek)
+        UserDefaults.standard.removeObject(forKey: kWeekMonday)
     }
 
     // MARK: - Init
@@ -202,20 +239,25 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func resetIfNewWeek() {
-        let cal       = Calendar.current
-        let thisWeek  = cal.component(.weekOfYear, from: Date())
-        let thisYear  = cal.component(.year, from: Date())
-
-        let savedWeek = UserDefaults.standard.integer(forKey: "plans_week_num")
-        let savedYear = UserDefaults.standard.integer(forKey: "plans_week_year")
-
-        guard savedWeek == thisWeek && savedYear == thisYear else {
+        let currentMonday = Self.currentMondayString()
+        let savedMonday   = UserDefaults.standard.string(forKey: kWeekMonday) ?? ""
+        if savedMonday != currentMonday {
             plansThisWeek = 0
-            UserDefaults.standard.set(0,        forKey: kPlansWeek)
-            UserDefaults.standard.set(thisWeek, forKey: "plans_week_num")
-            UserDefaults.standard.set(thisYear, forKey: "plans_week_year")
-            return
+            UserDefaults.standard.set(0,             forKey: kPlansWeek)
+            UserDefaults.standard.set(currentMonday, forKey: kWeekMonday)
         }
+    }
+
+    /// Returns the ISO-8601 date string of the Monday that starts the current week.
+    /// Using the ISO calendar guarantees Monday is always day 1, locale-independent.
+    static func currentMondayString() -> String {
+        var cal = Calendar(identifier: .iso8601)
+        cal.locale = Locale(identifier: "en_US_POSIX")
+        let monday = cal.date(from: cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date()))!
+        let fmt = DateFormatter()
+        fmt.locale     = Locale(identifier: "en_US_POSIX")
+        fmt.dateFormat = "yyyy-MM-dd"
+        return fmt.string(from: monday)
     }
 }
 

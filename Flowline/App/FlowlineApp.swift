@@ -89,7 +89,7 @@ struct FlowlineApp: App {
                     if let token = authService.token {
                         isSyncingAfterLogin = true
                         Task {
-                            await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext)
+                            await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext, subscriptionManager: subscriptionManager)
                             isSyncingAfterLogin = false
                         }
                     }
@@ -103,7 +103,7 @@ struct FlowlineApp: App {
 
                 // Pull server data on every launch if already logged in
                 if authService.isLoggedIn, let token = authService.token {
-                    await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext)
+                    await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext, subscriptionManager: subscriptionManager)
                 }
             }
         }
@@ -155,10 +155,8 @@ struct FlowlineApp: App {
         // pullProfile() always writes the server's onboarding_done value,
         // so the correct state is set once the pull completes.
         StreakManager.shared.resetForAccountSwitch()
-        // Reset weekly plan limit so the new account starts fresh
-        UserDefaults.standard.removeObject(forKey: "plans_this_week")
-        UserDefaults.standard.removeObject(forKey: "plans_week_num")
-        UserDefaults.standard.removeObject(forKey: "plans_week_year")
+        // Reset weekly plan limit locally — pullAll will restore the server's count
+        subscriptionManager.resetForAccountSwitch()
         UserDefaults.standard.removeObject(forKey: "total_plan_saves")
         UserDefaults.standard.removeObject(forKey: "chats.lastSyncTimestamp")
     }

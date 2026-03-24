@@ -1157,7 +1157,7 @@ After planning, tell the user which inbox tasks you included):
                     await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
                 }
                 StreakManager.shared.recordPlan()
-                subscriptionManager.recordPlanSave()
+                subscriptionManager.recordPlanSave(token: authService.token)
 
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(
@@ -1209,7 +1209,7 @@ After planning, tell the user which inbox tasks you included):
                     lastUsedCalendarID = id
                 }
                 StreakManager.shared.recordPlan()
-                subscriptionManager.recordPlanSave()
+                subscriptionManager.recordPlanSave(token: authService.token)
 
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(

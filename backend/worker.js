@@ -331,7 +331,7 @@ async function handleGetProfile(userId, env) {
   const [user, profile] = await Promise.all([
     env.DB.prepare("SELECT id, name, email, is_pro, pro_expires_at FROM users WHERE id = ?")
       .bind(userId).first(),
-    env.DB.prepare("SELECT wake_time, sleep_time, work_start, work_end, has_work_hours, bio, recurring_commitments, onboarding_done FROM profiles WHERE user_id = ?")
+    env.DB.prepare("SELECT wake_time, sleep_time, work_start, work_end, has_work_hours, bio, recurring_commitments, onboarding_done, weekly_saves, weekly_saves_monday FROM profiles WHERE user_id = ?")
       .bind(userId).first(),
   ]);
   if (!user) return res({ error: "User not found" }, 404);
@@ -360,14 +360,19 @@ async function handleUpdateProfile(userId, req, env) {
         work_end        = COALESCE(?, work_end),
         has_work_hours  = COALESCE(?, has_work_hours),
         bio             = COALESCE(?, bio),
-        onboarding_done = COALESCE(?, onboarding_done),
-        updated_at      = ?
+        recurring_commitments = COALESCE(?, recurring_commitments),
+        onboarding_done       = COALESCE(?, onboarding_done),
+        weekly_saves          = COALESCE(?, weekly_saves),
+        weekly_saves_monday   = COALESCE(?, weekly_saves_monday),
+        updated_at            = ?
       WHERE user_id = ?
     `).bind(
       p.wakeTime ?? null, p.sleepTime ?? null,
       p.workStart ?? null, p.workEnd ?? null,
       p.hasWorkHours ?? null, p.bio ?? null,
+      p.recurringCommitments ?? null,
       p.onboardingDone ?? null,
+      p.weeklySaves ?? null, p.weeklySavesMonday ?? null,
       ts, userId
     ).run();
   }
