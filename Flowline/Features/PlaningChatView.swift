@@ -1230,6 +1230,8 @@ After planning, tell the user which inbox tasks you included):
                 if let jsonData = response.data(using: .utf8),
                    let plan = try? JSONDecoder().decode(GeneratedPlan.self, from: jsonData) {
                     try? planSaver.save(plan: plan, for: Date(), context: modelContext)
+                    WidgetDataWriter.shared.refresh(context: modelContext)
+                    scheduleNotificationsAfterSave()
                     if let token = authService.token {
                         _Concurrency.Task { await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext) }
                     }
@@ -1400,6 +1402,20 @@ After planning, tell the user which inbox tasks you included):
         }
     }
 
+    /// Fetch today's saved blocks and schedule block-reminder notifications.
+    private func scheduleNotificationsAfterSave() {
+        let today    = Calendar.current.startOfDay(for: Date())
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        let descriptor = FetchDescriptor<ScheduleBlock>(
+            predicate: #Predicate { $0.startTime >= today && $0.startTime < tomorrow },
+            sortBy: [SortDescriptor(\.startTime)]
+        )
+        guard let blocks = try? modelContext.fetch(descriptor) else { return }
+        let sleepTime  = profiles.first?.sleepTime ?? Calendar.current.date(from: DateComponents(hour: 23))!
+        let streakDays = StreakManager.shared.currentStreak
+        NotificationManager.shared.onPlanSaved(blocks: blocks, streakDays: streakDays, sleepTime: sleepTime)
+    }
+
     private func savePlan() {
         guard !isSaving, subscriptionManager.canSavePlan else { return }
         isSaving = true
@@ -1429,6 +1445,8 @@ After planning, tell the user which inbox tasks you included):
                 }
 
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                WidgetDataWriter.shared.refresh(context: modelContext)
+                scheduleNotificationsAfterSave()
                 if let token = authService.token {
                     await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
                 }
@@ -1492,6 +1510,8 @@ After planning, tell the user which inbox tasks you included):
                 }
 
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                WidgetDataWriter.shared.refresh(context: modelContext)
+                scheduleNotificationsAfterSave()
                 if let token = authService.token {
                     await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
                 }

@@ -11,6 +11,9 @@
 		977B71892F7205D100538EC7 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 977B71882F7205D100538EC7 /* RevenueCatUI */; };
 		977B718C2F7205F300538EC7 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 977B718B2F7205F300538EC7 /* RevenueCat */; };
 		977B718E2F7205F900538EC7 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 977B718D2F7205F900538EC7 /* RevenueCatUI */; };
+		97B43E4E2F73134E004B28DE /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97B43E4D2F73134E004B28DE /* WidgetKit.framework */; };
+		97B43E502F73134E004B28DE /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97B43E4F2F73134E004B28DE /* SwiftUI.framework */; };
+		97B43E5F2F73134E004B28DE /* FlowlineWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 97B43E4C2F73134E004B28DE /* FlowlineWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,7 +45,28 @@
 			remoteGlobalIDString = 9752E0112F6704A700CBF252;
 			remoteInfo = Flowline;
 		};
+		97B43E5D2F73134E004B28DE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9752E00A2F6704A700CBF252 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 97B43E4B2F73134E004B28DE;
+			remoteInfo = FlowlineWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		97B43E642F73134E004B28DE /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				97B43E5F2F73134E004B28DE /* FlowlineWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		971EAD092F7097B1006D2662 /* Flowline_iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flowline_iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -51,7 +75,21 @@
 		9752E0122F6704A700CBF252 /* Flowline.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flowline.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9752E0212F6704A800CBF252 /* FlowlineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FlowlineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9752E02B2F6704A800CBF252 /* FlowlineUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FlowlineUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		97B43E4C2F73134E004B28DE /* FlowlineWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FlowlineWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		97B43E4D2F73134E004B28DE /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		97B43E4F2F73134E004B28DE /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		97B43E662F7313CB004B28DE /* FlowlineWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FlowlineWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		97B43E602F73134E004B28DE /* Exceptions for "FlowlineWidget" folder in "FlowlineWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 97B43E4B2F73134E004B28DE /* FlowlineWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		971EAD0A2F7097B1006D2662 /* Flowline_iOS */ = {
@@ -82,6 +120,14 @@
 		9752E02E2F6704A800CBF252 /* FlowlineUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = FlowlineUITests;
+			sourceTree = "<group>";
+		};
+		97B43E512F73134E004B28DE /* FlowlineWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				97B43E602F73134E004B28DE /* Exceptions for "FlowlineWidget" folder in "FlowlineWidgetExtension" target */,
+			);
+			path = FlowlineWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -133,18 +179,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		97B43E492F73134E004B28DE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				97B43E502F73134E004B28DE /* SwiftUI.framework in Frameworks */,
+				97B43E4E2F73134E004B28DE /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		9752E0092F6704A700CBF252 = {
 			isa = PBXGroup;
 			children = (
+				97B43E662F7313CB004B28DE /* FlowlineWidgetExtension.entitlements */,
 				9752E0142F6704A700CBF252 /* Flowline */,
 				9752E0242F6704A800CBF252 /* FlowlineTests */,
 				9752E02E2F6704A800CBF252 /* FlowlineUITests */,
 				971EAD0A2F7097B1006D2662 /* Flowline_iOS */,
 				971EAD1A2F7097B2006D2662 /* Flowline_iOSTests */,
 				971EAD242F7097B2006D2662 /* Flowline_iOSUITests */,
+				97B43E512F73134E004B28DE /* FlowlineWidget */,
 				977B718A2F7205F300538EC7 /* Frameworks */,
 				9752E0132F6704A700CBF252 /* Products */,
 			);
@@ -159,6 +216,7 @@
 				971EAD092F7097B1006D2662 /* Flowline_iOS.app */,
 				971EAD172F7097B2006D2662 /* Flowline_iOSTests.xctest */,
 				971EAD212F7097B2006D2662 /* Flowline_iOSUITests.xctest */,
+				97B43E4C2F73134E004B28DE /* FlowlineWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -166,6 +224,8 @@
 		977B718A2F7205F300538EC7 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				97B43E4D2F73134E004B28DE /* WidgetKit.framework */,
+				97B43E4F2F73134E004B28DE /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -180,10 +240,12 @@
 				971EAD052F7097B1006D2662 /* Sources */,
 				971EAD062F7097B1006D2662 /* Frameworks */,
 				971EAD072F7097B1006D2662 /* Resources */,
+				97B43E642F73134E004B28DE /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				97B43E5E2F73134E004B28DE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				971EAD0A2F7097B1006D2662 /* Flowline_iOS */,
@@ -314,6 +376,28 @@
 			productReference = 9752E02B2F6704A800CBF252 /* FlowlineUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		97B43E4B2F73134E004B28DE /* FlowlineWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 97B43E612F73134E004B28DE /* Build configuration list for PBXNativeTarget "FlowlineWidgetExtension" */;
+			buildPhases = (
+				97B43E482F73134E004B28DE /* Sources */,
+				97B43E492F73134E004B28DE /* Frameworks */,
+				97B43E4A2F73134E004B28DE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				97B43E512F73134E004B28DE /* FlowlineWidget */,
+			);
+			name = FlowlineWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = FlowlineWidgetExtension;
+			productReference = 97B43E4C2F73134E004B28DE /* FlowlineWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -346,6 +430,9 @@
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = 9752E0112F6704A700CBF252;
 					};
+					97B43E4B2F73134E004B28DE = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
 			buildConfigurationList = 9752E00D2F6704A700CBF252 /* Build configuration list for PBXProject "Flowline" */;
@@ -371,6 +458,7 @@
 				971EAD082F7097B1006D2662 /* Flowline_iOS */,
 				971EAD162F7097B2006D2662 /* Flowline_iOSTests */,
 				971EAD202F7097B2006D2662 /* Flowline_iOSUITests */,
+				97B43E4B2F73134E004B28DE /* FlowlineWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -412,6 +500,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9752E0292F6704A800CBF252 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		97B43E4A2F73134E004B28DE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -463,6 +558,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		97B43E482F73134E004B28DE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -486,6 +588,11 @@
 			target = 9752E0112F6704A700CBF252 /* Flowline */;
 			targetProxy = 9752E02C2F6704A800CBF252 /* PBXContainerItemProxy */;
 		};
+		97B43E5E2F73134E004B28DE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 97B43E4B2F73134E004B28DE /* FlowlineWidgetExtension */;
+			targetProxy = 97B43E5D2F73134E004B28DE /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -494,6 +601,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Flowline_iOS/Flowline_iOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 477VGA23K5;
@@ -533,6 +641,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Flowline_iOS/Flowline_iOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 477VGA23K5;
@@ -794,6 +903,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon1;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = Flowline/Flowline.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -852,6 +962,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon1;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = Flowline/Flowline.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1006,6 +1117,73 @@
 			};
 			name = Release;
 		};
+		97B43E622F73134E004B28DE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FlowlineWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 477VGA23K5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FlowlineWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FlowlineWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dandev.Flowline-iOS.FlowlineWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		97B43E632F73134E004B28DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FlowlineWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 477VGA23K5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FlowlineWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FlowlineWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dandev.Flowline-iOS.FlowlineWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1068,6 +1246,15 @@
 			buildConfigurations = (
 				9752E03C2F6704A800CBF252 /* Debug */,
 				9752E03D2F6704A800CBF252 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		97B43E612F73134E004B28DE /* Build configuration list for PBXNativeTarget "FlowlineWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				97B43E622F73134E004B28DE /* Debug */,
+				97B43E632F73134E004B28DE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

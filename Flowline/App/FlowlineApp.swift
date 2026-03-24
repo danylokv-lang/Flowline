@@ -30,7 +30,12 @@ struct FlowlineApp: App {
             ChatMessage.self,
             CapturedTask.self
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        // Store in App Group so the widget extension can read the same data
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            groupContainer: .identifier(WidgetDayData.appGroupID)
+        )
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
@@ -111,6 +116,12 @@ struct FlowlineApp: App {
                 if authService.isLoggedIn {
                     subscriptionManager.startTrialIfNeeded()
                 }
+
+                // Re-arm the 9am planning nudge every launch.
+                // It fires daily; if the user saves a plan it's cancelled automatically.
+                #if os(iOS)
+                NotificationManager.shared.schedulePlanningNudge()
+                #endif
             }
         }
         .modelContainer(sharedModelContainer)
