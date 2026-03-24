@@ -133,7 +133,7 @@ struct ProfileView: View {
                                                 .clipShape(Capsule())
                                         }
                                     }
-                                    Text("\(subscriptionManager.remainingMessages) messages left today")
+                                    Text("\(subscriptionManager.plansThisWeek)/\(SubscriptionManager.weeklyFreeLimit) plans saved this week")
                                         .font(.system(size: 11))
                                         .foregroundColor(FlowLineTheme.secondTxt)
                                 }

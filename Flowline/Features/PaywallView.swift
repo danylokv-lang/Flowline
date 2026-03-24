@@ -8,7 +8,8 @@ struct FlowlinePaywallView: View {
     @Environment(\.dismiss) private var dismiss
     var onDismiss: () -> Void
 
-    @State private var isRestoring = false
+    @State private var isRestoring  = false
+    @State private var pickYearly   = true   // default = yearly (better value)
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -46,7 +47,6 @@ struct FlowlinePaywallView: View {
 
                     // ── Hero ──────────────────────────────────────
                     VStack(spacing: 12) {
-                        // Icon
                         ZStack {
                             Circle()
                                 .fill(Color(hex: "#6d4cfa").opacity(0.15))
@@ -60,48 +60,50 @@ struct FlowlinePaywallView: View {
                             .font(.system(size: 30, weight: .black))
                             .foregroundColor(.white)
 
+                        Text("Unlimited AI planning, every day.")
+                            .font(.system(size: 15))
+                            .foregroundColor(Color(hex: "#9999bb"))
                     }
                     .padding(.bottom, 28)
 
                     // ── Features ──────────────────────────────────
                     VStack(spacing: 10) {
-                        featureRow(icon: "sparkles",                  color: "#6d4cfa", text: "10 AI planning messages per day")
-                        featureRow(icon: "calendar.badge.checkmark",  color: "#3b9eff", text: "Smart calendar & replanning")
-                        featureRow(icon: "timer",                     color: "#2ecc71", text: "Focus timer with session tracking")
-                        featureRow(icon: "bell.badge.fill",           color: "#a78bfa", text: "Smart reminders & notifications")
+                        featureRow(icon: "sparkles",                 color: "#6d4cfa", text: "Unlimited AI day planning")
+                        featureRow(icon: "arrow.trianglehead.2.counterclockwise.rotate.90",
+                                                                     color: "#3b9eff", text: "Unlimited replanning & smart reschedule")
+                        featureRow(icon: "chart.bar.fill",           color: "#f59e0b", text: "Full stats, streaks & insights")
+                        featureRow(icon: "timer",                    color: "#2ecc71", text: "Focus timer & session tracking")
                     }
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 24)
 
-                    // ── Plan card ─────────────────────────────────
-                    HStack(spacing: 14) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Monthly")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundColor(.white)
-                            Text("per month · cancel anytime")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color(hex: "#7a7a9a"))
-                        }
-                        Spacer()
-                        Text("$4.99")
-                            .font(.system(size: 22, weight: .black))
-                            .foregroundColor(.white)
+                    // ── Plan picker ───────────────────────────────
+                    VStack(spacing: 10) {
+                        planCard(
+                            title: "Yearly",
+                            subtitle: "Best value · billed once a year",
+                            price: "$34.99",
+                            badge: "Save 42%",
+                            selected: pickYearly
+                        ) { pickYearly = true }
+
+                        planCard(
+                            title: "Monthly",
+                            subtitle: "Flexible · cancel anytime",
+                            price: "$4.99",
+                            badge: nil,
+                            selected: !pickYearly
+                        ) { pickYearly = false }
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 16)
-                    .background(Color(hex: "#6d4cfa").opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: "#6d4cfa").opacity(0.45), lineWidth: 1.5))
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 16)
 
                     // ── Trial note ────────────────────────────────
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.seal.fill")
                             .foregroundColor(Color(hex: "#2ecc71"))
                             .font(.system(size: 12))
-                        Text("3-day free trial included · No charge until trial ends")
+                        Text("3-day free trial · No charge until trial ends")
                             .font(.system(size: 12))
                             .foregroundColor(Color(hex: "#7a7a9a"))
                     }
@@ -118,7 +120,9 @@ struct FlowlinePaywallView: View {
                                     .tint(.white)
                                     .scaleEffect(0.85)
                             } else {
-                                Text("Start Free Trial — $4.99/mo")
+                                Text(pickYearly
+                                     ? "Start Free Trial — $34.99/yr"
+                                     : "Start Free Trial — $4.99/mo")
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.white)
                             }
@@ -177,7 +181,7 @@ struct FlowlinePaywallView: View {
             }
         }
         #if os(macOS)
-        .frame(width: 420, height: 680)
+        .frame(width: 420, height: 720)
         #endif
     }
 
@@ -212,11 +216,81 @@ struct FlowlinePaywallView: View {
         )
     }
 
+    private func planCard(
+        title: String,
+        subtitle: String,
+        price: String,
+        badge: String?,
+        selected: Bool,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                // Radio dot
+                ZStack {
+                    Circle()
+                        .stroke(selected ? Color(hex: "#6d4cfa") : Color(hex: "#444466"), lineWidth: 2)
+                        .frame(width: 20, height: 20)
+                    if selected {
+                        Circle()
+                            .fill(Color(hex: "#6d4cfa"))
+                            .frame(width: 10, height: 10)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.white)
+                        if let badge {
+                            Text(badge)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color(hex: "#2ecc71"))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2)
+                                .background(Color(hex: "#2ecc71").opacity(0.15))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "#7a7a9a"))
+                }
+
+                Spacer()
+
+                Text(price)
+                    .font(.system(size: 20, weight: .black))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                selected
+                    ? Color(hex: "#6d4cfa").opacity(0.12)
+                    : Color.white.opacity(0.03)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        selected ? Color(hex: "#6d4cfa").opacity(0.6) : Color.white.opacity(0.06),
+                        lineWidth: selected ? 1.5 : 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Logic
 
     private func purchase() async {
         await subscriptionManager.fetchOfferings()
-        guard let pkg = subscriptionManager.monthlyPackage else { return }
+        let pkgOpt = pickYearly
+            ? (subscriptionManager.yearlyPackage ?? subscriptionManager.monthlyPackage)
+            : subscriptionManager.monthlyPackage
+        guard let pkg = pkgOpt else { return }
         let success = await subscriptionManager.purchase(package: pkg)
         if success { onDismiss(); dismiss() }
     }
@@ -298,4 +372,3 @@ extension View {
         }
     }
 }
-

@@ -2,6 +2,7 @@ import SwiftUI
 import Combine
 import SwiftData
 import EventKit
+import StoreKit
 #if os(iOS)
 import UIKit
 #endif
@@ -214,14 +215,14 @@ struct PlanningChatView: View {
                         .fill(FlowLineTheme.border)
                         .frame(height: 0.5)
 
-                    // ── Upgrade banner (trial ended or limit hit) ─────────
+                    // ── Upgrade banner (limit hit) ─────────
                     if subscriptionManager.isAtLimit {
                         HStack(spacing: 14) {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(subscriptionManager.trialExpired ? "Your free trial has ended" : "Daily limit reached")
+                                Text("Weekly plan limit reached")
                                     .font(.system(size: 13, weight: .bold))
                                     .foregroundColor(FlowLineTheme.mainTxt)
-                                Text("Upgrade to Flowline Pro to keep planning")
+                                Text("Upgrade for unlimited AI planning")
                                     .font(.system(size: 11))
                                     .foregroundColor(FlowLineTheme.secondTxt)
                             }
@@ -245,11 +246,11 @@ struct PlanningChatView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
 
-                    // ── Messages remaining counter ────────────────────────
-                    if !subscriptionManager.isPro && !subscriptionManager.isAtLimit && subscriptionManager.isInTrial {
+                    // ── Plans saved counter ────────────────────────
+                    if !subscriptionManager.isPro && !subscriptionManager.isAtLimit {
                         HStack {
                             Spacer()
-                            Text("\(subscriptionManager.remainingMessages) messages left today · \(subscriptionManager.trialDaysRemaining)d trial remaining")
+                            Text("\(subscriptionManager.plansThisWeek)/\(SubscriptionManager.weeklyFreeLimit) plans saved this week · \(subscriptionManager.trialDaysRemaining)d trial remaining")
                                 .font(.system(size: 10))
                                 .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
                         }
@@ -258,32 +259,16 @@ struct PlanningChatView: View {
                     }
 
                     if hasPlanInChat && !isLoading && !isSaving {
-                        HStack {
+                        HStack(spacing: 8) {
                             Spacer()
+                            // Save Plan button — saves to SwiftData
                             Button {
-                                _Concurrency.Task { @MainActor in
-                                    await calendarService.requestAccess()
-                                    var cals = calendarService.writableCalendars()
-                                    // EKEventStore can return empty on first access right after launch
-                                    // — wait briefly and retry once so the store has time to warm up
-                                    if cals.isEmpty {
-                                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 400_000_000)
-                                        cals = calendarService.writableCalendars()
-                                    }
-                                    calendarPickerItems = cals
-                                    // Restore last-used calendar, fall back to first
-                                    if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
-                                        selectedCalendarID = lastUsedCalendarID
-                                    } else {
-                                        selectedCalendarID = cals.first?.id ?? ""
-                                    }
-                                    showCalendarPicker = true
-                                }
+                                savePlan()
                             } label: {
                                 HStack(spacing: 6) {
-                                    Image(systemName: "calendar.badge.plus")
+                                    Image(systemName: "checkmark.circle")
                                         .font(.system(size: 12, weight: .bold))
-                                    Text("Save to Calendar")
+                                    Text("Save Plan")
                                         .font(.system(size: 12, weight: .bold))
                                 }
                                 .foregroundColor(.white)
@@ -297,6 +282,34 @@ struct PlanningChatView: View {
                                 )
                                 .clipShape(Capsule())
                                 .shadow(color: FlowLineTheme.accent.opacity(0.45), radius: 10, x: 0, y: 4)
+                            }
+                            .buttonStyle(.plain)
+
+                            // Calendar button — optional export
+                            Button {
+                                _Concurrency.Task { @MainActor in
+                                    await calendarService.requestAccess()
+                                    var cals = calendarService.writableCalendars()
+                                    if cals.isEmpty {
+                                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 400_000_000)
+                                        cals = calendarService.writableCalendars()
+                                    }
+                                    calendarPickerItems = cals
+                                    if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
+                                        selectedCalendarID = lastUsedCalendarID
+                                    } else {
+                                        selectedCalendarID = cals.first?.id ?? ""
+                                    }
+                                    showCalendarPicker = true
+                                }
+                            } label: {
+                                Image(systemName: "calendar.badge.plus")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(FlowLineTheme.secondTxt)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(FlowLineTheme.tertiaryBg)
+                                    .clipShape(Capsule())
                             }
                             .buttonStyle(.plain)
                         }
@@ -1029,12 +1042,6 @@ After planning, tell the user which inbox tasks you included):
         let text = overrideText ?? inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, !isLoading, !isSaving else { return }
 
-        // ── Subscription check ─────────────────────────────────────────────
-        guard subscriptionManager.consumeMessage() else {
-            showPaywall = true
-            return
-        }
-
         refreshSystemPrompt()
 
         let history = savedMessages
@@ -1133,6 +1140,53 @@ After planning, tell the user which inbox tasks you included):
         messages.contains { !$0.isThinking && !$0.isSavedPlan && $0.role == .assistant && $0.content.count > 200 }
     }
 
+    private func savePlan() {
+        guard !isSaving, subscriptionManager.canSavePlan else { return }
+        isSaving = true
+        messages.append(Message(role: .assistant, content: "Saving plan...", isThinking: true))
+
+        let history = messages
+            .filter { !$0.isThinking && !$0.isSavedPlan }
+            .map { msg in (role: msg.role == .user ? "user" : "assistant", content: msg.content) }
+
+        _Concurrency.Task {
+            do {
+                let plan = try await aiService.generatePlan(for: Date(), history: history)
+                try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                if let token = authService.token {
+                    await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
+                }
+                StreakManager.shared.recordPlan()
+                subscriptionManager.recordPlanSave()
+
+                if let index = messages.lastIndex(where: { $0.isThinking }) {
+                    messages[index] = Message(
+                        role: .assistant,
+                        content: "Plan saved \u{2713}\n\n\(plan.summary)",
+                        isSavedPlan: true
+                    )
+                }
+
+                // Rate Us on 2nd save
+                let totalSaves = subscriptionManager.totalPlanSaves
+                if totalSaves == 2 {
+                    try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_000_000_000)
+                    #if os(iOS)
+                    if let scene = UIApplication.shared.connectedScenes
+                        .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                        SKStoreReviewController.requestReview(in: scene)
+                    }
+                    #endif
+                }
+            } catch {
+                if let index = messages.lastIndex(where: { $0.isThinking }) {
+                    messages[index] = Message(role: .assistant, content: "Save failed: \(error.localizedDescription)", isError: true, isRetryable: true)
+                }
+            }
+            isSaving = false
+        }
+    }
+
     private func savePlanToCalendar(toCalendarID calendarID: String? = nil) {
         guard !isSaving else { return }
         isSaving = true
@@ -1155,6 +1209,8 @@ After planning, tell the user which inbox tasks you included):
                     lastUsedCalendarID = id
                 }
                 StreakManager.shared.recordPlan()
+                subscriptionManager.recordPlanSave()
+
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(
                         role: .assistant,
@@ -1162,11 +1218,17 @@ After planning, tell the user which inbox tasks you included):
                         isSavedPlan: true
                     )
                 }
-                // Show paywall at the happiest moment — right after their first plan is saved
-                if !subscriptionManager.isPro && !paywallShownAfterFirstPlan {
-                    paywallShownAfterFirstPlan = true
-                    try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_500_000_000)
-                    showPaywall = true
+
+                // Rate Us on 2nd save
+                let totalSaves = subscriptionManager.totalPlanSaves
+                if totalSaves == 2 {
+                    try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_000_000_000)
+                    #if os(iOS)
+                    if let scene = UIApplication.shared.connectedScenes
+                        .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                        SKStoreReviewController.requestReview(in: scene)
+                    }
+                    #endif
                 }
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {

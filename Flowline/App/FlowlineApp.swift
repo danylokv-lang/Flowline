@@ -79,7 +79,11 @@ struct FlowlineApp: App {
                 subscriptionManager.startTrialIfNeeded()
             }
             .task {
-                // Pull on every app launch if already logged in
+                // Set up RevenueCat AFTER first frame so launch completes
+                // before any file I/O happens on the main thread.
+                await subscriptionManager.setup()
+
+                // Pull server data on every launch if already logged in
                 if authService.isLoggedIn, let token = authService.token {
                     await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext)
                 }
@@ -131,9 +135,11 @@ struct FlowlineApp: App {
         try? ctx.save()
         hasCompletedOnboarding = false
         StreakManager.shared.resetForAccountSwitch()
-        // Reset daily AI usage so the new account starts fresh
-        UserDefaults.standard.removeObject(forKey: "usage_count")
-        UserDefaults.standard.removeObject(forKey: "usage_date")
+        // Reset weekly plan limit so the new account starts fresh
+        UserDefaults.standard.removeObject(forKey: "plans_this_week")
+        UserDefaults.standard.removeObject(forKey: "plans_week_num")
+        UserDefaults.standard.removeObject(forKey: "plans_week_year")
+        UserDefaults.standard.removeObject(forKey: "total_plan_saves")
         UserDefaults.standard.removeObject(forKey: "chats.lastSyncTimestamp")
     }
 

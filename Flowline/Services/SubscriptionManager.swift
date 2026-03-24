@@ -5,28 +5,31 @@ import RevenueCat
 /// Manages all subscription state via RevenueCat.
 /// Entitlement: "Flowline Pro"
 /// Products:    monthly · yearly · lifetime
+///
+/// Gating model:
+///   Free  — up to 3 day-plan saves per week
+///   Pro   — unlimited saves (+ all features)
 @MainActor
 final class SubscriptionManager: ObservableObject {
 
     // MARK: - Published
 
-    @Published private(set) var customerInfo: CustomerInfo?   = nil
-    @Published private(set) var currentOffering: Offering?   = nil
-    @Published private(set) var messagesUsedToday: Int        = 0
-    @Published private(set) var isLoading: Bool               = false
-    @Published var errorMessage: String?                      = nil
+    @Published private(set) var customerInfo: CustomerInfo?  = nil
+    @Published private(set) var currentOffering: Offering?  = nil
+    @Published private(set) var plansThisWeek: Int           = 0
+    @Published private(set) var isLoading: Bool              = false
+    @Published var errorMessage: String?                     = nil
 
     // MARK: - Constants
 
     /// Must exactly match the entitlement identifier in RevenueCat dashboard
-    static let entitlementID = "Flowline Pro"
+    static let entitlementID   = "Flowline Pro"
 
-    static let freeLimit     = 3     // messages/day — free tier
-    static let proLimit      = 10    // messages/day — pro/trial tier
-    static let trialDays     = 3
+    static let weeklyFreeLimit = 3          // plan saves/week — free tier
+    static let trialDays       = 3
 
-    static let monthlyPrice  = "$4.99"
-    static let originalPrice = "$10.99"
+    static let monthlyPrice    = "$4.99"
+    static let yearlyPrice     = "$34.99"
 
     // MARK: - Computed Pro Status
 
@@ -38,11 +41,11 @@ final class SubscriptionManager: ObservableObject {
         customerInfo?.entitlements[Self.entitlementID]?.productIdentifier.contains("lifetime") == true
     }
 
-    // MARK: - Trial (local 3-day trial, runs before or without purchase)
+    // MARK: - Trial (local 3-day trial)
 
-    private let kTrialStart = "trial_start_date"
-    private let kUsageCount = "usage_count"
-    private let kUsageDate  = "usage_date"
+    private let kTrialStart   = "trial_start_date"
+    private let kPlansWeek    = "plans_this_week"
+    private let kTotalSaves   = "total_plan_saves"
 
     var trialStartDate: Date? {
         UserDefaults.standard.object(forKey: kTrialStart) as? Date
@@ -64,60 +67,58 @@ final class SubscriptionManager: ObservableObject {
         trialStartDate != nil && !isInTrial && !isPro
     }
 
-    var dailyLimit: Int {
-        if isPro || isInTrial { return Self.proLimit }
-        if trialExpired { return 0 }   // must subscribe after trial
-        return Self.freeLimit
-    }
-
     func startTrialIfNeeded() {
         if trialStartDate == nil {
             UserDefaults.standard.set(Date(), forKey: kTrialStart)
         }
     }
 
-    // MARK: - Message Limiting
+    // MARK: - Weekly Plan Limit
 
-    var isAtLimit: Bool {
-        !isPro && (trialExpired || messagesUsedToday >= dailyLimit)
+    /// Whether the user can save another plan right now.
+    var canSavePlan: Bool {
+        isPro || isInTrial || plansThisWeek < Self.weeklyFreeLimit
     }
 
-    var remainingMessages: Int {
-        max(0, dailyLimit - messagesUsedToday)
+    /// Convenience inverse used by UI to disable controls.
+    var isAtLimit: Bool { !canSavePlan }
+
+    /// Total lifetime plan saves — used to trigger review prompts.
+    var totalPlanSaves: Int {
+        UserDefaults.standard.integer(forKey: kTotalSaves)
     }
 
-    func consumeMessage() -> Bool {
-        if isPro { return true }
-        resetIfNewDay()
-        if messagesUsedToday >= dailyLimit { return false }
-        messagesUsedToday += 1
-        UserDefaults.standard.set(messagesUsedToday, forKey: kUsageCount)
-        return true
+    /// Call once per successful plan save.
+    func recordPlanSave() {
+        resetIfNewWeek()
+        plansThisWeek += 1
+        UserDefaults.standard.set(plansThisWeek, forKey: kPlansWeek)
+
+        let total = UserDefaults.standard.integer(forKey: kTotalSaves) + 1
+        UserDefaults.standard.set(total, forKey: kTotalSaves)
     }
 
     // MARK: - Init
 
     init() {
-        // ⚠️ Configure FIRST — before any Purchases.shared access
+        // Configure RevenueCat synchronously so Purchases.shared is always
+        // valid — even if the user taps "Restore" before setup() runs.
         Self.configureIfNeeded()
-
-        resetIfNewDay()
-        messagesUsedToday = UserDefaults.standard.integer(forKey: kUsageCount)
-
-        // Listen to RevenueCat customer info updates in real time
         Purchases.shared.delegate = RCDelegateHandler.shared
-
-        Task {
-            await refreshCustomerInfo()
-            await fetchOfferings()
-        }
-
-        // Forward delegate updates to this manager
         RCDelegateHandler.shared.onCustomerInfoUpdate = { [weak self] info in
             Task { @MainActor [weak self] in
                 self?.customerInfo = info
             }
         }
+        resetIfNewWeek()
+        plansThisWeek = UserDefaults.standard.integer(forKey: kPlansWeek)
+    }
+
+    /// Call from the root view's `.task {}` to fetch the latest data from
+    /// RevenueCat's servers without blocking the initial launch.
+    func setup() async {
+        await refreshCustomerInfo()
+        await fetchOfferings()
     }
 
     // MARK: - RevenueCat: Fetch
@@ -147,7 +148,7 @@ final class SubscriptionManager: ObservableObject {
 
     @discardableResult
     func purchase(package: Package) async -> Bool {
-        isLoading   = true
+        isLoading    = true
         errorMessage = nil
         defer { isLoading = false }
         do {
@@ -187,7 +188,6 @@ final class SubscriptionManager: ObservableObject {
 
     // MARK: - Private
 
-    /// Configures RevenueCat exactly once. Safe to call multiple times.
     static func configureIfNeeded() {
         guard !Purchases.isConfigured else { return }
         let key = Config.revenueCatAPIKey
@@ -201,13 +201,21 @@ final class SubscriptionManager: ObservableObject {
         Purchases.configure(withAPIKey: key)
     }
 
-    private func resetIfNewDay() {
-        let today     = Calendar.current.startOfDay(for: Date())
-        let savedDate = UserDefaults.standard.object(forKey: kUsageDate) as? Date
-        guard savedDate == nil || !Calendar.current.isDate(savedDate!, inSameDayAs: today) else { return }
-        messagesUsedToday = 0
-        UserDefaults.standard.set(0,     forKey: kUsageCount)
-        UserDefaults.standard.set(today, forKey: kUsageDate)
+    private func resetIfNewWeek() {
+        let cal       = Calendar.current
+        let thisWeek  = cal.component(.weekOfYear, from: Date())
+        let thisYear  = cal.component(.year, from: Date())
+
+        let savedWeek = UserDefaults.standard.integer(forKey: "plans_week_num")
+        let savedYear = UserDefaults.standard.integer(forKey: "plans_week_year")
+
+        guard savedWeek == thisWeek && savedYear == thisYear else {
+            plansThisWeek = 0
+            UserDefaults.standard.set(0,        forKey: kPlansWeek)
+            UserDefaults.standard.set(thisWeek, forKey: "plans_week_num")
+            UserDefaults.standard.set(thisYear, forKey: "plans_week_year")
+            return
+        }
     }
 }
 
