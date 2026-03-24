@@ -331,7 +331,7 @@ async function handleGetProfile(userId, env) {
   const [user, profile] = await Promise.all([
     env.DB.prepare("SELECT id, name, email, is_pro, pro_expires_at FROM users WHERE id = ?")
       .bind(userId).first(),
-    env.DB.prepare("SELECT wake_time, sleep_time, work_start, work_end, has_work_hours, bio, onboarding_done FROM profiles WHERE user_id = ?")
+    env.DB.prepare("SELECT wake_time, sleep_time, work_start, work_end, has_work_hours, bio, recurring_commitments, onboarding_done FROM profiles WHERE user_id = ?")
       .bind(userId).first(),
   ]);
   if (!user) return res({ error: "User not found" }, 404);
@@ -595,6 +595,44 @@ async function handleSyncCalendar(userId, req, env) {
   return res({ success: true, synced: days.length });
 }
 
+// ── Inbox: Get Tasks ───────────────────────────────────────────────────────
+
+async function handleGetInbox(userId, env) {
+  const result = await env.DB.prepare(`
+    SELECT id, text, category, is_scheduled, created_at
+    FROM captured_tasks
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 500
+  `).bind(userId).all();
+  return res({ tasks: result.results ?? [] });
+}
+
+// ── Inbox: Sync Tasks ──────────────────────────────────────────────────────
+
+async function handleSyncInbox(userId, req, env) {
+  const { tasks } = await req.json();
+  if (!Array.isArray(tasks)) return res({ error: "tasks array required" }, 400);
+
+  for (const task of tasks) {
+    if (!task.id || !task.text) continue;
+    // Upsert — insert new tasks, update is_scheduled on existing ones
+    await env.DB.prepare(`
+      INSERT INTO captured_tasks (id, user_id, text, category, is_scheduled, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET is_scheduled = excluded.is_scheduled
+    `).bind(
+      task.id, userId,
+      task.text,
+      task.category ?? "work",
+      task.isScheduled ? 1 : 0,
+      task.createdAt ?? Math.floor(Date.now() / 1000)
+    ).run();
+  }
+
+  return res({ success: true, synced: tasks.length });
+}
+
 // ── Main Router ────────────────────────────────────────────────────────────
 
 export default {
@@ -653,6 +691,8 @@ export default {
       if (path === "/chats"             && method === "GET") return handleGetChats(userId, url, env);
       if (path === "/chats/sync"        && method === "POST") return handleSyncChats(userId, request, env);
       if (path === "/reviews"           && method === "POST") return handleSubmitReview(userId, request, env);
+      if (path === "/inbox"             && method === "GET")  return handleGetInbox(userId, env);
+      if (path === "/inbox/sync"        && method === "POST") return handleSyncInbox(userId, request, env);
 
       return res({ error: "Not found" }, 404);
     } catch (err) {
