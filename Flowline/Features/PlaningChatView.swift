@@ -29,6 +29,12 @@ struct Message: Identifiable {
     }
 }
 
+struct PlanValidationResult {
+    let isValid: Bool
+    let warnings: [String]
+    let canProceedAnyway: Bool = true
+}
+
 struct ShimmerModifier: ViewModifier {
     @State private var phase: CGFloat = 0
     private let timer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
@@ -82,6 +88,8 @@ struct PlanningChatView: View {
     @State private var selectedCalendarID: String = ""
     @State private var showSidebar = false
     @State private var showPaywall = false
+    @State private var planValidationWarnings: [String] = []
+    @State private var showValidationWarnings = false
     @State private var lastFailedMessage: String? = nil
     @State private var editorHeight: CGFloat = 17
     @State private var emptyGlow = false
@@ -484,6 +492,68 @@ struct PlanningChatView: View {
                 },
                 onCancel: { showCalendarPicker = false }
             )
+        }
+        .sheet(isPresented: $showValidationWarnings) {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Plan Review")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(FlowLineTheme.mainTxt)
+
+                    Text("This plan has some potential issues:")
+                        .font(.system(size: 13))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(planValidationWarnings, id: \.self) { warning in
+                            HStack(alignment: .top, spacing: 8) {
+                                Text(warning)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(FlowLineTheme.mainTxt)
+                                Spacer()
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .background(FlowLineTheme.tertiaryBg)
+                    .cornerRadius(6)
+                }
+                .padding(16)
+                .background(FlowLineTheme.secondBg)
+                .cornerRadius(12)
+
+                HStack(spacing: 12) {
+                    Button {
+                        showValidationWarnings = false
+                    } label: {
+                        Text("Edit Plan")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(FlowLineTheme.accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(10)
+                            .background(FlowLineTheme.tertiaryBg)
+                            .cornerRadius(6)
+                    }
+
+                    Button {
+                        showValidationWarnings = false
+                        // Save anyway - call save again
+                        savePlan()
+                    } label: {
+                        Text("Save Anyway")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(10)
+                            .background(FlowLineTheme.accent)
+                            .cornerRadius(6)
+                    }
+                }
+                .padding(16)
+
+                Spacer()
+            }
+            .background(FlowLineTheme.mainBg)
         }
     }
 
@@ -956,14 +1026,65 @@ struct PlanningChatView: View {
             }
         } else {
             // Normal AI message card
-            aiCard {
-                Text(message.content)
-                    .font(.system(size: 14))
-                    .foregroundColor(FlowLineTheme.secondTxt)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 12) {
+                aiCard {
+                    Text(message.content)
+                        .font(.system(size: 14))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                // Refinement suggestions for plan messages
+                if hasPlanInMessage(message) {
+                    refinementSuggestions
+                }
             }
         }
+    }
+
+    private func hasPlanInMessage(_ message: Message) -> Bool {
+        guard let timePattern = try? NSRegularExpression(pattern: "\\d{2}:\\d{2}") else { return false }
+        return timePattern.firstMatch(in: message.content, range: NSRange(message.content.startIndex..., in: message.content)) != nil
+    }
+
+    private var refinementSuggestions: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Adjust this plan:")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(FlowLineTheme.secondTxt)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    refinementButton("+ Break", "Add a 20-30 min break")
+                    refinementButton("📱 Evening", "Move to evening")
+                    Spacer()
+                }
+                HStack(spacing: 8) {
+                    refinementButton("⚡ Morning", "Move hard tasks here")
+                    refinementButton("🎯 Shorter", "Reduce durations")
+                    Spacer()
+                }
+            }
+        }
+        .padding(12)
+        .background(FlowLineTheme.tertiaryBg.opacity(0.5))
+        .cornerRadius(8)
+    }
+
+    private func refinementButton(_ label: String, _ instruction: String) -> some View {
+        Button {
+            sendMessage(instruction)
+        } label: {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(FlowLineTheme.accent)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(FlowLineTheme.accent.opacity(0.12))
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
     }
 
     /// Branded AI card — "✦ FLOWLINE" tag + dark bubble, matching website style.
@@ -1211,6 +1332,59 @@ After planning, tell the user which inbox tasks you included):
         }
     }
 
+    // MARK: - Plan Validation
+
+    private func validatePlan(_ plan: GeneratedPlan) -> PlanValidationResult {
+        var warnings: [String] = []
+
+        let wakeTime = profiles.first?.wakeTime ?? Date(timeIntervalSince1970: TimeInterval(7 * 3600))
+        let sleepTime = profiles.first?.sleepTime ?? Date(timeIntervalSince1970: TimeInterval(23 * 3600))
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        let wakeTimeStr = formatter.string(from: wakeTime)
+        let sleepTimeStr = formatter.string(from: sleepTime)
+
+        // Check for blocks before wake or after sleep
+        for block in plan.blocks {
+            if block.startTime < wakeTimeStr {
+                warnings.append("⚠️ '\(block.title)' starts at \(block.startTime) — before your \(wakeTimeStr) wake time")
+            }
+            if block.endTime > sleepTimeStr {
+                warnings.append("⚠️ '\(block.title)' ends at \(block.endTime) — after your \(sleepTimeStr) sleep time")
+            }
+
+            // Check for blocks longer than 4 hours (should have break)
+            if let start = timeComponents(block.startTime), let end = timeComponents(block.endTime) {
+                let minutes = (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute)
+                if minutes > 240 { // 4 hours
+                    warnings.append("⚠️ '\(block.title)' is \(minutes / 60)h \(minutes % 60)m — consider adding a break")
+                }
+            }
+        }
+
+        // Check total hours in day
+        var totalMinutes = 0
+        for block in plan.blocks {
+            if let start = timeComponents(block.startTime), let end = timeComponents(block.endTime) {
+                let minutes = (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute)
+                totalMinutes += minutes
+            }
+        }
+        let totalHours = totalMinutes / 60
+        if totalHours > 16 {
+            warnings.append("⚠️ Total scheduled time is \(totalHours) hours — very ambitious for one day")
+        }
+
+        return PlanValidationResult(isValid: warnings.isEmpty, warnings: warnings)
+    }
+
+    private func timeComponents(_ timeStr: String) -> (hour: Int, minute: Int)? {
+        let parts = timeStr.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2 else { return nil }
+        return (hour: parts[0], minute: parts[1])
+    }
+
     // MARK: - Save Plan
 
     private var hasPlanInChat: Bool {
@@ -1219,7 +1393,7 @@ After planning, tell the user which inbox tasks you included):
             guard message.content.count > 200 else { return false }
 
             // Check if content has schedule blocks (HH:mm pattern like "07:00", "14:30")
-            let timePattern = try! NSRegularExpression(pattern: "\\d{2}:\\d{2}")
+            guard let timePattern = try? NSRegularExpression(pattern: "\\d{2}:\\d{2}") else { return false }
             let hasTimeBlocks = timePattern.firstMatch(in: message.content, range: NSRange(message.content.startIndex..., in: message.content)) != nil
 
             return hasTimeBlocks
@@ -1239,6 +1413,21 @@ After planning, tell the user which inbox tasks you included):
             aiService.token = authService.token ?? ""
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
+
+                // Validate plan and show warnings if needed
+                let validation = validatePlan(plan)
+                if !validation.isValid {
+                    await MainActor.run {
+                        planValidationWarnings = validation.warnings
+                        showValidationWarnings = true
+                    }
+                    if let index = messages.lastIndex(where: { $0.isThinking }) {
+                        messages.remove(at: index)
+                    }
+                    isSaving = false
+                    return
+                }
+
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
                 if let token = authService.token {
                     await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
@@ -1287,6 +1476,21 @@ After planning, tell the user which inbox tasks you included):
             aiService.token = authService.token ?? ""
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
+
+                // Validate plan and show warnings if needed
+                let validation = validatePlan(plan)
+                if !validation.isValid {
+                    await MainActor.run {
+                        planValidationWarnings = validation.warnings
+                        showValidationWarnings = true
+                    }
+                    if let index = messages.lastIndex(where: { $0.isThinking }) {
+                        messages.remove(at: index)
+                    }
+                    isSaving = false
+                    return
+                }
+
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
                 if let token = authService.token {
                     await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
