@@ -247,12 +247,18 @@ struct PlanningChatView: View {
                     }
 
                     // ── Plans saved counter ────────────────────────
-                    if !subscriptionManager.isPro && !subscriptionManager.isAtLimit {
+                    if !subscriptionManager.isPro {
                         HStack {
                             Spacer()
-                            Text("\(subscriptionManager.plansThisWeek)/\(SubscriptionManager.weeklyFreeLimit) plans saved this week · \(subscriptionManager.trialDaysRemaining)d trial remaining")
-                                .font(.system(size: 10))
-                                .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                            if subscriptionManager.isInTrial {
+                                Text("Free trial — unlimited saves · \(subscriptionManager.trialDaysRemaining)d remaining")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(FlowLineTheme.accent.opacity(0.7))
+                            } else if !subscriptionManager.isAtLimit {
+                                Text("\(subscriptionManager.plansThisWeek)/\(SubscriptionManager.weeklyFreeLimit) plans saved this week")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 6)
@@ -261,57 +267,75 @@ struct PlanningChatView: View {
                     if hasPlanInChat && !isLoading && !isSaving {
                         HStack(spacing: 8) {
                             Spacer()
-                            // Save Plan button — saves to SwiftData
-                            Button {
-                                savePlan()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "checkmark.circle")
-                                        .font(.system(size: 12, weight: .bold))
-                                    Text("Save Plan")
-                                        .font(.system(size: 12, weight: .bold))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 7)
-                                .background(
-                                    LinearGradient(
-                                        colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
-                                        startPoint: .leading, endPoint: .trailing
-                                    )
-                                )
-                                .clipShape(Capsule())
-                                .shadow(color: FlowLineTheme.accent.opacity(0.45), radius: 10, x: 0, y: 4)
-                            }
-                            .buttonStyle(.plain)
-
-                            // Calendar button — optional export
-                            Button {
-                                _Concurrency.Task { @MainActor in
-                                    await calendarService.requestAccess()
-                                    var cals = calendarService.writableCalendars()
-                                    if cals.isEmpty {
-                                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 400_000_000)
-                                        cals = calendarService.writableCalendars()
+                            if subscriptionManager.isAtLimit {
+                                // Limit reached — save buttons replaced with Upgrade prompt
+                                Button { showPaywall = true } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "lock.fill")
+                                            .font(.system(size: 11, weight: .bold))
+                                        Text("Upgrade to Save")
+                                            .font(.system(size: 12, weight: .bold))
                                     }
-                                    calendarPickerItems = cals
-                                    if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
-                                        selectedCalendarID = lastUsedCalendarID
-                                    } else {
-                                        selectedCalendarID = cals.first?.id ?? ""
-                                    }
-                                    showCalendarPicker = true
-                                }
-                            } label: {
-                                Image(systemName: "calendar.badge.plus")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(FlowLineTheme.secondTxt)
-                                    .padding(.horizontal, 12)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
                                     .padding(.vertical, 7)
-                                    .background(FlowLineTheme.tertiaryBg)
+                                    .background(FlowLineTheme.accent)
                                     .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                // Save Plan button — saves to SwiftData
+                                Button {
+                                    savePlan()
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "checkmark.circle")
+                                            .font(.system(size: 12, weight: .bold))
+                                        Text("Save Plan")
+                                            .font(.system(size: 12, weight: .bold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 7)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                                            startPoint: .leading, endPoint: .trailing
+                                        )
+                                    )
+                                    .clipShape(Capsule())
+                                    .shadow(color: FlowLineTheme.accent.opacity(0.45), radius: 10, x: 0, y: 4)
+                                }
+                                .buttonStyle(.plain)
+
+                                // Calendar button — optional export
+                                Button {
+                                    _Concurrency.Task { @MainActor in
+                                        await calendarService.requestAccess()
+                                        var cals = calendarService.writableCalendars()
+                                        if cals.isEmpty {
+                                            try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 400_000_000)
+                                            cals = calendarService.writableCalendars()
+                                        }
+                                        calendarPickerItems = cals
+                                        if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
+                                            selectedCalendarID = lastUsedCalendarID
+                                        } else {
+                                            selectedCalendarID = cals.first?.id ?? ""
+                                        }
+                                        showCalendarPicker = true
+                                    }
+                                } label: {
+                                    Image(systemName: "calendar.badge.plus")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(FlowLineTheme.secondTxt)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 7)
+                                        .background(FlowLineTheme.tertiaryBg)
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
@@ -1188,7 +1212,7 @@ After planning, tell the user which inbox tasks you included):
     }
 
     private func savePlanToCalendar(toCalendarID calendarID: String? = nil) {
-        guard !isSaving else { return }
+        guard !isSaving, subscriptionManager.canSavePlan else { return }
         isSaving = true
         messages.append(Message(role: .assistant, content: "Saving to calendar...", isThinking: true))
 
