@@ -105,6 +105,12 @@ struct FlowlineApp: App {
                 if authService.isLoggedIn, let token = authService.token {
                     await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext, subscriptionManager: subscriptionManager)
                 }
+
+                // Start trial on every device on first launch (not just on userId change,
+                // since onChange only fires when userId actually changes in the session).
+                if authService.isLoggedIn {
+                    subscriptionManager.startTrialIfNeeded()
+                }
             }
         }
         .modelContainer(sharedModelContainer)

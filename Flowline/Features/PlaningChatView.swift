@@ -252,12 +252,22 @@ struct PlanningChatView: View {
                             Spacer()
                             if subscriptionManager.isInTrial {
                                 Text("Free trial — unlimited saves · \(subscriptionManager.trialDaysRemaining)d remaining")
+                                    #if os(macOS)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(FlowLineTheme.accent.opacity(0.85))
+                                    #else
                                     .font(.system(size: 10))
                                     .foregroundColor(FlowLineTheme.accent.opacity(0.7))
+                                    #endif
                             } else if !subscriptionManager.isAtLimit {
                                 Text("\(subscriptionManager.plansThisWeek)/\(SubscriptionManager.weeklyFreeLimit) plans saved this week")
+                                    #if os(macOS)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.7))
+                                    #else
                                     .font(.system(size: 10))
                                     .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
+                                    #endif
                             }
                         }
                         .padding(.horizontal, 20)
