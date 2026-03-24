@@ -490,72 +490,117 @@ private struct ProfileForm: View {
 // MARK: - Notifications Tab
 
 private struct NotificationSettingsTab: View {
+
+    // ── Planning
+    @AppStorage(NotificationManager.morningReminderEnabledKey) private var morningEnabled  = false
+    @AppStorage(NotificationManager.eveningReminderEnabledKey) private var eveningEnabled  = false
+    @AppStorage(NotificationManager.tomorrowNudgeEnabledKey)   private var tomorrowEnabled = true
+    @AppStorage(NotificationManager.weeklyNudgeEnabledKey)     private var weeklyEnabled   = true
+    @AppStorage(NotificationManager.streakAlertsEnabledKey)    private var streakEnabled   = true
+
+    // ── Block reminders (0 = off, 5/10/15 min)
+    @AppStorage(NotificationManager.blockReminderMinutesKey)   private var blockMinutes    = 10
+
+    // ── Break reminders (existing)
     @AppStorage("breakRemindersEnabled")  private var breakRemindersEnabled = true
     @AppStorage("breakReminderInterval")  private var breakReminderIntervalHours = 1
-    @AppStorage("notificationSound")      private var notificationSound = true
-    @AppStorage("dailyReminderEnabled")   private var dailyReminderEnabled = false
-    @AppStorage("dailyReminderHour")      private var dailyReminderHour = 8
-    @AppStorage("dailyReminderMinute")    private var dailyReminderMinute = 0
-    @State private var permissionStatus: UNAuthorizationStatus = .notDetermined
-    @State private var reminderTime = Date()
 
-    private let intervalOptions = [1: "Every hour", 2: "Every 2 hours", 3: "Every 3 hours"]
+    @State private var permissionStatus: UNAuthorizationStatus = .notDetermined
+
+    // Snapshot of user profile for re-scheduling
+    @Query private var profiles: [UserProfile]
+
+    private var profile: UserProfile? { profiles.first }
 
     var body: some View {
         Form {
-            // ── Daily planning reminder ───────────────────────────────────────
-            Section {
-                Toggle("Daily planning reminder", isOn: $dailyReminderEnabled)
-                    .onChange(of: dailyReminderEnabled) { _, enabled in
-                        if enabled {
-                            requestPermissionThenSchedule()
-                        } else {
-                            cancelDailyReminder()
-                        }
-                    }
 
-                if dailyReminderEnabled {
-                    DatePicker(
-                        "Remind me at",
-                        selection: $reminderTime,
-                        displayedComponents: .hourAndMinute
-                    )
-                    .onChange(of: reminderTime) { _, t in
-                        let comps = Calendar.current.dateComponents([.hour, .minute], from: t)
-                        dailyReminderHour   = comps.hour   ?? 8
-                        dailyReminderMinute = comps.minute ?? 0
-                        scheduleDailyReminder()
-                    }
+            // ── Block reminders ───────────────────────────────────────────────
+            Section {
+                Picker("Remind me before block", selection: $blockMinutes) {
+                    Text("Off").tag(0)
+                    Text("5 min").tag(5)
+                    Text("10 min").tag(10)
+                    Text("15 min").tag(15)
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Label("Block Reminders", systemImage: "timer")
+            } footer: {
+                Text(blockMinutes == 0
+                     ? "You won't be notified before blocks start."
+                     : "You'll get a heads-up \(blockMinutes) minutes before each scheduled block.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            // ── Planning nudges ───────────────────────────────────────────────
+            Section {
+                Toggle(isOn: $morningEnabled) {
+                    Label("Morning reminder", systemImage: "sun.horizon.fill")
+                }
+                .onChange(of: morningEnabled) { rescheduleMorningEvening() }
+
+                Toggle(isOn: $eveningEnabled) {
+                    Label("Evening review", systemImage: "moon.stars.fill")
+                }
+                .onChange(of: eveningEnabled) { rescheduleMorningEvening() }
+
+                Toggle(isOn: $tomorrowEnabled) {
+                    Label("Plan tomorrow (9 pm)", systemImage: "moon.fill")
+                }
+                .onChange(of: tomorrowEnabled) {
+                    if tomorrowEnabled { NotificationManager.shared.scheduleTomorrowNudge() }
+                    else               { NotificationManager.shared.cancelTomorrowNudge() }
                 }
             } header: {
-                Label("Morning Reminder", systemImage: "sun.horizon")
+                Label("Planning Nudges", systemImage: "calendar.badge.clock")
             } footer: {
-                Text("A daily nudge to plan your day with Flowline. Sent once at your chosen time.")
+                Text("Morning = 5 min after your wake time. Evening = 30 min before sleep.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            // ── Streak & weekly ───────────────────────────────────────────────
+            Section {
+                Toggle(isOn: $streakEnabled) {
+                    Label("Streak alerts (8 pm)", systemImage: "flame.fill")
+                }
+                .onChange(of: streakEnabled) { rescheduleStreak() }
+
+                Toggle(isOn: $weeklyEnabled) {
+                    Label("Weekly summary (Sunday 8 pm)", systemImage: "chart.bar.fill")
+                }
+                .onChange(of: weeklyEnabled) { rescheduleWeekly() }
+            } header: {
+                Label("Motivation", systemImage: "sparkles")
+            } footer: {
+                Text("Streak alert fires if you haven't planned today. Weekly summary shows your stats every Sunday.")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
 
             // ── Break reminders ───────────────────────────────────────────────
-            Section("Break Reminders") {
-                Toggle("Hourly break notifications", isOn: $breakRemindersEnabled)
+            Section {
+                Toggle("Break notifications", isOn: $breakRemindersEnabled)
                     .onChange(of: breakRemindersEnabled) { updateBreakNotifications() }
 
                 if breakRemindersEnabled {
-                    Picker("Remind me", selection: $breakReminderIntervalHours) {
-                        ForEach([1, 2, 3], id: \.self) { h in
-                            Text(intervalOptions[h] ?? "").tag(h)
-                        }
+                    Picker("Interval", selection: $breakReminderIntervalHours) {
+                        Text("1h").tag(1)
+                        Text("2h").tag(2)
+                        Text("3h").tag(3)
                     }
                     .pickerStyle(.segmented)
                     .onChange(of: breakReminderIntervalHours) { updateBreakNotifications() }
-
-                    Toggle("Sound", isOn: $notificationSound)
                 }
+            } header: {
+                Label("Focus Breaks", systemImage: "cup.and.saucer.fill")
             }
 
             // ── Permission status ─────────────────────────────────────────────
-            Section("Permission") {
-                HStack {
+            Section {
+                HStack(spacing: 8) {
                     Circle()
                         .fill(statusColor)
                         .frame(width: 8, height: 8)
@@ -573,19 +618,26 @@ private struct NotificationSettingsTab: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                    } else if permissionStatus == .notDetermined {
+                        Button("Allow") {
+                            Task {
+                                let granted = await NotificationManager.shared.requestAuthorization()
+                                await MainActor.run {
+                                    permissionStatus = granted ? .authorized : .denied
+                                }
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
                     }
                 }
+            } header: {
+                Label("Permission", systemImage: "bell.badge")
             }
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
-        .onAppear {
-            checkPermission()
-            var comps        = DateComponents()
-            comps.hour       = dailyReminderHour
-            comps.minute     = dailyReminderMinute
-            reminderTime     = Calendar.current.date(from: comps) ?? Date()
-        }
+        .onAppear { checkPermission() }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -600,9 +652,9 @@ private struct NotificationSettingsTab: View {
 
     private var statusText: String {
         switch permissionStatus {
-        case .authorized:    return "Notifications allowed"
-        case .denied:        return "Notifications blocked — enable in Settings"
-        case .notDetermined: return "Permission not requested yet"
+        case .authorized:    return "Notifications allowed ✓"
+        case .denied:        return "Notifications blocked — tap Open Settings"
+        case .notDetermined: return "Tap Allow to enable notifications"
         default:             return "Unknown status"
         }
     }
@@ -613,46 +665,30 @@ private struct NotificationSettingsTab: View {
         }
     }
 
-    private func requestPermissionThenSchedule() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            DispatchQueue.main.async {
-                permissionStatus = granted ? .authorized : .denied
-                if granted { scheduleDailyReminder() }
-                else { dailyReminderEnabled = false }
-            }
+    private func rescheduleMorningEvening() {
+        guard let p = profile else { return }
+        NotificationManager.shared.scheduleMorning(name: p.name, wakeTime: p.wakeTime)
+        NotificationManager.shared.scheduleEvening(sleepTime: p.sleepTime)
+    }
+
+    private func rescheduleStreak() {
+        guard let p = profile else { return }
+        let streak = StreakManager.shared.currentStreak
+        NotificationManager.shared.scheduleStreakReminder(streakDays: streak, sleepTime: p.sleepTime)
+    }
+
+    private func rescheduleWeekly() {
+        guard weeklyEnabled else {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["flowline.weekly.summary"])
+            return
         }
-    }
-
-    private func scheduleDailyReminder() {
-        cancelDailyReminder()
-        var comps    = DateComponents()
-        comps.hour   = dailyReminderHour
-        comps.minute = dailyReminderMinute
-
-        let content       = UNMutableNotificationContent()
-        content.title     = "Time to plan your day ✦"
-        content.body      = "Open Flowline and tell AI what's on your plate — takes 60 seconds."
-        content.sound     = .default
-        content.categoryIdentifier = "DAILY_PLAN"
-
-        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
-        let request = UNNotificationRequest(
-            identifier: "flowline.dailyReminder",
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request)
-    }
-
-    private func cancelDailyReminder() {
-        UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: ["flowline.dailyReminder"])
+        let streak = StreakManager.shared.currentStreak
+        NotificationManager.shared.scheduleWeeklySummary(completedDays: 0, streak: streak)
     }
 
     private func updateBreakNotifications() {
         guard breakRemindersEnabled else {
-            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-            if dailyReminderEnabled { scheduleDailyReminder() }
+            NotificationCenter.default.post(name: .rescheduleBreaks, object: 0)
             return
         }
         NotificationCenter.default.post(name: .rescheduleBreaks, object: breakReminderIntervalHours)

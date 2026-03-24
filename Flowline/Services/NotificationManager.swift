@@ -12,23 +12,41 @@ extension Notification.Name {
 // MARK: - NotificationManager
 
 /// Manages all local notifications for Flowline:
-///   • Morning planning reminder  (wake + 5 min, daily)
-///   • Evening review reminder    (sleep − 30 min, daily)
-///   • Block reminders            (10 min before each saved block, one-time)
-///   • Planning nudge             (9:00 am if no plan saved yet, daily)
-///   • Streak protection          (8 pm if streak > 0, daily — cancelled on save)
+///   • Morning planning reminder   (wake + 5 min, daily)
+///   • Evening review reminder     (sleep − 30 min, daily)
+///   • Block reminders             (configurable min before each block, one-time)
+///   • Planning nudge              (9:00 am if no plan saved yet, daily)
+///   • Tomorrow nudge              (9:00 pm — plan tomorrow before you sleep, daily)
+///   • Streak protection           (8 pm if streak > 0, daily)
+///   • Weekly summary              (Sunday 8 pm with stats)
 final class NotificationManager {
     static let shared = NotificationManager()
     private init() {}
 
     private let center = UNUserNotificationCenter.current()
 
-    // Stable IDs
-    private let kMorningID  = "flowline.morning.planning"
-    private let kEveningID  = "flowline.evening.review"
-    private let kNudgeID    = "flowline.nudge.noplan"
-    private let kStreakID   = "flowline.streak.protection"
+    // MARK: - Stable IDs
+    private let kMorningID   = "flowline.morning.planning"
+    private let kEveningID   = "flowline.evening.review"
+    private let kNudgeID     = "flowline.nudge.noplan"
+    private let kTomorrowID  = "flowline.nudge.tomorrow"
+    private let kStreakID    = "flowline.streak.protection"
+    private let kWeeklyID    = "flowline.weekly.summary"
     private let kBlockPrefix = "flowline.block."   // + block start ISO string
+
+    // MARK: - UserDefaults keys for user preferences
+    static let blockReminderMinutesKey  = "blockReminderMinutes"
+    static let tomorrowNudgeEnabledKey  = "tomorrowNudgeEnabled"
+    static let weeklyNudgeEnabledKey    = "weeklyNudgeEnabled"
+    static let streakAlertsEnabledKey   = "streakAlertsEnabled"
+    static let morningReminderEnabledKey = "morningReminderEnabled"
+    static let eveningReminderEnabledKey = "eveningReminderEnabled"
+
+    /// Minutes before a block fires the reminder. Defaults to 10.
+    var blockReminderMinutes: Int {
+        let v = UserDefaults.standard.integer(forKey: Self.blockReminderMinutesKey)
+        return v > 0 ? v : 10
+    }
 
     // MARK: - Permission
 
@@ -50,31 +68,39 @@ final class NotificationManager {
 
     // MARK: - Public API
 
-    /// Request permission + schedule morning, evening, nudge, streak reminders.
+    /// Request permission + schedule all daily reminders.
     /// Call after onboarding is complete.
     func requestAndSchedule(name: String, wakeTime: Date, sleepTime: Date) async {
         guard await requestAuthorization() else { return }
         scheduleMorning(name: name, wakeTime: wakeTime)
         scheduleEvening(sleepTime: sleepTime)
         schedulePlanningNudge()
+        scheduleTomorrowNudge()
         scheduleStreakReminder(streakDays: 0, sleepTime: sleepTime)
     }
 
     /// Re-schedule daily reminders after wake/sleep update in Settings.
     func reschedule(name: String, wakeTime: Date, sleepTime: Date) {
-        scheduleMorning(name: name, wakeTime: wakeTime)
-        scheduleEvening(sleepTime: sleepTime)
+        if UserDefaults.standard.bool(forKey: Self.morningReminderEnabledKey) {
+            scheduleMorning(name: name, wakeTime: wakeTime)
+        }
+        if UserDefaults.standard.bool(forKey: Self.eveningReminderEnabledKey) {
+            scheduleEvening(sleepTime: sleepTime)
+        }
         scheduleStreakReminder(streakDays: 0, sleepTime: sleepTime)
     }
 
     /// Call every time a plan is saved.
-    /// - Schedules 10-min-before reminders for each block.
-    /// - Cancels today's planning nudge (plan exists → no longer needed).
-    /// - Updates streak protection text.
     func onPlanSaved(blocks: [ScheduleBlock], streakDays: Int, sleepTime: Date) {
         scheduleBlockReminders(for: blocks)
         cancelPlanningNudge()
         scheduleStreakReminder(streakDays: streakDays, sleepTime: sleepTime)
+    }
+
+    /// Call when weekly stats are available (e.g. on Sunday or after plan save).
+    func refreshWeeklySummary(completedDays: Int, streak: Int) {
+        guard UserDefaults.standard.bool(forKey: Self.weeklyNudgeEnabledKey) else { return }
+        scheduleWeeklySummary(completedDays: completedDays, streak: streak)
     }
 
     /// Cancel everything. Call on sign-out.
@@ -84,8 +110,9 @@ final class NotificationManager {
 
     // MARK: - Morning
 
-    private func scheduleMorning(name: String, wakeTime: Date) {
+    func scheduleMorning(name: String, wakeTime: Date) {
         center.removePendingNotificationRequests(withIdentifiers: [kMorningID])
+        guard UserDefaults.standard.bool(forKey: Self.morningReminderEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Good morning, \(name)! ☀️"
@@ -108,8 +135,9 @@ final class NotificationManager {
 
     // MARK: - Evening
 
-    private func scheduleEvening(sleepTime: Date) {
+    func scheduleEvening(sleepTime: Date) {
         center.removePendingNotificationRequests(withIdentifiers: [kEveningID])
+        guard UserDefaults.standard.bool(forKey: Self.eveningReminderEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "How did today go? 🌙"
@@ -135,28 +163,30 @@ final class NotificationManager {
 
     // MARK: - Block Reminders
 
-    /// Schedules a one-time "starts in 10 min" notification for each future block today.
+    /// Schedules a one-time "starts in X min" notification for each future block today.
+    /// Timing controlled by `blockReminderMinutes` from UserDefaults.
     func scheduleBlockReminders(for blocks: [ScheduleBlock]) {
-        // Snapshot needed data from @Model objects on the calling thread before
-        // entering the callback (which runs on an arbitrary thread).
         struct BlockSnap { let title: String; let start: Date; let end: Date }
         let snaps = blocks.map { BlockSnap(title: $0.title, start: $0.startTime, end: $0.endTime) }
+        let minutesBefore = blockReminderMinutes
 
         center.getPendingNotificationRequests { [weak self] pending in
             guard let self else { return }
             let oldIDs = pending.map(\.identifier).filter { $0.hasPrefix(self.kBlockPrefix) }
             self.center.removePendingNotificationRequests(withIdentifiers: oldIDs)
 
+            guard minutesBefore > 0 else { return }   // 0 = reminders disabled
+
             let now = Date()
             let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
             let isoFormatter = ISO8601DateFormatter()
 
             for snap in snaps {
-                let fireAt = snap.start.addingTimeInterval(-10 * 60)
+                let fireAt = snap.start.addingTimeInterval(-Double(minutesBefore) * 60)
                 guard fireAt > now else { continue }
 
                 let content = UNMutableNotificationContent()
-                content.title = "\(snap.title) starts in 10 min"
+                content.title = "\(snap.title) starts in \(minutesBefore) min"
                 content.body = "\(fmt.string(from: snap.start)) – \(fmt.string(from: snap.end))"
                 content.sound = .default
                 content.userInfo = ["action": "openChat"]
@@ -175,10 +205,9 @@ final class NotificationManager {
         }
     }
 
-    // MARK: - Planning Nudge
+    // MARK: - Planning Nudge (9am — no plan yet today)
 
     /// Daily 9:00 am nudge — if no plan has been saved yet today.
-    /// Cancelled automatically via `cancelPlanningNudge()` when a plan is saved.
     func schedulePlanningNudge() {
         center.removePendingNotificationRequests(withIdentifiers: [kNudgeID])
 
@@ -186,14 +215,10 @@ final class NotificationManager {
         content.title = "No plan yet today 📋"
         content.body = "30 seconds is all it takes. Tap to plan your day."
         content.sound = .default
-        content.userInfo = [
-            "action": "openChat",
-            "prompt": "Plan my day quickly"
-        ]
+        content.userInfo = ["action": "openChat", "prompt": "Plan my day quickly"]
 
         var comps = DateComponents()
-        comps.hour = 9
-        comps.minute = 0
+        comps.hour = 9; comps.minute = 0
 
         center.add(UNNotificationRequest(
             identifier: kNudgeID,
@@ -206,17 +231,52 @@ final class NotificationManager {
         center.removePendingNotificationRequests(withIdentifiers: [kNudgeID])
     }
 
-    // MARK: - Streak Protection
+    // MARK: - Tomorrow Nudge (9pm — plan tomorrow before you sleep)
 
-    /// Daily 8 pm reminder to protect a streak.
-    /// If streak is 0 or unknown, shows generic "build your streak" copy.
-    func scheduleStreakReminder(streakDays: Int, sleepTime: Date) {
-        center.removePendingNotificationRequests(withIdentifiers: [kStreakID])
+    /// Daily 9:00 pm nudge — plan tomorrow's day before bed.
+    func scheduleTomorrowNudge() {
+        center.removePendingNotificationRequests(withIdentifiers: [kTomorrowID])
+        guard UserDefaults.standard.bool(forKey: Self.tomorrowNudgeEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
-        if streakDays >= 2 {
+        content.title = "Plan tomorrow before you sleep? 🌙"
+        content.body = "30 seconds to set yourself up for a great day."
+        content.sound = .default
+        content.userInfo = [
+            "action": "openChat",
+            "prompt": "Help me plan tomorrow"
+        ]
+
+        var comps = DateComponents()
+        comps.hour = 21; comps.minute = 0
+
+        center.add(UNNotificationRequest(
+            identifier: kTomorrowID,
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
+        ))
+    }
+
+    func cancelTomorrowNudge() {
+        center.removePendingNotificationRequests(withIdentifiers: [kTomorrowID])
+    }
+
+    // MARK: - Streak Protection (8pm)
+
+    func scheduleStreakReminder(streakDays: Int, sleepTime: Date) {
+        center.removePendingNotificationRequests(withIdentifiers: [kStreakID])
+        guard UserDefaults.standard.bool(forKey: Self.streakAlertsEnabledKey) else { return }
+
+        let content = UNMutableNotificationContent()
+        if streakDays >= 7 {
+            content.title = "\(streakDays)-day streak 🔥 Don't break the chain"
+            content.body = "Plan something for today — even 10 minutes keeps the streak alive."
+        } else if streakDays >= 2 {
             content.title = "\(streakDays)-day streak at risk 🔥"
-            content.body = "Plan something — even 10 minutes — to keep your streak alive."
+            content.body = "Plan today and keep your streak going."
+        } else if streakDays == 0 {
+            content.title = "Start a new streak today 🔁"
+            content.body = "Yesterday's gone — today is day 1. Tap to plan."
         } else {
             content.title = "Build your streak ✦"
             content.body = "Plan today and start a streak. Day 1 is the hardest."
@@ -224,14 +284,12 @@ final class NotificationManager {
         content.sound = .default
         content.userInfo = ["action": "openChat"]
 
-        // Fire at 20:00 or 1h before sleep if sleep is earlier than 21:00
         let sleepComps = Calendar.current.dateComponents([.hour], from: sleepTime)
         let sleepHour = sleepComps.hour ?? 23
         let fireHour = sleepHour < 21 ? max(sleepHour - 1, 18) : 20
 
         var comps = DateComponents()
-        comps.hour = fireHour
-        comps.minute = 0
+        comps.hour = fireHour; comps.minute = 0
 
         center.add(UNNotificationRequest(
             identifier: kStreakID,
@@ -239,5 +297,33 @@ final class NotificationManager {
             trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
         ))
     }
-}
 
+    // MARK: - Weekly Summary (Sunday 8pm)
+
+    /// Sunday 8:00 pm — show weekly stats and nudge to keep going.
+    func scheduleWeeklySummary(completedDays: Int, streak: Int) {
+        center.removePendingNotificationRequests(withIdentifiers: [kWeeklyID])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Your week in review 📊"
+        if completedDays >= 5 {
+            content.body = "\(completedDays) days planned this week 🔥 \(streak > 0 ? "\(streak)-day streak." : "Keep it up!")"
+        } else if completedDays >= 3 {
+            content.body = "\(completedDays)/7 days planned · \(streak > 0 ? "\(streak)-day streak" : "start your streak tomorrow")"
+        } else {
+            content.body = "Only \(completedDays) days planned this week. Let's do better next week 💪"
+        }
+        content.sound = .default
+        content.userInfo = ["action": "openStats"]
+
+        var comps = DateComponents()
+        comps.weekday = 1  // Sunday
+        comps.hour = 20; comps.minute = 0
+
+        center.add(UNNotificationRequest(
+            identifier: kWeeklyID,
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
+        ))
+    }
+}

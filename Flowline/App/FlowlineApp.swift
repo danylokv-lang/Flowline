@@ -117,10 +117,20 @@ struct FlowlineApp: App {
                     subscriptionManager.startTrialIfNeeded()
                 }
 
-                // Re-arm the 9am planning nudge every launch.
-                // It fires daily; if the user saves a plan it's cancelled automatically.
+                // Re-arm daily notification schedules every launch.
+                // Planning nudge fires at 9am unless cancelled by a plan save.
+                // Tomorrow nudge fires at 9pm if the toggle is on.
+                // Weekly summary fires every Sunday at 8pm if the toggle is on.
                 #if os(iOS)
                 NotificationManager.shared.schedulePlanningNudge()
+                NotificationManager.shared.scheduleTomorrowNudge()
+                let streak = StreakManager.shared.currentStreak
+                // clamp totalPlansCreated to 7 as a rough "this week" proxy
+                let daysThisWeek = min(StreakManager.shared.totalPlansCreated, 7)
+                NotificationManager.shared.refreshWeeklySummary(
+                    completedDays: daysThisWeek,
+                    streak: streak
+                )
                 #endif
             }
         }
