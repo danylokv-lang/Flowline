@@ -1,8 +1,9 @@
-# Flowline — AI Day Planner for Mac
+# Flowline — AI Day Planner
 
 > **Your day, designed by AI.** Flowline builds your entire daily schedule around your energy, real commitments, and goals — in one message.
 
 ![macOS](https://img.shields.io/badge/macOS-14.6%2B-black?style=flat-square&logo=apple)
+![iOS](https://img.shields.io/badge/iOS-17.0%2B-black?style=flat-square&logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-5.0-orange?style=flat-square&logo=swift)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-5-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-proprietary-red?style=flat-square)
@@ -77,6 +78,7 @@ Flowline/
 ## Requirements
 
 - macOS **14.6** or later
+- iOS **17.0** or later
 - Xcode **15+**
 - An Anthropic API key (or deploy the included Cloudflare Worker proxy)
 

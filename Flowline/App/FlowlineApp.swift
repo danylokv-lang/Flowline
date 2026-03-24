@@ -42,6 +42,10 @@ struct FlowlineApp: App {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
 
+    /// True while we are pulling server data after a login/account-switch.
+    /// During this window we show a spinner so the user never sees the wrong screen.
+    @State private var isSyncingAfterLogin = false
+
     var body: some Scene {
         // ── Main Window ───────────────────────────────────────────────────
         WindowGroup(id: "main") {
@@ -51,6 +55,15 @@ struct FlowlineApp: App {
                 } else if !authService.isLoggedIn {
                     AuthView()
                         .environmentObject(authService)
+                } else if isSyncingAfterLogin {
+                    // Pulling profile from server — wait before deciding which screen to show
+                    ZStack {
+                        Color(hex: "#080810").ignoresSafeArea()
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                            .scaleEffect(1.2)
+                    }
                 } else if hasCompletedOnboarding {
                     MainTabView()
                         .environmentObject(timerManager)
@@ -71,9 +84,14 @@ struct FlowlineApp: App {
                 if newUserId != lastLoggedInUserId {
                     clearLocalUserData()
                     lastLoggedInUserId = newUserId
-                    // Pull fresh data from server after switching accounts
+                    // Pull fresh data from server — show spinner until done so we
+                    // never flash the wrong screen (e.g. onboarding for a returning user)
                     if let token = authService.token {
-                        Task { await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext) }
+                        isSyncingAfterLogin = true
+                        Task {
+                            await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext)
+                            isSyncingAfterLogin = false
+                        }
                     }
                 }
                 subscriptionManager.startTrialIfNeeded()
@@ -133,7 +151,9 @@ struct FlowlineApp: App {
         if let items = try? ctx.fetch(FetchDescriptor<CapturedTask>())   { items.forEach { ctx.delete($0) } }
         if let items = try? ctx.fetch(FetchDescriptor<FlowTask>())       { items.forEach { ctx.delete($0) } }
         try? ctx.save()
-        hasCompletedOnboarding = false
+        // NOTE: hasCompletedOnboarding is NOT reset here.
+        // pullProfile() always writes the server's onboarding_done value,
+        // so the correct state is set once the pull completes.
         StreakManager.shared.resetForAccountSwitch()
         // Reset weekly plan limit so the new account starts fresh
         UserDefaults.standard.removeObject(forKey: "plans_this_week")

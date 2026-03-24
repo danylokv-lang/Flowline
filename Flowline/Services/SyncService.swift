@@ -155,10 +155,10 @@ final class SyncService {
         }
         try? context.save()
 
-        // Only skip onboarding if the user has explicitly completed it on another device
-        if onboardingDone {
-            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        }
+        // Always sync onboarding state from server — this ensures:
+        // • Same account, new device → skips onboarding if already completed
+        // • Different account → shows onboarding if that account hasn't done it
+        UserDefaults.standard.set(onboardingDone, forKey: "hasCompletedOnboarding")
 
         // Cache work hours for break notification scheduling
         let ud = UserDefaults.standard
