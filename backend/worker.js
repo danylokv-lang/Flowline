@@ -560,6 +560,49 @@ async function handleGetCalendar(userId, url, env) {
   return res({ days: result });
 }
 
+// ── Plan Saves: Increment (server-enforced free-tier limit) ───────────────
+//
+// Returns { allowed: true, weeklySaves: N, weeklySavesMonday: "yyyy-MM-dd" }
+// Returns 403  { error: "Weekly plan limit reached" } when free user hits 3/week
+
+const FREE_WEEKLY_SAVE_LIMIT = 3;
+
+function currentMondayISO() {
+  const d = new Date();
+  const dayOfWeek = d.getUTCDay();
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(d);
+  monday.setUTCDate(d.getUTCDate() + daysToMonday);
+  return monday.toISOString().slice(0, 10);
+}
+
+async function handleIncrementPlanSave(userId, env) {
+  const monday = currentMondayISO();
+
+  const [user, profile] = await Promise.all([
+    env.DB.prepare("SELECT is_pro, pro_expires_at FROM users WHERE id = ?").bind(userId).first(),
+    env.DB.prepare("SELECT weekly_saves, weekly_saves_monday FROM profiles WHERE user_id = ?").bind(userId).first(),
+  ]);
+  if (!user) return res({ error: "User not found" }, 404);
+
+  const isPro = user.is_pro === 1 && (!user.pro_expires_at || user.pro_expires_at > now());
+
+  const savedMonday = profile?.weekly_saves_monday ?? "";
+  const currentCount = savedMonday === monday ? (profile?.weekly_saves ?? 0) : 0;
+
+  if (!isPro && currentCount >= FREE_WEEKLY_SAVE_LIMIT) {
+    return res({ error: "Weekly plan limit reached", weeklySaves: currentCount, weeklySavesMonday: monday }, 403);
+  }
+
+  const newCount = currentCount + 1;
+  const ts = now();
+  await env.DB.prepare(`
+    UPDATE profiles SET weekly_saves = ?, weekly_saves_monday = ?, updated_at = ? WHERE user_id = ?
+  `).bind(newCount, monday, ts, userId).run();
+
+  return res({ allowed: true, weeklySaves: newCount, weeklySavesMonday: monday });
+}
+
 // ── Calendar: Sync (replace days) ─────────────────────────────────────────
 
 async function handleSyncCalendar(userId, req, env) {
@@ -698,6 +741,7 @@ export default {
       if (path === "/reviews"           && method === "POST") return handleSubmitReview(userId, request, env);
       if (path === "/inbox"             && method === "GET")  return handleGetInbox(userId, env);
       if (path === "/inbox/sync"        && method === "POST") return handleSyncInbox(userId, request, env);
+      if (path === "/plan-saves/increment" && method === "POST") return handleIncrementPlanSave(userId, env);
 
       return res({ error: "Not found" }, 404);
     } catch (err) {

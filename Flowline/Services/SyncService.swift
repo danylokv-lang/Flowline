@@ -115,11 +115,16 @@ final class SyncService {
         _ = try? await request("PUT", "/user/profile", body: body, token: token)
     }
 
-    /// Push the current week's plan-save count so other devices stay in sync.
-    func pushWeeklySaves(count: Int, monday: String, token: String) async {
-        guard !token.isEmpty else { return }
-        let body: [String: Any] = ["profile": ["weeklySaves": count, "weeklySavesMonday": monday]]
-        _ = try? await request("PUT", "/user/profile", body: body, token: token)
+    /// Increment the server-side weekly save counter (server-enforced limit).
+    /// Returns (count, monday) from the server, or nil on error.
+    /// The server resets the count automatically when the ISO week changes.
+    func incrementPlanSave(token: String) async -> (count: Int, monday: String)? {
+        guard !token.isEmpty else { return nil }
+        guard let data  = try? await request("POST", "/plan-saves/increment", body: [:], token: token),
+              let json  = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let count = json["weeklySaves"]      as? Int,
+              let monday = json["weeklySavesMonday"] as? String else { return nil }
+        return (count, monday)
     }
 
     /// Push captured inbox tasks to the server.

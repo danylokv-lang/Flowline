@@ -89,7 +89,8 @@ final class SubscriptionManager: ObservableObject {
         UserDefaults.standard.integer(forKey: kTotalSaves)
     }
 
-    /// Call once per successful plan save. Pass the auth token so the count is pushed to the server.
+    /// Call once per successful plan save. Increments locally immediately, then
+    /// confirms with the server and syncs back the authoritative count.
     func recordPlanSave(token: String?) {
         resetIfNewWeek()
         plansThisWeek += 1
@@ -100,11 +101,16 @@ final class SubscriptionManager: ObservableObject {
         let total = UserDefaults.standard.integer(forKey: kTotalSaves) + 1
         UserDefaults.standard.set(total, forKey: kTotalSaves)
 
-        // Persist the count server-side so it survives reinstalls and device switches
+        // Ask the server to increment its authoritative counter.
+        // The server enforces the limit and resets the week — we sync back its result
+        // so the local count matches exactly (prevents proxy-based bypass).
         if let token, !token.isEmpty {
-            let count = plansThisWeek
             Task {
-                await SyncService.shared.pushWeeklySaves(count: count, monday: monday, token: token)
+                if let result = await SyncService.shared.incrementPlanSave(token: token) {
+                    await MainActor.run {
+                        self.refreshFromServer(count: result.count, monday: result.monday)
+                    }
+                }
             }
         }
     }
