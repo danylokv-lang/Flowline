@@ -25,12 +25,13 @@ final class SyncService {
 
     // MARK: - Public API
 
-    /// Pull profile + last 30 days + next 30 days from the server.
+    /// Pull profile + last 30 days + next 30 days + chats + inbox from the server.
     func pullAll(token: String, context: ModelContext) async {
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.pullProfile(token: token, context: context) }
             group.addTask { await self.pullCalendar(token: token, context: context) }
             group.addTask { await self.pullChats(token: token, context: context) }
+            group.addTask { await self.pullInbox(token: token, context: context) }
         }
     }
 
@@ -100,10 +101,11 @@ final class SyncService {
     func pushProfile(_ profile: UserProfile, name: String, token: String) async {
         guard !token.isEmpty else { return }
         var profileDict: [String: Any] = [
-            "wakeTime":     hhmmFmt.string(from: profile.wakeTime),
-            "sleepTime":    hhmmFmt.string(from: profile.sleepTime),
-            "hasWorkHours": profile.hasWorkHours ? 1 : 0,
-            "bio":          profile.bio,
+            "wakeTime":              hhmmFmt.string(from: profile.wakeTime),
+            "sleepTime":             hhmmFmt.string(from: profile.sleepTime),
+            "hasWorkHours":          profile.hasWorkHours ? 1 : 0,
+            "bio":                   profile.bio,
+            "recurringCommitments":  profile.recurringCommitments,
         ]
         if profile.hasWorkHours {
             if let ws = profile.workStartTime { profileDict["workStart"] = hhmmFmt.string(from: ws) }
@@ -111,6 +113,19 @@ final class SyncService {
         }
         let body: [String: Any] = ["name": name, "profile": profileDict]
         _ = try? await request("PUT", "/user/profile", body: body, token: token)
+    }
+
+    /// Push captured inbox tasks to the server.
+    func pushInbox(_ tasks: [CapturedTask], token: String) async {
+        guard !token.isEmpty, !tasks.isEmpty else { return }
+        let payload: [[String: Any]] = tasks.map { t in [
+            "id":          t.taskID,
+            "text":        t.text,
+            "category":    t.category,
+            "isScheduled": t.isScheduled,
+            "createdAt":   Int(t.createdAt.timeIntervalSince1970),
+        ]}
+        _ = try? await request("POST", "/inbox/sync", body: ["tasks": payload], token: token)
     }
 
     // MARK: - Pull profile
@@ -131,34 +146,37 @@ final class SyncService {
                             second: 0, of: refDate)
         }
 
-        let name            = json["name"]               as? String ?? ""
-        let wakeTime        = toDate(p["wake_time"])      ?? refDate
-        let sleepTime       = toDate(p["sleep_time"])     ?? refDate
-        let workStart       = toDate(p["work_start"])
-        let workEnd         = toDate(p["work_end"])
-        let hasWork         = (p["has_work_hours"]        as? Int ?? 0) == 1
-        let bio             = p["bio"]                    as? String ?? ""
-        let onboardingDone  = (p["onboarding_done"]       as? Int ?? 0) == 1
+        let name                  = json["name"]                      as? String ?? ""
+        let wakeTime              = toDate(p["wake_time"])             ?? refDate
+        let sleepTime             = toDate(p["sleep_time"])            ?? refDate
+        let workStart             = toDate(p["work_start"])
+        let workEnd               = toDate(p["work_end"])
+        let hasWork               = (p["has_work_hours"]               as? Int ?? 0) == 1
+        let bio                   = p["bio"]                           as? String ?? ""
+        let recurringCommitments  = p["recurring_commitments"]         as? String ?? ""
+        let onboardingDone        = (p["onboarding_done"]              as? Int ?? 0) == 1
 
         if let existing = (try? context.fetch(FetchDescriptor<UserProfile>()))?.first {
-            existing.name          = name
-            existing.wakeTime      = wakeTime
-            existing.sleepTime     = sleepTime
-            existing.hasWorkHours  = hasWork
-            existing.workStartTime = workStart
-            existing.workEndTime   = workEnd
-            existing.bio           = bio
+            existing.name                 = name
+            existing.wakeTime             = wakeTime
+            existing.sleepTime            = sleepTime
+            existing.hasWorkHours         = hasWork
+            existing.workStartTime        = workStart
+            existing.workEndTime          = workEnd
+            existing.bio                  = bio
+            existing.recurringCommitments = recurringCommitments
         } else {
             context.insert(UserProfile(name: name, wakeTime: wakeTime, sleepTime: sleepTime,
                                        hasWorkHours: hasWork, workStartTime: workStart,
-                                       workEndTime: workEnd, bio: bio))
+                                       workEndTime: workEnd, bio: bio,
+                                       recurringCommitments: recurringCommitments))
         }
         try? context.save()
 
-        // Always sync onboarding state from server — this ensures:
-        // • Same account, new device → skips onboarding if already completed
-        // • Different account → shows onboarding if that account hasn't done it
-        UserDefaults.standard.set(onboardingDone, forKey: "hasCompletedOnboarding")
+        // Only skip onboarding if the user has explicitly completed it on another device
+        if onboardingDone {
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        }
 
         // Cache work hours for break notification scheduling
         let ud = UserDefaults.standard
@@ -276,6 +294,34 @@ final class SyncService {
         try? context.save()
     }
 
+    // MARK: - Pull inbox
+
+    private func pullInbox(token: String, context: ModelContext) async {
+        guard let data = try? await request("GET", "/inbox", body: nil, token: token),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tasks = json["tasks"] as? [[String: Any]],
+              !tasks.isEmpty else { return }
+
+        let existing = Set((try? context.fetch(FetchDescriptor<CapturedTask>()))?.map { $0.taskID } ?? [])
+
+        for t in tasks {
+            guard let id       = t["id"]          as? String,
+                  let text     = t["text"]        as? String,
+                  !existing.contains(id) else { continue }
+
+            let category    = t["category"]     as? String ?? "work"
+            let isScheduled = (t["is_scheduled"] as? Int ?? 0) == 1
+            let createdAt   = Date(timeIntervalSince1970: TimeInterval(t["created_at"] as? Int ?? 0))
+
+            let task = CapturedTask(text: text, category: category)
+            task.taskID      = id
+            task.isScheduled = isScheduled
+            task.createdAt   = createdAt
+            context.insert(task)
+        }
+        try? context.save()
+    }
+
     // MARK: - Helpers
 
     private func planToJSON(_ plan: DayPlan) -> [String: Any] {
@@ -295,6 +341,7 @@ final class SyncService {
         guard let url = URL(string: base + path) else { throw URLError(.badURL) }
         var req = URLRequest(url: url)
         req.httpMethod = method
+        req.setValue(Config.appSecret, forHTTPHeaderField: "x-app-secret")
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         if let body {
             req.httpBody = try JSONSerialization.data(withJSONObject: body)

@@ -335,6 +335,7 @@ Today is \(dateString).
             request = URLRequest(url: proxyURL)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "content-type")
+            request.setValue(Config.appSecret, forHTTPHeaderField: "x-app-secret")
         } else {
             let directURL = URL(string: "https://api.anthropic.com/v1/messages")!
             request = URLRequest(url: directURL)

@@ -57,6 +57,7 @@ private enum InboxFilter: String, CaseIterable {
 
 struct TaskInboxView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var authService: AuthService
     @Query(sort: \CapturedTask.createdAt, order: .reverse)
     private var allTasks: [CapturedTask]
 
@@ -96,6 +97,9 @@ struct TaskInboxView: View {
                                 TaskCard(task: task, appeared: appeared) {
                                     withAnimation(.easeInOut(duration: 0.25)) {
                                         task.isScheduled.toggle()
+                                    }
+                                    if let token = authService.token {
+                                        Task { await SyncService.shared.pushInbox([task], token: token) }
                                     }
                                 } onDelete: {
                                     withAnimation(.easeInOut(duration: 0.22)) {
@@ -272,6 +276,10 @@ struct TaskInboxView: View {
 
         let task = CapturedTask(text: trimmed, category: inputCat)
         modelContext.insert(task)
+
+        if let token = authService.token {
+            Task { await SyncService.shared.pushInbox([task], token: token) }
+        }
 
         withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             inputText = ""
