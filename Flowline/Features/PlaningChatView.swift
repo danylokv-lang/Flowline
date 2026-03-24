@@ -1116,10 +1116,31 @@ After planning, tell the user which inbox tasks you included):
                         messages[index] = Message(role: .assistant, content: plan.summary, isSavedPlan: true)
                     }
                     persistMessage(role: "assistant", content: response)
-                    showCalendarBanner = true
-                    _Concurrency.Task {
-                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 3_000_000_000)
-                        showCalendarBanner = false
+
+                    // Auto-show calendar picker if user has saves remaining
+                    if subscriptionManager.canSavePlan {
+                        _Concurrency.Task { @MainActor in
+                            try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 500_000_000) // 0.5s delay
+                            await calendarService.requestAccess()
+                            var cals = calendarService.writableCalendars()
+                            if cals.isEmpty {
+                                try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 400_000_000)
+                                cals = calendarService.writableCalendars()
+                            }
+                            calendarPickerItems = cals
+                            if !lastUsedCalendarID.isEmpty, cals.contains(where: { $0.id == lastUsedCalendarID }) {
+                                selectedCalendarID = lastUsedCalendarID
+                            } else {
+                                selectedCalendarID = cals.first?.id ?? ""
+                            }
+                            showCalendarPicker = true
+                        }
+                    } else {
+                        showCalendarBanner = true
+                        _Concurrency.Task {
+                            try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 3_000_000_000)
+                            showCalendarBanner = false
+                        }
                     }
                 } else {
                     if let index = messages.lastIndex(where: { $0.isThinking }) {
