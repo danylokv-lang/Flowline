@@ -227,6 +227,11 @@ struct MainTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .flowlineOpenChat)) { _ in
             withAnimation { selectedTab = 0 }
         }
+        // Day 1 checklist tracking
+        .onChange(of: selectedTab) { _, tab in
+            if tab == 1 { UserDefaults.standard.set(true, forKey: "hasViewedCalendar") }
+            if tab == 2 { UserDefaults.standard.set(true, forKey: "hasUsedFocusTimer") }
+        }
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showStreakToast)
     }
 

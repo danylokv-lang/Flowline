@@ -100,8 +100,10 @@ struct PlanningChatView: View {
     @AppStorage("lastReviewDate")   private var lastReviewDate: String = ""
     @AppStorage("lastReviewRating") private var lastReviewRating: Int = 0
     @State private var showReviewCard = false
-    // Paywall timing
+    // Paywall timing (shown once, after the very first plan save)
     @AppStorage("paywallShownAfterFirstPlan") private var paywallShownAfterFirstPlan = false
+    // Auto-send first plan prompt after onboarding
+    @AppStorage("shouldAutoSendFirstPlan") private var shouldAutoSendFirstPlan = false
     @StateObject private var aiService = GeminiPlanningService()
     @StateObject private var streak = StreakManager.shared
     private let planSaver = PlanSavingService()
@@ -183,6 +185,11 @@ struct PlanningChatView: View {
                 Rectangle()
                     .fill(FlowLineTheme.border)
                     .frame(height: 0.5)
+
+                // ── Day 1 Checklist (new users only) ─────────────────────
+                if streak.totalPlansCreated <= 5 {
+                    Day1ChecklistView()
+                }
 
                 // ── Chat area ────────────────────────────────────────────
                 if messages.isEmpty {
@@ -449,7 +456,20 @@ struct PlanningChatView: View {
                 loadHistory()
                 Task {
                     await calendarService.requestAccess()
-                    refreshSystemPrompt() // re-run after calendar access granted
+                    refreshSystemPrompt()
+                    // Auto-send personalized first plan prompt after onboarding
+                    if shouldAutoSendFirstPlan {
+                        shouldAutoSendFirstPlan = false
+                        // Small delay so the view is fully ready
+                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 800_000_000)
+                        let profile = profiles.first
+                        let focusLine = profile?.bio.components(separatedBy: "\n").first ?? ""
+                        let wakeStr = profile.map {
+                            let f = DateFormatter(); f.timeStyle = .short; return f.string(from: $0.wakeTime)
+                        } ?? "7:00 AM"
+                        let prompt = "Plan my day. \(focusLine.isEmpty ? "" : "\(focusLine). ")I wake at \(wakeStr). Make it realistic and actionable."
+                        await MainActor.run { sendMessage(prompt) }
+                    }
                 }
                 checkReviewPrompt()
             }
@@ -1444,6 +1464,7 @@ After planning, tell the user which inbox tasks you included):
                     return
                 }
 
+                let isFirstPlan = StreakManager.shared.totalPlansCreated == 0
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
                 WidgetDataWriter.shared.refresh(context: modelContext)
                 scheduleNotificationsAfterSave()
@@ -1452,6 +1473,13 @@ After planning, tell the user which inbox tasks you included):
                 }
                 StreakManager.shared.recordPlan()
                 subscriptionManager.recordPlanSave(token: authService.token)
+
+                // C.2 — show paywall after the very first plan save
+                if isFirstPlan && !paywallShownAfterFirstPlan {
+                    paywallShownAfterFirstPlan = true
+                    try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_500_000_000)
+                    await MainActor.run { showPaywall = true }
+                }
 
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages[index] = Message(

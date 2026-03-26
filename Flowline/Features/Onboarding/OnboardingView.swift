@@ -2,6 +2,40 @@ import SwiftUI
 import SwiftData
 import RevenueCatUI
 
+// MARK: - Focus Type
+
+enum FocusType: String, CaseIterable {
+    case work = "Work"
+    case study = "Study"
+    case mixed = "Mixed"
+
+    var icon: String {
+        switch self {
+        case .work:  return "briefcase.fill"
+        case .study: return "graduationcap.fill"
+        case .mixed: return "shuffle"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .work:  return "Meetings, deep work, projects"
+        case .study: return "Classes, assignments, research"
+        case .mixed: return "Work and study combined"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .work:  return Color(hex: "#818cf8")
+        case .study: return Color(hex: "#34d399")
+        case .mixed: return Color(hex: "#f59e0b")
+        }
+    }
+}
+
+// MARK: - OnboardingView
+
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -9,7 +43,6 @@ struct OnboardingView: View {
     @EnvironmentObject private var authService: AuthService
     var isInitialOnboarding: Bool = true
     @State private var currentStep = 0
-    @State private var showPaywall = false
 
     @State private var name: String = ""
     @State private var wakeTime = Calendar.current.date(from: DateComponents(hour: 7, minute: 0))!
@@ -18,8 +51,9 @@ struct OnboardingView: View {
     @State private var workStart = Calendar.current.date(from: DateComponents(hour: 9, minute: 0))!
     @State private var workEnd = Calendar.current.date(from: DateComponents(hour: 17, minute: 0))!
     @State private var bio: String = ""
+    @State private var focusType: FocusType = .mixed
 
-    private let totalSteps = 5
+    private let totalSteps = 6
 
     var body: some View {
         ZStack {
@@ -62,8 +96,9 @@ struct OnboardingView: View {
                         case 0: nameStep
                         case 1: scheduleStep
                         case 2: workHoursStep
-                        case 3: bioStep
-                        case 4: calendarStep
+                        case 3: focusTypeStep
+                        case 4: bioStep
+                        case 5: calendarStep
                         default: EmptyView()
                         }
                     }
@@ -140,12 +175,6 @@ struct OnboardingView: View {
                 .padding(.horizontal, 28)
                 .padding(.bottom, 40)
             }
-        }
-        .sheet(isPresented: $showPaywall) {
-            FlowlinePaywallView { finishOnboarding() }
-                .environmentObject(subscriptionManager)
-                .interactiveDismissDisabled(false)
-                .onDisappear { finishOnboarding() }
         }
     }
 
@@ -269,7 +298,78 @@ struct OnboardingView: View {
         .padding(.horizontal, 28)
     }
 
-    // MARK: - Step 4: Bio
+    // MARK: - Step 4: Focus Type
+
+    private var focusTypeStep: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("What's your\nmain focus?")
+                    .font(.system(size: 32, weight: .black))
+                    .foregroundStyle(LinearGradient(
+                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd")],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .lineSpacing(2)
+
+                Text("We'll personalize your first plan")
+                    .font(.system(size: 14))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+            }
+
+            VStack(spacing: 12) {
+                ForEach(FocusType.allCases, id: \.self) { type in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) { focusType = type }
+                    } label: {
+                        HStack(spacing: 16) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(type.color.opacity(focusType == type ? 0.2 : 0.08))
+                                    .frame(width: 48, height: 48)
+                                Image(systemName: type.icon)
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(type.color)
+                            }
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(type.rawValue)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(FlowLineTheme.mainTxt)
+                                Text(type.description)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(FlowLineTheme.secondTxt)
+                            }
+
+                            Spacer()
+
+                            if focusType == type {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(type.color)
+                            }
+                        }
+                        .padding(14)
+                        .background(FlowLineTheme.tertiaryBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(
+                                    focusType == type ? type.color.opacity(0.6) : FlowLineTheme.borderHi,
+                                    lineWidth: focusType == type ? 1.5 : 1
+                                )
+                        )
+                        .shadow(
+                            color: focusType == type ? type.color.opacity(0.2) : .clear,
+                            radius: 8, y: 3
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal, 28)
+    }
+
+    // MARK: - Step 5: Bio
 
     private var bioStep: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -441,19 +541,40 @@ struct OnboardingView: View {
     // MARK: - Save
 
     private func completeOnboarding() {
-        let profile = UserProfile(
-            name: name.trimmingCharacters(in: .whitespaces),
-            wakeTime: wakeTime,
-            sleepTime: sleepTime,
-            hasWorkHours: hasWorkHours,
-            workStartTime: hasWorkHours ? workStart : nil,
-            workEndTime: hasWorkHours ? workEnd : nil,
-            bio: bio.trimmingCharacters(in: .whitespaces)
-        )
-        modelContext.insert(profile)
+        var fullBio = "My main focus: \(focusType.rawValue)"
+        let trimmedBio = bio.trimmingCharacters(in: .whitespaces)
+        if !trimmedBio.isEmpty { fullBio += "\n\n\(trimmedBio)" }
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+
+        // UPSERT: pullProfile may have already inserted a blank UserProfile for new accounts.
+        // Always update the existing record rather than inserting a second one — a duplicate
+        // causes profiles.first to return the blank record everywhere, making data appear lost.
+        if let existing = (try? modelContext.fetch(FetchDescriptor<UserProfile>()))?.first {
+            existing.name          = trimmedName
+            existing.wakeTime      = wakeTime
+            existing.sleepTime     = sleepTime
+            existing.hasWorkHours  = hasWorkHours
+            existing.workStartTime = hasWorkHours ? workStart : nil
+            existing.workEndTime   = hasWorkHours ? workEnd   : nil
+            existing.bio           = fullBio
+        } else {
+            modelContext.insert(UserProfile(
+                name: trimmedName,
+                wakeTime: wakeTime,
+                sleepTime: sleepTime,
+                hasWorkHours: hasWorkHours,
+                workStartTime: hasWorkHours ? workStart : nil,
+                workEndTime:   hasWorkHours ? workEnd   : nil,
+                bio: fullBio
+            ))
+        }
+        // Save before the auto-plan fires so PlaningChatView reads the real profile.
+        try? modelContext.save()
+
+        finishOnboarding()
+
         if isInitialOnboarding {
-            // Show paywall — finishing it (buy or dismiss) marks onboarding complete
-            showPaywall = true
+            UserDefaults.standard.set(true, forKey: "shouldAutoSendFirstPlan")
         } else {
             dismiss()
         }
@@ -462,14 +583,21 @@ struct OnboardingView: View {
     private func finishOnboarding() {
         subscriptionManager.startTrialIfNeeded()
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        // Tell the server onboarding is done so other devices skip it
-        if let token = authService.token {
-            Task { await SyncService.shared.markOnboardingDone(token: token) }
-        }
-        // Schedule morning + evening planning reminders
+
         let displayName = name.trimmingCharacters(in: .whitespaces)
-        let wake = wakeTime
+        let wake  = wakeTime
         let sleep = sleepTime
+
+        if let token = authService.token {
+            Task {
+                await SyncService.shared.markOnboardingDone(token: token)
+                // Push the real profile to the server so the next pullProfile
+                // doesn't overwrite it with the server's previously-empty values.
+                if let profile = (try? modelContext.fetch(FetchDescriptor<UserProfile>()))?.first {
+                    await SyncService.shared.pushProfile(profile, name: displayName, token: token)
+                }
+            }
+        }
         Task {
             await NotificationManager.shared.requestAndSchedule(
                 name: displayName.isEmpty ? "there" : displayName,
