@@ -94,7 +94,7 @@ struct PlanningChatView: View {
     @State private var showReviewCard = false
     // Paywall timing
     @AppStorage("paywallShownAfterFirstPlan") private var paywallShownAfterFirstPlan = false
-    @StateObject private var aiService = ClaudePlanningService(apiKey: "")
+    @StateObject private var aiService = GeminiPlanningService()
     @StateObject private var streak = StreakManager.shared
     private let planSaver = PlanSavingService()
     private let calendarService = CalendarService.shared
@@ -258,6 +258,16 @@ struct PlanningChatView: View {
                                     #else
                                     .font(.system(size: 10))
                                     .foregroundColor(FlowLineTheme.accent.opacity(0.7))
+                                    #endif
+                            } else if subscriptionManager.plansThisWeek == 0 {
+                                // Show "0/3" on first week or after reset, even without active trial
+                                Text("0/\(SubscriptionManager.weeklyFreeLimit) plans saved this week")
+                                    #if os(macOS)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.7))
+                                    #else
+                                    .font(.system(size: 10))
+                                    .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
                                     #endif
                             } else if !subscriptionManager.isAtLimit {
                                 Text("\(subscriptionManager.plansThisWeek)/\(SubscriptionManager.weeklyFreeLimit) plans saved this week")
@@ -1067,6 +1077,7 @@ After planning, tell the user which inbox tasks you included):
             reviewCtx = "RECENT FEEDBACK: The user rated their \(wasToday ? "today's" : "last") plan \(label). Adjust your next plan accordingly — \(lastReviewRating <= 2 ? "fewer tasks, more breathing room, be realistic" : lastReviewRating == 3 ? "slightly lighter load and clearer priorities" : "keep the same style, it's working")."
         }
 
+        aiService.token = authService.token ?? ""
         aiService.updateSystemPrompt(from: profile, calendarContext: combined, reviewContext: reviewCtx)
     }
 
@@ -1092,6 +1103,7 @@ After planning, tell the user which inbox tasks you included):
         messages.append(Message(role: .assistant, content: "Thinking...", isThinking: true))
 
         _Concurrency.Task {
+            aiService.token = authService.token ?? ""
             do {
                 let response = try await aiService.sendMessage(history: history, newMessage: text)
                 if let jsonData = response.data(using: .utf8),
@@ -1119,13 +1131,23 @@ After planning, tell the user which inbox tasks you included):
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
                     messages.remove(at: index)
                 }
-                // Store for retry
                 if claudeError.isRetryable { lastFailedMessage = text }
                 messages.append(Message(
                     role: .assistant,
                     content: claudeError.errorDescription ?? "Something went wrong.",
                     isError: true,
                     isRetryable: claudeError.isRetryable
+                ))
+            } catch let geminiError as GeminiError {
+                if let index = messages.lastIndex(where: { $0.isThinking }) {
+                    messages.remove(at: index)
+                }
+                lastFailedMessage = text
+                messages.append(Message(
+                    role: .assistant,
+                    content: geminiError.errorDescription ?? "Something went wrong.",
+                    isError: true,
+                    isRetryable: true
                 ))
             } catch {
                 if let index = messages.lastIndex(where: { $0.isThinking }) {
@@ -1171,7 +1193,16 @@ After planning, tell the user which inbox tasks you included):
     // MARK: - Save Plan
 
     private var hasPlanInChat: Bool {
-        messages.contains { !$0.isThinking && !$0.isSavedPlan && $0.role == .assistant && $0.content.count > 200 }
+        messages.contains { message in
+            guard !message.isThinking && !message.isSavedPlan && message.role == .assistant else { return false }
+            guard message.content.count > 200 else { return false }
+
+            // Check if content has schedule blocks (HH:mm pattern like "07:00", "14:30")
+            let timePattern = try! NSRegularExpression(pattern: "\\d{2}:\\d{2}")
+            let hasTimeBlocks = timePattern.firstMatch(in: message.content, range: NSRange(message.content.startIndex..., in: message.content)) != nil
+
+            return hasTimeBlocks
+        }
     }
 
     private func savePlan() {
@@ -1184,6 +1215,7 @@ After planning, tell the user which inbox tasks you included):
             .map { msg in (role: msg.role == .user ? "user" : "assistant", content: msg.content) }
 
         _Concurrency.Task {
+            aiService.token = authService.token ?? ""
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
@@ -1231,6 +1263,7 @@ After planning, tell the user which inbox tasks you included):
             .map { msg in (role: msg.role == .user ? "user" : "assistant", content: msg.content) }
 
         _Concurrency.Task {
+            aiService.token = authService.token ?? ""
             do {
                 let plan = try await aiService.generatePlan(for: Date(), history: history)
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)

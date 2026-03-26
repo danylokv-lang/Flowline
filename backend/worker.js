@@ -438,26 +438,31 @@ async function handleGetChats(userId, url, env) {
 
 // ── Chat: Sync Messages ────────────────────────────────────────────────────
 
+const CHAT_TTL_DAYS = 90;
+
 async function handleSyncChats(userId, req, env) {
   const { messages } = await req.json();
   if (!Array.isArray(messages)) return res({ error: "messages array required" }, 400);
 
-  for (const msg of messages) {
-    if (!msg.id || !msg.sessionId || !msg.role || !msg.content) continue;
-    // INSERT OR IGNORE — never overwrite an existing message (they're immutable)
-    await env.DB.prepare(`
-      INSERT OR IGNORE INTO chat_messages
-        (id, user_id, session_id, session_date, role, content, timestamp)
-      VALUES (?,?,?,?,?,?,?)
-    `).bind(
-      msg.id, userId, msg.sessionId,
-      msg.sessionDate ?? "",
-      msg.role, msg.content,
-      msg.timestamp ?? now()
-    ).run();
-  }
+  const valid = messages.filter(m => m.id && m.sessionId && m.role && m.content);
+  if (valid.length === 0) return res({ success: true, synced: 0 });
 
-  return res({ success: true, synced: messages.length });
+  const cutoff = now() - CHAT_TTL_DAYS * 86400;
+  const stmts = [
+    env.DB.prepare("DELETE FROM chat_messages WHERE user_id = ? AND timestamp < ?")
+      .bind(userId, cutoff),
+    ...valid.map(msg =>
+      env.DB.prepare(`
+        INSERT OR IGNORE INTO chat_messages
+          (id, user_id, session_id, session_date, role, content, timestamp)
+        VALUES (?,?,?,?,?,?,?)
+      `).bind(msg.id, userId, msg.sessionId, msg.sessionDate ?? "",
+              msg.role, msg.content, msg.timestamp ?? now())
+    ),
+  ];
+  await env.DB.batch(stmts);
+
+  return res({ success: true, synced: valid.length });
 }
 
 // ── Reviews: Submit ───────────────────────────────────────────────────────
@@ -609,38 +614,49 @@ async function handleSyncCalendar(userId, req, env) {
   const { days } = await req.json();
   if (!Array.isArray(days)) return res({ error: "days array required" }, 400);
 
+  const validDays = days.filter(d => d.date);
+  if (validDays.length === 0) return res({ success: true, synced: 0 });
+
   const ts = now();
+  const dates = validDays.map(d => d.date);
 
-  for (const day of days) {
-    if (!day.date) continue;
+  // 1. Single read to get all existing day IDs for these dates
+  const placeholders = dates.map(() => "?").join(",");
+  const existing = await env.DB.prepare(
+    `SELECT id, date FROM calendar_days WHERE user_id = ? AND date IN (${placeholders})`
+  ).bind(userId, ...dates).all();
 
-    const existing = await env.DB.prepare(
-      "SELECT id FROM calendar_days WHERE user_id = ? AND date = ?"
-    ).bind(userId, day.date).first();
+  const dateToId = Object.fromEntries((existing.results ?? []).map(r => [r.date, r.id]));
 
-    const dayId = existing?.id ?? crypto.randomUUID();
-
-    if (existing) {
-      await env.DB.prepare("UPDATE calendar_days SET ai_notes = ?, updated_at = ? WHERE id = ?")
-        .bind(day.aiNotes ?? null, ts, dayId).run();
-      await env.DB.prepare("DELETE FROM schedule_blocks WHERE day_id = ?")
-        .bind(dayId).run();
+  // 2. Build one batch for all writes: upsert days + delete old blocks + insert new blocks
+  const stmts = [];
+  for (const day of validDays) {
+    const dayId = dateToId[day.date] ?? crypto.randomUUID();
+    if (dateToId[day.date]) {
+      stmts.push(
+        env.DB.prepare("UPDATE calendar_days SET ai_notes = ?, updated_at = ? WHERE id = ?")
+          .bind(day.aiNotes ?? null, ts, dayId)
+      );
     } else {
-      await env.DB.prepare(
-        "INSERT INTO calendar_days (id, user_id, date, ai_notes, updated_at) VALUES (?,?,?,?,?)"
-      ).bind(dayId, userId, day.date, day.aiNotes ?? null, ts).run();
+      stmts.push(
+        env.DB.prepare("INSERT INTO calendar_days (id, user_id, date, ai_notes, updated_at) VALUES (?,?,?,?,?)")
+          .bind(dayId, userId, day.date, day.aiNotes ?? null, ts)
+      );
     }
-
+    stmts.push(env.DB.prepare("DELETE FROM schedule_blocks WHERE day_id = ?").bind(dayId));
     for (const block of day.blocks ?? []) {
-      await env.DB.prepare(`
-        INSERT INTO schedule_blocks (id, day_id, user_id, title, category, start_time, end_time, created_at)
-        VALUES (?,?,?,?,?,?,?,?)
-      `).bind(crypto.randomUUID(), dayId, userId, block.title, block.category,
-              block.startTime, block.endTime, ts).run();
+      stmts.push(
+        env.DB.prepare(`
+          INSERT INTO schedule_blocks (id, day_id, user_id, title, category, start_time, end_time, created_at)
+          VALUES (?,?,?,?,?,?,?,?)
+        `).bind(crypto.randomUUID(), dayId, userId, block.title, block.category,
+                block.startTime, block.endTime, ts)
+      );
     }
   }
+  if (stmts.length > 0) await env.DB.batch(stmts);
 
-  return res({ success: true, synced: days.length });
+  return res({ success: true, synced: validDays.length });
 }
 
 // ── Inbox: Get Tasks ───────────────────────────────────────────────────────
@@ -662,10 +678,11 @@ async function handleSyncInbox(userId, req, env) {
   const { tasks } = await req.json();
   if (!Array.isArray(tasks)) return res({ error: "tasks array required" }, 400);
 
-  for (const task of tasks) {
-    if (!task.id || !task.text) continue;
-    // Upsert — insert new tasks, update is_scheduled on existing ones
-    await env.DB.prepare(`
+  const valid = tasks.filter(t => t.id && t.text);
+  if (valid.length === 0) return res({ success: true, synced: 0 });
+
+  const stmts = valid.map(task =>
+    env.DB.prepare(`
       INSERT INTO captured_tasks (id, user_id, text, category, is_scheduled, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET is_scheduled = excluded.is_scheduled
@@ -675,10 +692,11 @@ async function handleSyncInbox(userId, req, env) {
       task.category ?? "work",
       task.isScheduled ? 1 : 0,
       task.createdAt ?? Math.floor(Date.now() / 1000)
-    ).run();
-  }
+    )
+  );
+  await env.DB.batch(stmts);
 
-  return res({ success: true, synced: tasks.length });
+  return res({ success: true, synced: valid.length });
 }
 
 // ── Main Router ────────────────────────────────────────────────────────────
@@ -722,6 +740,23 @@ export default {
           },
           body: JSON.stringify(body),
         });
+        const data = await upstream.json();
+        return res(data, upstream.status);
+      }
+
+      // ── Gemini proxy — no JWT needed, key stored as Worker secret ────
+      if (path === "/ai/gemini" && method === "POST") {
+        const body  = await request.json();
+        const model = body.model ?? "gemini-2.5-flash";
+        const { model: _m, ...geminiBody } = body;
+        const upstream = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(geminiBody),
+          }
+        );
         const data = await upstream.json();
         return res(data, upstream.status);
       }
