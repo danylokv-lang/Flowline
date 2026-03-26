@@ -135,8 +135,11 @@ async function checkRateLimit(userId, env, limit) {
 
 // ── Email via Resend ───────────────────────────────────────────────────────
 
-async function sendEmail(env, { to, subject, html }) {
-  if (!env.RESEND_API_KEY) return false;
+async function sendEmail(env, { to, subject, html, text }) {
+  if (!env.RESEND_API_KEY) {
+    console.warn("Email skipped — RESEND_API_KEY not configured");
+    return false;
+  }
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -145,44 +148,196 @@ async function sendEmail(env, { to, subject, html }) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        // "hello@" is far more trusted than "noreply@" by spam filters.
+        // Make sure this address is verified in your Resend domain settings.
         from: "Flowline <noreply@flowline.ink>",
+        reply_to: "noreply@flowline.ink",
         to: [to],
         subject,
         html,
+        // Plain-text alternative is required to avoid spam classification.
+        // Gmail/Outlook heavily penalise HTML-only messages.
+        text: text ?? subject,
+        headers: {
+          // Gives Gmail's "unsubscribe" button something to latch onto,
+          // which signals you're a legitimate sender — even for transactional mail.
+          "List-Unsubscribe": `<mailto:noreply@flowline.ink?subject=unsubscribe>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
       }),
     });
+    if (!r.ok) {
+      const body = await r.text().catch(() => "(unreadable)");
+      console.error(`Email delivery failed [${r.status}] to=${to} subject="${subject}" resend_body=${body}`);
+    }
     return r.ok;
-  } catch { return false; }
+  } catch (err) {
+    console.error(`Email send error to=${to} subject="${subject}":`, err.message);
+    return false;
+  }
 }
 
-function emailBase(content) {
+/**
+ * Fire-and-forget email using ctx.waitUntil so the Worker keeps the Promise
+ * alive after the HTTP response is returned. A bare sendEmail() call without
+ * await and without waitUntil is killed the moment the Response is flushed.
+ */
+function sendEmailBackground(ctx, env, opts) {
+  ctx.waitUntil(sendEmail(env, opts));
+}
+
+// All styles are inlined and table-based — the only layout that renders
+// correctly in Gmail, Outlook (Windows), iOS Mail, and every other client.
+// Gmail strips <style> blocks and all class-based CSS. Flexbox/grid/box-shadow
+// are not supported in Outlook desktop at all.
+function emailBase(content, { preheader = "" } = {}) {
+  const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
   return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<title>Flowline</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <style>
-  body{margin:0;padding:0;background:#080810;font-family:Inter,-apple-system,sans-serif;color:#eeeef5}
-  .wrap{max-width:480px;margin:40px auto;padding:0 20px}
-  .logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;font-weight:700;font-size:17px;color:#eeeef5;text-decoration:none}
-  .card{background:#0f0f1e;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:36px}
-  h2{margin:0 0 12px;font-size:22px;font-weight:700;color:#eeeef5}
-  p{margin:0 0 20px;font-size:15px;line-height:1.6;color:#aaaacc}
-  .btn{display:inline-block;background:#6d4cfa;color:#fff;text-decoration:none;padding:13px 28px;border-radius:10px;font-weight:600;font-size:15px;margin:4px 0 20px}
-  .note{font-size:13px;color:#55556a;line-height:1.5}
-  .footer{margin-top:28px;font-size:12px;color:#44445a;text-align:center}
-</style></head>
-<body><div class="wrap">
-  <a class="logo" href="https://flowline.ink">
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="#6d4cfa" opacity=".9"/><path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/></svg>
-    Flowline
-  </a>
-  <div class="card">${content}</div>
-  <div class="footer">© 2026 Flowline · <a href="https://flowline.ink/privacy.html" style="color:#55556a">Privacy Policy</a></div>
-</div></body></html>`;
+  body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+  table,td{mso-table-lspace:0;mso-table-rspace:0}
+  img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
+  body{margin:0;padding:0;background-color:#07070f}
+  a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important}
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#07070f;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#07070f;">${preheader}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ""}
+
+<!-- Outer wrapper -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#07070f;">
+<tr><td align="center" style="padding:32px 16px 48px;">
+
+  <!-- Inner max-width -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
+
+    <!-- Logo row -->
+    <tr><td style="padding-bottom:24px;">
+      <a href="https://flowline.ink" style="text-decoration:none;display:inline-block;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+          <tr>
+            <td style="vertical-align:middle;padding-right:8px;">
+              <img src="https://flowline.ink/icon-email.png" width="28" height="28" alt="Flowline"
+                   style="display:block;width:28px;height:28px;"
+                   onerror="this.style.display='none'"/>
+              <!--[if !mso]><!-->
+              <div style="display:none;">
+              <svg width="28" height="28" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+                <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="#6d4cfa"/>
+                <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#07070f"/>
+              </svg>
+              </div>
+              <!--<![endif]-->
+            </td>
+            <td style="vertical-align:middle;">
+              <span style="font-family:${F};font-size:17px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Flowline</span>
+            </td>
+          </tr>
+        </table>
+      </a>
+    </td></tr>
+
+    <!-- Card -->
+    <tr><td style="background-color:#0d0d1f;border:1px solid #2a1f5a;border-radius:16px;overflow:hidden;">
+      ${content}
+    </td></tr>
+
+    <!-- Footer -->
+    <tr><td style="padding-top:24px;text-align:center;font-family:${F};font-size:12px;color:#44445a;line-height:1.7;">
+      &copy; 2026 Flowline &nbsp;&middot;&nbsp;
+      <a href="https://flowline.ink/privacy.html" style="color:#44445a;text-decoration:underline;">Privacy Policy</a><br/>
+      You received this because you created a Flowline account.<br/>
+      Questions? <a href="mailto:noreply@flowline.ink" style="color:#44445a;text-decoration:underline;">noreply@flowline.ink</a>
+    </td></tr>
+
+  </table>
+</td></tr>
+</table>
+
+</body>
+</html>`;
+}
+
+// ── Reusable email building blocks (table-safe, inline styles only) ─────────
+
+function emailHero({ badge, title, subtitle }) {
+  const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+  return `
+    <!-- Hero -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+           style="background-color:#130d2e;border-bottom:1px solid #2a1f5a;">
+      <tr><td style="padding:36px 36px 28px;">
+        <!-- Badge -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:16px;">
+          <tr>
+            <td style="background-color:#1e1460;border:1px solid #4a35a0;border-radius:20px;padding:4px 12px;">
+              <span style="font-family:${F};font-size:11px;font-weight:600;color:#a78bfa;letter-spacing:0.6px;text-transform:uppercase;">${badge}</span>
+            </td>
+          </tr>
+        </table>
+        <!-- Title -->
+        <h1 style="margin:0 0 10px;font-family:${F};font-size:26px;font-weight:800;color:#ffffff;line-height:1.25;letter-spacing:-0.5px;">${title}</h1>
+        <!-- Subtitle -->
+        <p style="margin:0;font-family:${F};font-size:15px;line-height:1.6;color:#8888bb;">${subtitle}</p>
+      </td></tr>
+    </table>`;
+}
+
+function emailStep(num, strong, rest) {
+  const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:14px;">
+      <tr>
+        <td width="32" style="vertical-align:top;padding-top:1px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr><td width="26" height="26" style="width:26px;height:26px;background-color:#1e1460;border:1px solid #4a35a0;border-radius:50%;text-align:center;vertical-align:middle;">
+              <span style="font-family:${F};font-size:12px;font-weight:700;color:#a78bfa;line-height:26px;">${num}</span>
+            </td></tr>
+          </table>
+        </td>
+        <td style="padding-left:12px;vertical-align:top;padding-top:4px;">
+          <span style="font-family:${F};font-size:14px;line-height:1.55;color:#8888aa;">
+            <strong style="color:#ddddee;font-weight:600;">${strong}</strong> ${rest}
+          </span>
+        </td>
+      </tr>
+    </table>`;
+}
+
+function emailButton(label, href) {
+  const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+  return `
+    <!-- Button — MSO VML fallback keeps it styled in Outlook desktop -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
+      <tr>
+        <td align="center" style="border-radius:10px;background-color:#6d4cfa;">
+          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${href}" style="height:46px;v-text-anchor:middle;width:180px;" arcsize="22%" strokecolor="#6d4cfa" fillcolor="#6d4cfa"><w:anchorlock/><center style="font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;">Open Flowline</center></v:roundrect><![endif]-->
+          <!--[if !mso]><!-->
+          <a href="${href}"
+             style="display:inline-block;font-family:${F};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;padding:13px 32px;border-radius:10px;background-color:#6d4cfa;mso-hide:all;">${label}</a>
+          <!--<![endif]-->
+        </td>
+      </tr>
+    </table>`;
+}
+
+
+function emailDivider() {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:20px 0;">
+    <tr><td style="height:1px;background-color:#1e1e38;font-size:1px;line-height:1px;">&nbsp;</td></tr>
+  </table>`;
 }
 
 // ── Auth: Register ─────────────────────────────────────────────────────────
 
-async function handleRegister(req, env) {
+async function handleRegister(req, env, ctx) {
   const { email, password, name } = await req.json();
   if (!email || !password || !name)
     return res({ error: "email, password and name are required" }, 400);
@@ -208,18 +363,41 @@ async function handleRegister(req, env) {
 
   const token = await jwtSign({ sub: userId, exp: now() + JWT_EXPIRY_SECONDS }, env.JWT_SECRET);
 
-  // Welcome email (non-blocking)
-  sendEmail(env, {
+  // Welcome email — sent after response using ctx.waitUntil so the Worker keeps
+  // the Promise alive even after the response has been returned to the client.
+  // A bare sendEmail() call without await/waitUntil is killed when the Response
+  // flushes — that is the root cause of unreliable welcome email delivery.
+  const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+  sendEmailBackground(ctx, env, {
     to: email.toLowerCase(),
-    subject: "Welcome to Flowline ✦",
-    html: emailBase(`
-      <h2>Welcome, ${name}! ✦</h2>
-      <p>You're all set. Open Flowline on your Mac to start planning your first day with AI — it only takes 60 seconds.</p>
-      <a class="btn" href="https://flowline.ink">Open Flowline</a>
-      <p class="note">You're on the Free plan — 3 AI messages per day to plan your schedule. Upgrade to Pro anytime for 10 messages/day and all features unlocked.</p>
-    `),
+    subject: `${name}, your Flowline account is ready`,
+    text: `Hi ${name},\n\nWelcome to Flowline! Your account is ready.\n\n1. Open Flowline on your iPhone, iPad, or Mac\n2. Tell the AI what's on your plate — meetings, tasks, anything\n3. Get a realistic day plan in seconds\n\nhttps://flowline.ink\n\n— Danylo from Flowline\nnoreply@flowline.ink`,
+    html: emailBase(
+      emailHero({
+        badge: "Account created",
+        title: `Welcome to Flowline, ${name}!`,
+        subtitle: "Your AI-powered day planner is ready. Let's plan your first day — it takes 60 seconds.",
+      }) + `
+      <!-- Body -->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr><td style="padding:28px 36px 32px;">
+
+          ${emailStep(1, "Open the app", "on your iPhone, iPad, or Mac.")}
+          ${emailStep(2, "Tell the AI what's on your plate", "— meetings, tasks, anything.")}
+          ${emailStep(3, "Get a realistic day plan", "blocked out and ready to follow.")}
+
+          <!-- CTA -->
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;">
+            <tr><td align="center">${emailButton("Open Flowline", "https://flowline.ink")}</td></tr>
+          </table>
+
+        </td></tr>
+      </table>`,
+      { preheader: `Welcome, ${name}! Your Flowline account is ready — plan your first day in 60 seconds.` }
+    ),
   });
 
+  console.log(`New account created: userId=${userId} email=${email.toLowerCase()}`);
   return res({ token, userId, name, email: email.toLowerCase(), isPro: false });
 }
 
@@ -268,15 +446,32 @@ async function handleForgotPassword(req, env) {
 
   const resetUrl = `https://flowline.ink/reset-password.html?token=${token}`;
 
+  const F2 = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
   await sendEmail(env, {
     to: email.toLowerCase(),
     subject: "Reset your Flowline password",
-    html: emailBase(`
-      <h2>Reset your password</h2>
-      <p>We got a request to reset the password for your Flowline account. Click the button below — this link expires in 1 hour.</p>
-      <a class="btn" href="${resetUrl}">Reset password</a>
-      <p class="note">If you didn't request this, you can ignore this email — your password won't change.<br/><br/>Or copy this link: <span style="word-break:break-all;color:#8b6dff">${resetUrl}</span></p>
-    `),
+    text: `Hi,\n\nWe received a request to reset your Flowline password.\n\nReset link (expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, ignore this email — your password won't change.\n\n— Danylo from Flowline`,
+    html: emailBase(
+      emailHero({
+        badge: "Password reset",
+        title: "Reset your password",
+        subtitle: "We received a request for your Flowline account. This link expires in 1 hour.",
+      }) + `
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr><td style="padding:28px 36px 32px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:20px;">
+            <tr><td align="center">${emailButton("Reset password", resetUrl)}</td></tr>
+          </table>
+          ${emailDivider()}
+          <p style="font-family:${F2};font-size:13px;color:#55556a;line-height:1.6;margin:0;text-align:center;">
+            Didn't request this? Ignore this email — nothing will change.<br/>
+            Or copy this link:<br/>
+            <span style="word-break:break-all;color:#7c55ff;font-size:12px;">${resetUrl}</span>
+          </p>
+        </td></tr>
+      </table>`,
+      { preheader: "Reset your Flowline password — link expires in 1 hour." }
+    ),
   });
 
   return res({ success: true });
@@ -284,7 +479,7 @@ async function handleForgotPassword(req, env) {
 
 // ── Auth: Reset Password ───────────────────────────────────────────────────
 
-async function handleResetPassword(req, env) {
+async function handleResetPassword(req, env, ctx) {
   const { token, password } = await req.json();
   if (!token || !password) return res({ error: "Token and password required" }, 400);
   if (password.length < 6) return res({ error: "Password must be at least 6 characters" }, 400);
@@ -311,15 +506,33 @@ async function handleResetPassword(req, env) {
     .bind(record.user_id).first();
 
   if (user) {
-    sendEmail(env, {
+    const F3 = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+    sendEmailBackground(ctx, env, {
       to: user.email,
-      subject: "Your Flowline password has been changed",
-      html: emailBase(`
-        <h2>Password changed ✓</h2>
-        <p>Hi ${user.name}, your Flowline password was successfully changed.</p>
-        <p>If you made this change, you're all set. If you didn't, <a href="https://flowline.ink/reset-password-request.html" style="color:#8b6dff">reset your password immediately</a> or contact us at <a href="mailto:dkov.dev@gmail.com" style="color:#8b6dff">dkov.dev@gmail.com</a>.</p>
-        <p class="note">This change was made on ${new Date().toUTCString()}.</p>
-      `),
+      subject: "Your Flowline password was changed",
+      text: `Hi ${user.name},\n\nYour Flowline password was changed on ${new Date().toUTCString()}.\n\nIf you made this change, you're all set.\nIf you didn't — reset it immediately:\nhttps://flowline.ink/reset-password-request.html\n\nOr just reply to this email.\n\n— Danylo from Flowline`,
+      html: emailBase(
+        emailHero({
+          badge: "Security notice",
+          title: "Password changed",
+          subtitle: `Hi ${user.name}, your Flowline password was successfully updated.`,
+        }) + `
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+          <tr><td style="padding:28px 36px 32px;">
+            <p style="font-family:${F3};font-size:14px;color:#8888aa;line-height:1.6;margin:0 0 16px;">
+              If you made this change, you're all set — nothing else to do.<br/><br/>
+              If you <strong style="color:#ddddee;">didn't</strong> make this change,
+              <a href="https://flowline.ink/reset-password-request.html" style="color:#a78bfa;text-decoration:none;font-weight:600;">reset your password immediately</a>
+              or reply to this email and we'll help right away.
+            </p>
+            ${emailDivider()}
+            <p style="font-family:${F3};font-size:12px;color:#44445a;margin:0;">
+              Changed on ${new Date().toUTCString()}
+            </p>
+          </td></tr>
+        </table>`,
+        { preheader: `Your Flowline password was just changed. If this wasn't you, act now.` }
+      ),
     });
   }
 
@@ -722,7 +935,7 @@ async function handleDeleteAccount(userId, env) {
 // ── Main Router ────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS });
     }
@@ -733,10 +946,11 @@ export default {
 
     try {
       // ── Auth routes — open to website + iOS (no app-secret needed) ───
-      if (path === "/auth/register"        && method === "POST") return handleRegister(request, env);
+      // ctx is threaded to handlers that send background emails via ctx.waitUntil()
+      if (path === "/auth/register"        && method === "POST") return handleRegister(request, env, ctx);
       if (path === "/auth/login"           && method === "POST") return handleLogin(request, env);
       if (path === "/auth/forgot-password" && method === "POST") return handleForgotPassword(request, env);
-      if (path === "/auth/reset-password"  && method === "POST") return handleResetPassword(request, env);
+      if (path === "/auth/reset-password"  && method === "POST") return handleResetPassword(request, env, ctx);
 
       // ── Admin routes — protected by ADMIN_SECRET, callable from browser/curl ──
       if (path === "/admin/stats" && method === "GET") return handleAdminStats(request, env);

@@ -14,6 +14,9 @@ struct CalendarView: View {
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
     #endif
 
+    // Check-in sheet — tapping a block sets this; sheet dismisses after selection
+    @State private var checkingInBlock: ScheduleBlock? = nil
+
     private let calendar = Calendar.current
     private let hourHeight: CGFloat = 60
     private let startHour = 0
@@ -35,6 +38,18 @@ struct CalendarView: View {
             macOSContent
             #endif
         }
+        #if os(iOS)
+        .sheet(item: $checkingInBlock) { block in
+            BlockCheckInView(block: block) { result in
+                setCheckIn(block, result: result)
+                checkingInBlock = nil
+            }
+            .presentationDetents([.height(200)])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(20)
+            .presentationBackground(Color(hex: "#0f0f1e"))
+        }
+        #endif
     }
 
     // MARK: - iOS Layout
@@ -299,7 +314,10 @@ struct CalendarView: View {
                                 .frame(height: max(height, 14))
                                 .padding(.horizontal, 4)
                                 .offset(y: top)
+                                .onTapGesture { checkingInBlock = block }
                                 .contextMenu {
+                                    checkInMenuItems(for: block)
+                                    Divider()
                                     Button(role: .destructive) { deleteBlock(block) } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
@@ -577,6 +595,8 @@ struct CalendarView: View {
                             .padding(.horizontal, 2)
                             .offset(y: top)
                             .contextMenu {
+                                checkInMenuItems(for: block)
+                                Divider()
                                 Button(role: .destructive) { deleteBlock(block) } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -607,7 +627,9 @@ struct CalendarView: View {
 
     @ViewBuilder
     private func blockView(for block: ScheduleBlock, height: CGFloat) -> some View {
-        let isSplit = block.title.contains("/")
+        let isSplit   = block.title.contains("/")
+        let status    = block.checkInResult
+        let isSkipped = status == .skipped
 
         if isSplit {
             let parts  = block.title.split(separator: "/", maxSplits: 1)
@@ -619,20 +641,23 @@ struct CalendarView: View {
 
             ZStack(alignment: .topLeading) {
                 HStack(spacing: 0) {
-                    Rectangle().fill(color1.opacity(0.18))
-                    Rectangle().fill(color2.opacity(0.18))
+                    Rectangle().fill(color1.opacity(isSkipped ? 0.06 : 0.18))
+                    Rectangle().fill(color2.opacity(isSkipped ? 0.06 : 0.18))
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .stroke(
-                        LinearGradient(colors: [color1.opacity(0.9), color2.opacity(0.9)],
+                        LinearGradient(colors: [color1.opacity(isSkipped ? 0.25 : 0.9),
+                                                color2.opacity(isSkipped ? 0.25 : 0.9)],
                                        startPoint: .leading, endPoint: .trailing),
                         lineWidth: 1.5
                     )
 
                 HStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color1).frame(width: 3)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(color1.opacity(isSkipped ? 0.25 : 1))
+                        .frame(width: 3)
                     Spacer()
                 }
 
@@ -648,12 +673,13 @@ struct CalendarView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(title1)
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(color1)
+                            .foregroundColor(color1.opacity(isSkipped ? 0.35 : 1))
+                            .strikethrough(isSkipped, color: color1.opacity(0.4))
                             .lineLimit(height > 40 ? 2 : 1)
                         if height > 36 {
                             Text(timeRangeString(start: block.startTime, end: block.endTime))
                                 .font(.system(size: 8, design: .monospaced))
-                                .foregroundColor(color1.opacity(0.75))
+                                .foregroundColor(color1.opacity(isSkipped ? 0.25 : 0.75))
                         }
                     }
                     .padding(.leading, 7).padding(.trailing, 3).padding(.vertical, 3)
@@ -662,46 +688,102 @@ struct CalendarView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(title2)
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(color2)
+                            .foregroundColor(color2.opacity(isSkipped ? 0.35 : 1))
+                            .strikethrough(isSkipped, color: color2.opacity(0.4))
                             .lineLimit(height > 40 ? 2 : 1)
                     }
                     .padding(.horizontal, 5).padding(.vertical, 3)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                checkInBadge(status: status, height: height)
             }
         } else {
             let color = colorForCategory(block.category)
 
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(LinearGradient(colors: [color.opacity(0.22), color.opacity(0.10)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .fill(LinearGradient(
+                        colors: [color.opacity(isSkipped ? 0.05 : 0.22),
+                                 color.opacity(isSkipped ? 0.03 : 0.10)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
                     .overlay(
                         RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .stroke(LinearGradient(colors: [color.opacity(1.0), color.opacity(0.55)],
-                                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                                    lineWidth: 1.5)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [color.opacity(isSkipped ? 0.25 : 1.0),
+                                             color.opacity(isSkipped ? 0.12 : 0.55)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.5
+                            )
                     )
-                    .shadow(color: color.opacity(0.30), radius: 6, x: 0, y: 2)
+                    .shadow(color: color.opacity(isSkipped ? 0.08 : 0.30), radius: 6, x: 0, y: 2)
+
+                // Status-tinted background wash (done = green, partly = orange)
+                if let s = status, s != .skipped {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(s.washColor.opacity(0.10))
+                }
 
                 HStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color).frame(width: 3)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(status == nil ? color : status!.barColor)
+                        .frame(width: 3)
                     Spacer()
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(block.title)
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(color)
+                        .foregroundColor(isSkipped ? color.opacity(0.35) : (status == nil ? color : status!.textColor(base: color)))
+                        .strikethrough(isSkipped, color: color.opacity(0.4))
                         .lineLimit(height > 40 ? 2 : 1)
                     if height > 36 {
                         Text(timeRangeString(start: block.startTime, end: block.endTime))
                             .font(.system(size: 8, design: .monospaced))
-                            .foregroundColor(color.opacity(0.75))
+                            .foregroundColor(color.opacity(isSkipped ? 0.25 : 0.75))
                     }
                 }
                 .padding(.leading, 7).padding(.trailing, 5).padding(.vertical, 3)
+
+                checkInBadge(status: status, height: height)
             }
+        }
+    }
+
+    /// Small icon badge pinned to the top-right corner of any block.
+    @ViewBuilder
+    private func checkInBadge(status: CheckInResult?, height: CGFloat) -> some View {
+        if let s = status, height >= 16 {
+            VStack(alignment: .trailing, spacing: 0) {
+                HStack(spacing: 0) {
+                    Spacer()
+                    Image(systemName: s.iconName)
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundColor(s.badgeColor)
+                        .padding(2.5)
+                        .background(Circle().fill(s.badgeColor.opacity(0.18)))
+                        .padding(.top, 3)
+                        .padding(.trailing, 4)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    /// Context menu items shared between iOS long-press and macOS right-click.
+    @ViewBuilder
+    private func checkInMenuItems(for block: ScheduleBlock) -> some View {
+        if let current = block.checkInResult {
+            Text("Currently: \(current.label)")
+        }
+        Button { setCheckIn(block, result: .done)    } label: { Label("Done",        systemImage: CheckInResult.done.iconName)    }
+        Button { setCheckIn(block, result: .partly)  } label: { Label("Partly done", systemImage: CheckInResult.partly.iconName)  }
+        Button { setCheckIn(block, result: .skipped) } label: { Label("Skipped",     systemImage: CheckInResult.skipped.iconName) }
+        if block.checkInResult != nil {
+            Button { setCheckIn(block, result: nil) } label: { Label("Clear status", systemImage: "xmark.circle") }
         }
     }
 
@@ -781,6 +863,13 @@ struct CalendarView: View {
         }
     }
 
+    /// Saves a check-in result (or nil to clear). isCompleted = true only for .done
+    /// so completion-rate calculations in weekly summary / streak stay accurate.
+    private func setCheckIn(_ block: ScheduleBlock, result: CheckInResult?) {
+        block.checkInResult = result
+        block.isCompleted   = (result == .done)
+    }
+
     static func mondayOfCurrentWeek() -> Date {
         let cal     = Calendar.current
         let today   = Date()
@@ -789,6 +878,115 @@ struct CalendarView: View {
         return cal.startOfDay(for: cal.date(byAdding: .day, value: delta, to: today)!)
     }
 }
+
+// MARK: - CheckInResult Display Properties
+
+extension CheckInResult {
+    var iconName: String {
+        switch self {
+        case .done:    return "checkmark"
+        case .partly:  return "circle.lefthalf.filled"
+        case .skipped: return "minus"
+        }
+    }
+    var label: String {
+        switch self {
+        case .done:    return "Done"
+        case .partly:  return "Partly done"
+        case .skipped: return "Skipped"
+        }
+    }
+    var badgeColor: Color {
+        switch self {
+        case .done:    return Color(hex: "#34d399")
+        case .partly:  return Color(hex: "#fb923c")
+        case .skipped: return Color.white.opacity(0.30)
+        }
+    }
+    var barColor: Color {
+        switch self {
+        case .done:    return Color(hex: "#34d399")
+        case .partly:  return Color(hex: "#fb923c")
+        case .skipped: return Color.white.opacity(0.20)
+        }
+    }
+    var washColor: Color {
+        switch self {
+        case .done:    return Color(hex: "#34d399")
+        case .partly:  return Color(hex: "#fb923c")
+        case .skipped: return .clear
+        }
+    }
+    func textColor(base: Color) -> Color {
+        switch self {
+        case .done:    return Color(hex: "#34d399")
+        case .partly:  return Color(hex: "#fb923c")
+        case .skipped: return base
+        }
+    }
+    var sheetButtonBg: Color { washColor }
+}
+
+// MARK: - Block Check-In Sheet (iOS only)
+
+#if os(iOS)
+struct BlockCheckInView: View {
+    let block: ScheduleBlock
+    let onSelect: (CheckInResult?) -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text(block.title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .padding(.top, 4)
+
+            HStack(spacing: 10) {
+                checkInButton(.done)
+                checkInButton(.partly)
+                checkInButton(.skipped)
+            }
+            .padding(.horizontal, 20)
+
+            if block.checkInResult != nil {
+                Button("Clear status") { onSelect(nil) }
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.35))
+            } else {
+                Color.clear.frame(height: 20)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+    }
+
+    @ViewBuilder
+    private func checkInButton(_ result: CheckInResult) -> some View {
+        let isActive = block.checkInResult == result
+        Button { onSelect(result) } label: {
+            VStack(spacing: 7) {
+                Image(systemName: result.iconName)
+                    .font(.system(size: 22, weight: .semibold))
+                Text(result.label)
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundColor(isActive ? result.badgeColor : result.badgeColor.opacity(0.50))
+            .frame(maxWidth: .infinity)
+            .frame(height: 76)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(result.sheetButtonBg.opacity(isActive ? 0.20 : 0.07))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(result.badgeColor.opacity(isActive ? 0.55 : 0.15), lineWidth: 1.5)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+#endif
 
 #Preview {
     CalendarView()
