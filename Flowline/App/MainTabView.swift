@@ -175,21 +175,25 @@ struct MainTabView: View {
                     .tabItem { Label("Week", systemImage: "calendar") }
                     .tag(1)
 
+                StatsView()
+                    .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
+                    .tag(2)
+
                 FocusTimerView()
                     .tabItem { Label("Focus", systemImage: "timer") }
                     .help("Run a focus timer for any block from your daily plan")
-                    .tag(2)
+                    .tag(3)
 
                 TaskInboxView()
                     .tabItem { Label("Inbox", systemImage: "tray.full") }
                     .badge(pendingCount > 0 ? pendingCount : 0)
                     .help("Capture tasks here — the AI will slot them into your plan when you ask")
-                    .tag(3)
+                    .tag(4)
 
                 #if os(iOS)
                 SettingsView()
                     .tabItem { Label("Settings", systemImage: "gearshape") }
-                    .tag(4)
+                    .tag(5)
                 #endif
             }
             .tint(FlowLineTheme.accent)
@@ -230,7 +234,7 @@ struct MainTabView: View {
         // Day 1 checklist tracking
         .onChange(of: selectedTab) { _, tab in
             if tab == 1 { UserDefaults.standard.set(true, forKey: "hasViewedCalendar") }
-            if tab == 2 { UserDefaults.standard.set(true, forKey: "hasUsedFocusTimer") }
+            if tab == 3 { UserDefaults.standard.set(true, forKey: "hasUsedFocusTimer") }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showStreakToast)
     }
