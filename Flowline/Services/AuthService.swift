@@ -70,6 +70,25 @@ final class AuthService: ObservableObject {
         persist(user: user, token: jwt)
     }
 
+    // MARK: - Delete Account
+
+    /// Best-effort server-side deletion. Does NOT call logout().
+    /// Capture token before calling logout(), then pass it here.
+    func deleteAccountOnServer(token: String) async {
+        guard !token.isEmpty,
+              let url = URL(string: baseURL + "/auth/account") else { return }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(token)",   forHTTPHeaderField: "Authorization")
+        req.setValue(Config.appSecret,    forHTTPHeaderField: "x-app-secret")
+
+        _ = try? await URLSession.shared.data(for: req)
+        // Failure is intentionally silent — local session is already cleared by the time
+        // this runs. The account row will remain on the server but is unreachable without
+        // credentials. Redeploy the worker if the route returns 404.
+    }
+
     // MARK: - Logout
 
     func logout() {

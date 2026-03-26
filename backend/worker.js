@@ -2,16 +2,17 @@
  * Flowline Backend — Cloudflare Worker
  *
  * Routes:
- *   POST /auth/register            — create account (email + password)
- *   POST /auth/login               — login, returns JWT
- *   POST /auth/forgot-password     — send password reset email
- *   POST /auth/reset-password      — set new password via reset token
- *   GET  /user/profile             — get profile (JWT required)
- *   PUT  /user/profile             — update profile (JWT required)
- *   GET  /user/subscription        — check pro status (JWT required)
- *   POST /ai                       — Claude proxy with per-user rate limit (JWT required)
- *   GET  /calendar                 — get week calendar (JWT required)
- *   POST /calendar/sync            — save/replace days (JWT required)
+ *   POST   /auth/register            — create account (email + password)
+ *   POST   /auth/login               — login, returns JWT
+ *   POST   /auth/forgot-password     — send password reset email
+ *   POST   /auth/reset-password      — set new password via reset token
+ *   DELETE /auth/account             — permanently delete account + all data (JWT required)
+ *   GET    /user/profile             — get profile (JWT required)
+ *   PUT    /user/profile             — update profile (JWT required)
+ *   GET    /user/subscription        — check pro status (JWT required)
+ *   POST   /ai                       — Claude proxy with per-user rate limit (JWT required)
+ *   GET    /calendar                 — get week calendar (JWT required)
+ *   POST   /calendar/sync            — save/replace days (JWT required)
  *
  * All routes require x-app-secret header (except /auth/*).
  * Authenticated routes also require Authorization: Bearer <token>
@@ -699,6 +700,25 @@ async function handleSyncInbox(userId, req, env) {
   return res({ success: true, synced: valid.length });
 }
 
+// ── Auth: Delete Account ────────────────────────────────────────────────────
+
+async function handleDeleteAccount(userId, env) {
+  // Explicitly delete in dependency order — do NOT rely on CASCADE.
+  // D1 (SQLite) ignores foreign-key cascades unless PRAGMA foreign_keys = ON
+  // is set per-connection, which is not guaranteed in Cloudflare D1.
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM schedule_blocks          WHERE user_id = ?").bind(userId),
+    env.DB.prepare("DELETE FROM calendar_days            WHERE user_id = ?").bind(userId),
+    env.DB.prepare("DELETE FROM chat_messages            WHERE user_id = ?").bind(userId),
+    env.DB.prepare("DELETE FROM captured_tasks           WHERE user_id = ?").bind(userId),
+    env.DB.prepare("DELETE FROM plan_reviews             WHERE user_id = ?").bind(userId),
+    env.DB.prepare("DELETE FROM password_reset_tokens    WHERE user_id = ?").bind(userId),
+    env.DB.prepare("DELETE FROM profiles                 WHERE user_id = ?").bind(userId),
+    env.DB.prepare("DELETE FROM users                    WHERE id       = ?").bind(userId),
+  ]);
+  return res({ success: true });
+}
+
 // ── Main Router ────────────────────────────────────────────────────────────
 
 export default {
@@ -765,6 +785,7 @@ export default {
       const userId = await getUserId(request, env);
       if (!userId) return res({ error: "Not authenticated — include Bearer token" }, 401);
 
+      if (path === "/auth/account"       && method === "DELETE") return handleDeleteAccount(userId, env);
       if (path === "/user/profile"      && method === "GET") return handleGetProfile(userId, env);
       if (path === "/user/profile"      && method === "PUT") return handleUpdateProfile(userId, request, env);
       if (path === "/user/subscription" && method === "GET") return handleGetSubscription(userId, env);

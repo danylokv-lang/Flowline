@@ -53,8 +53,10 @@ private struct macOSSettingsRoot: View {
     @AppStorage("hasSeenIntro")           private var hasSeenIntro = true
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
-    @State private var showLogoutConfirm = false
-    @State private var showDeleteConfirm = false
+    @State private var showLogoutConfirm   = false
+    @State private var showDeleteConfirm   = false
+    @State private var isDeletingAccount   = false
+    @State private var deleteAccountError: String? = nil
 
     var body: some View {
         TabView {
@@ -93,6 +95,14 @@ private struct macOSSettingsRoot: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("All data — chats, calendar blocks, and your profile — will be permanently erased.")
+        }
+        .alert("Deletion Failed", isPresented: Binding(
+            get: { deleteAccountError != nil },
+            set: { if !$0 { deleteAccountError = nil } }
+        )) {
+            Button("OK") { deleteAccountError = nil }
+        } message: {
+            Text(deleteAccountError ?? "")
         }
     }
 
@@ -153,14 +163,22 @@ private struct macOSSettingsRoot: View {
     }
 
     private func deleteAll() {
-        messages.forEach { context.delete($0) }
-        dayPlans.forEach { context.delete($0) }
+        let token = authService.token ?? ""
+        // 1. Sign out and clear local data immediately — never block the user here
+        messages.forEach      { context.delete($0) }
+        dayPlans.forEach      { context.delete($0) }
         capturedTasks.forEach { context.delete($0) }
-        profiles.forEach { context.delete($0) }
-        hasSeenIntro = false
+        profiles.forEach      { context.delete($0) }
+        if let tasks = try? context.fetch(FetchDescriptor<FlowTask>()) {
+            tasks.forEach { context.delete($0) }
+        }
+        try? context.save()
+        hasSeenIntro           = false
         hasCompletedOnboarding = false
-        lastLoggedInUserId = ""
+        lastLoggedInUserId     = ""
         authService.logout()
+        // 2. Best-effort server deletion in background (silent on failure)
+        Task { await authService.deleteAccountOnServer(token: token) }
     }
 }
 #endif
@@ -179,8 +197,10 @@ private struct iOSSettingsRoot: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
 
-    @State private var showLogoutConfirm = false
-    @State private var showDeleteConfirm = false
+    @State private var showLogoutConfirm   = false
+    @State private var showDeleteConfirm   = false
+    @State private var isDeletingAccount   = false
+    @State private var deleteAccountError: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -287,9 +307,17 @@ private struct iOSSettingsRoot: View {
                     Button {
                         showDeleteConfirm = true
                     } label: {
-                        Label("Delete Account", systemImage: "trash")
-                            .foregroundColor(.red)
+                        if isDeletingAccount {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Text("Deleting…").foregroundColor(.secondary)
+                            }
+                        } else {
+                            Label("Delete Account", systemImage: "trash")
+                                .foregroundColor(.red)
+                        }
                     }
+                    .disabled(isDeletingAccount)
                 } header: {
                     Text("Account")
                 } footer: {
@@ -334,6 +362,14 @@ private struct iOSSettingsRoot: View {
         } message: {
             Text("All data — chats, calendar blocks, and your profile — will be permanently erased.")
         }
+        .alert("Deletion Failed", isPresented: Binding(
+            get: { deleteAccountError != nil },
+            set: { if !$0 { deleteAccountError = nil } }
+        )) {
+            Button("OK") { deleteAccountError = nil }
+        } message: {
+            Text(deleteAccountError ?? "")
+        }
     }
 
     // ── Row helper ────────────────────────────────────────────────────────────
@@ -352,16 +388,23 @@ private struct iOSSettingsRoot: View {
         }
     }
 
-    // ── Delete all local data + sign out ──────────────────────────────────────
     private func deleteAll() {
-        messages.forEach { context.delete($0) }
-        dayPlans.forEach { context.delete($0) }
+        let token = authService.token ?? ""
+        // 1. Sign out and clear local data immediately — never block the user here
+        messages.forEach      { context.delete($0) }
+        dayPlans.forEach      { context.delete($0) }
         capturedTasks.forEach { context.delete($0) }
-        profiles.forEach { context.delete($0) }
-        hasSeenIntro = false
+        profiles.forEach      { context.delete($0) }
+        if let tasks = try? context.fetch(FetchDescriptor<FlowTask>()) {
+            tasks.forEach { context.delete($0) }
+        }
+        try? context.save()
+        hasSeenIntro           = false
         hasCompletedOnboarding = false
-        lastLoggedInUserId = ""
+        lastLoggedInUserId     = ""
         authService.logout()
+        // 2. Best-effort server deletion in background (silent on failure)
+        Task { await authService.deleteAccountOnServer(token: token) }
     }
 }
 #endif
