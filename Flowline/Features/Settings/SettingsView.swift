@@ -534,171 +534,234 @@ private struct ProfileForm: View {
 
 private struct NotificationSettingsTab: View {
 
-    // ── Planning
-    @AppStorage(NotificationManager.morningReminderEnabledKey) private var morningEnabled  = false
-    @AppStorage(NotificationManager.eveningReminderEnabledKey) private var eveningEnabled  = false
+    // All default to true — new users start with everything on.
+    @AppStorage(NotificationManager.morningReminderEnabledKey) private var morningEnabled  = true
+    @AppStorage(NotificationManager.eveningReminderEnabledKey) private var eveningEnabled  = true
     @AppStorage(NotificationManager.tomorrowNudgeEnabledKey)   private var tomorrowEnabled = true
     @AppStorage(NotificationManager.weeklyNudgeEnabledKey)     private var weeklyEnabled   = true
     @AppStorage(NotificationManager.streakAlertsEnabledKey)    private var streakEnabled   = true
-
-    // ── Block reminders (0 = off, 5/10/15 min)
     @AppStorage(NotificationManager.blockReminderMinutesKey)   private var blockMinutes    = 10
-
-    // ── Break reminders (existing)
-    @AppStorage("breakRemindersEnabled")  private var breakRemindersEnabled = true
-    @AppStorage("breakReminderInterval")  private var breakReminderIntervalHours = 1
+    @AppStorage("breakRemindersEnabled")                       private var breakRemindersEnabled     = true
+    @AppStorage("breakReminderInterval")                       private var breakReminderIntervalHours = 1
 
     @State private var permissionStatus: UNAuthorizationStatus = .notDetermined
-
-    // Snapshot of user profile for re-scheduling
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var profiles: [UserProfile]
-
     private var profile: UserProfile? { profiles.first }
+
+    private var isDenied: Bool { permissionStatus == .denied }
 
     var body: some View {
         Form {
 
-            // ── Block reminders ───────────────────────────────────────────────
-            Section {
-                Picker("Remind me before block", selection: $blockMinutes) {
-                    Text("Off").tag(0)
-                    Text("5 min").tag(5)
-                    Text("10 min").tag(10)
-                    Text("15 min").tag(15)
+            // ── Blocked banner (only when iOS permission is denied) ────────────
+            if isDenied {
+                Section {
+                    Button {
+                        #if os(iOS)
+                        openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
+                        #else
+                        openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
+                        #endif
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bell.slash.fill")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 18))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Notifications are blocked")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                Text("Open iOS Settings to allow Flowline notifications.")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 13))
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .pickerStyle(.segmented)
-            } header: {
-                Label("Block Reminders", systemImage: "timer")
-            } footer: {
-                Text(blockMinutes == 0
-                     ? "You won't be notified before blocks start."
-                     : "You'll get a heads-up \(blockMinutes) minutes before each scheduled block.")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
             }
 
-            // ── Planning nudges ───────────────────────────────────────────────
-            Section {
-                Toggle(isOn: $morningEnabled) {
-                    Label("Morning reminder", systemImage: "sun.horizon.fill")
-                }
-                .onChange(of: morningEnabled) { rescheduleMorningEvening() }
+            // ── All preference sections — dimmed when permission is denied ─────
+            Group {
 
-                Toggle(isOn: $eveningEnabled) {
-                    Label("Evening review", systemImage: "moon.stars.fill")
-                }
-                .onChange(of: eveningEnabled) { rescheduleMorningEvening() }
-
-                Toggle(isOn: $tomorrowEnabled) {
-                    Label("Plan tomorrow (9 pm)", systemImage: "moon.fill")
-                }
-                .onChange(of: tomorrowEnabled) {
-                    if tomorrowEnabled { NotificationManager.shared.scheduleTomorrowNudge() }
-                    else               { NotificationManager.shared.cancelTomorrowNudge() }
-                }
-            } header: {
-                Label("Planning Nudges", systemImage: "calendar.badge.clock")
-            } footer: {
-                Text("Morning = 5 min after your wake time. Evening = 30 min before sleep.")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-            }
-
-            // ── Streak & weekly ───────────────────────────────────────────────
-            Section {
-                Toggle(isOn: $streakEnabled) {
-                    Label("Streak alerts (8 pm)", systemImage: "flame.fill")
-                }
-                .onChange(of: streakEnabled) { rescheduleStreak() }
-
-                Toggle(isOn: $weeklyEnabled) {
-                    Label("Weekly summary (Sunday 8 pm)", systemImage: "chart.bar.fill")
-                }
-                .onChange(of: weeklyEnabled) { rescheduleWeekly() }
-            } header: {
-                Label("Motivation", systemImage: "sparkles")
-            } footer: {
-                Text("Streak alert fires if you haven't planned today. Weekly summary shows your stats every Sunday.")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-            }
-
-            // ── Break reminders ───────────────────────────────────────────────
-            Section {
-                Toggle("Break notifications", isOn: $breakRemindersEnabled)
-                    .onChange(of: breakRemindersEnabled) { updateBreakNotifications() }
-
-                if breakRemindersEnabled {
-                    Picker("Interval", selection: $breakReminderIntervalHours) {
-                        Text("1h").tag(1)
-                        Text("2h").tag(2)
-                        Text("3h").tag(3)
+                // ── Block reminders ───────────────────────────────────────────
+                Section {
+                    Picker("Remind me before block", selection: $blockMinutes) {
+                        Text("Off").tag(0)
+                        Text("5 min").tag(5)
+                        Text("10 min").tag(10)
+                        Text("15 min").tag(15)
                     }
                     .pickerStyle(.segmented)
-                    .onChange(of: breakReminderIntervalHours) { updateBreakNotifications() }
-                }
-            } header: {
-                Label("Focus Breaks", systemImage: "cup.and.saucer.fill")
-            }
-
-            // ── Permission status ─────────────────────────────────────────────
-            Section {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(statusColor)
-                        .frame(width: 8, height: 8)
-                    Text(statusText)
+                } header: {
+                    Label("Block Reminders", systemImage: "timer")
+                } footer: {
+                    Text(blockMinutes == 0
+                         ? "You won't be notified before blocks start."
+                         : "You'll get a heads-up \(blockMinutes) minutes before each scheduled block.")
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                        .font(.system(size: 12))
-                    Spacer()
-                    if permissionStatus == .denied {
-                        Button("Open Settings") {
-                            #if os(iOS)
-                            openSystemURL(URL(string: UIApplication.openSettingsURLString)!)
-                            #else
-                            openSystemURL(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
-                            #endif
+                }
+
+                // ── Planning nudges ───────────────────────────────────────────
+                Section {
+                    Toggle(isOn: $morningEnabled) {
+                        Label("Morning reminder", systemImage: "sun.horizon.fill")
+                    }
+                    .onChange(of: morningEnabled) { _, on in
+                        withPermission(onEnable: on) { rescheduleMorningEvening() }
+                    }
+
+                    Toggle(isOn: $eveningEnabled) {
+                        Label("Evening review", systemImage: "moon.stars.fill")
+                    }
+                    .onChange(of: eveningEnabled) { _, on in
+                        withPermission(onEnable: on) { rescheduleMorningEvening() }
+                    }
+
+                    Toggle(isOn: $tomorrowEnabled) {
+                        Label("Plan tomorrow (9 pm)", systemImage: "moon.fill")
+                    }
+                    .onChange(of: tomorrowEnabled) { _, on in
+                        withPermission(onEnable: on) {
+                            if on { NotificationManager.shared.scheduleTomorrowNudge() }
+                            else  { NotificationManager.shared.cancelTomorrowNudge() }
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    } else if permissionStatus == .notDetermined {
-                        Button("Allow") {
-                            Task {
-                                let granted = await NotificationManager.shared.requestAuthorization()
-                                await MainActor.run {
-                                    permissionStatus = granted ? .authorized : .denied
+                    }
+                } header: {
+                    Label("Planning Nudges", systemImage: "calendar.badge.clock")
+                } footer: {
+                    Text("Morning = 5 min after your wake time. Evening = 30 min before sleep.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                // ── Streak & weekly ───────────────────────────────────────────
+                Section {
+                    Toggle(isOn: $streakEnabled) {
+                        Label("Streak alerts (8 pm)", systemImage: "flame.fill")
+                    }
+                    .onChange(of: streakEnabled) { _, on in
+                        withPermission(onEnable: on) { rescheduleStreak() }
+                    }
+
+                    Toggle(isOn: $weeklyEnabled) {
+                        Label("Weekly summary (Sunday 8 pm)", systemImage: "chart.bar.fill")
+                    }
+                    .onChange(of: weeklyEnabled) { _, on in
+                        withPermission(onEnable: on) { rescheduleWeekly() }
+                    }
+                } header: {
+                    Label("Motivation", systemImage: "sparkles")
+                } footer: {
+                    Text("Streak alert fires if you haven't planned today. Weekly summary shows your stats every Sunday.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                // ── Break reminders ───────────────────────────────────────────
+                Section {
+                    Toggle("Break notifications", isOn: $breakRemindersEnabled)
+                        .onChange(of: breakRemindersEnabled) { _, on in
+                            withPermission(onEnable: on) { updateBreakNotifications() }
+                        }
+                    if breakRemindersEnabled {
+                        Picker("Interval", selection: $breakReminderIntervalHours) {
+                            Text("1h").tag(1)
+                            Text("2h").tag(2)
+                            Text("3h").tag(3)
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: breakReminderIntervalHours) { updateBreakNotifications() }
+                    }
+                } header: {
+                    Label("Focus Breaks", systemImage: "cup.and.saucer.fill")
+                }
+
+                // ── Permission row (when not denied — denied shows the banner above) ──
+                if !isDenied {
+                    Section {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(permissionStatus == .authorized ? Color.green : Color.orange)
+                                .frame(width: 8, height: 8)
+                            Text(permissionStatus == .authorized
+                                 ? "Notifications allowed ✓"
+                                 : "Tap Allow to enable notifications")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 12))
+                            Spacer()
+                            if permissionStatus == .notDetermined {
+                                Button("Allow") {
+                                    Task {
+                                        let granted = await NotificationManager.shared.requestAuthorization()
+                                        await MainActor.run {
+                                            permissionStatus = granted ? .authorized : .denied
+                                            if granted { scheduleAll() }
+                                        }
+                                    }
                                 }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
                             }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
+                    } header: {
+                        Label("Permission", systemImage: "bell.badge")
                     }
                 }
-            } header: {
-                Label("Permission", systemImage: "bell.badge")
             }
+            .disabled(isDenied)
+            .opacity(isDenied ? 0.45 : 1)
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
         .onAppear { checkPermission() }
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private var statusColor: Color {
-        switch permissionStatus {
-        case .authorized: return .green
-        case .denied:     return .red
-        default:          return .orange
+        .onChange(of: scenePhase) { _, phase in
+            // Re-check whenever user returns from iOS Settings
+            if phase == .active { checkPermission() }
         }
     }
 
-    private var statusText: String {
+    // ── Permission helpers ────────────────────────────────────────────────────
+
+    /// Schedules all enabled notifications at once (called after permission is granted).
+    private func scheduleAll() {
+        guard let p = profile else { return }
+        NotificationManager.shared.scheduleMorning(name: p.name, wakeTime: p.wakeTime)
+        NotificationManager.shared.scheduleEvening(sleepTime: p.sleepTime)
+        NotificationManager.shared.scheduleTomorrowNudge()
+        NotificationManager.shared.scheduleStreakReminder(
+            streakDays: StreakManager.shared.currentStreak, sleepTime: p.sleepTime)
+        if weeklyEnabled {
+            NotificationManager.shared.scheduleWeeklySummary(
+                completedDays: 0, streak: StreakManager.shared.currentStreak)
+        }
+    }
+
+    /// Runs `action` when permission is granted; requests it if not yet determined.
+    /// When `onEnable` is false (toggle turned off), runs `action` directly — no gate needed.
+    private func withPermission(onEnable: Bool, action: @escaping () -> Void) {
+        guard onEnable else { action(); return }
         switch permissionStatus {
-        case .authorized:    return "Notifications allowed ✓"
-        case .denied:        return "Notifications blocked — tap Open Settings"
-        case .notDetermined: return "Tap Allow to enable notifications"
-        default:             return "Unknown status"
+        case .authorized, .provisional, .ephemeral:
+            action()
+        case .notDetermined:
+            Task {
+                let granted = await NotificationManager.shared.requestAuthorization()
+                await MainActor.run {
+                    permissionStatus = granted ? .authorized : .denied
+                    if granted { action() }
+                    // If denied, keep the toggle as-is (user's intent is saved,
+                    // notification just won't fire until they grant permission).
+                }
+            }
+        default: break  // denied — banner already shown, nothing to do
         }
     }
 
@@ -716,17 +779,18 @@ private struct NotificationSettingsTab: View {
 
     private func rescheduleStreak() {
         guard let p = profile else { return }
-        let streak = StreakManager.shared.currentStreak
-        NotificationManager.shared.scheduleStreakReminder(streakDays: streak, sleepTime: p.sleepTime)
+        NotificationManager.shared.scheduleStreakReminder(
+            streakDays: StreakManager.shared.currentStreak, sleepTime: p.sleepTime)
     }
 
     private func rescheduleWeekly() {
         guard weeklyEnabled else {
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["flowline.weekly.summary"])
+            UNUserNotificationCenter.current()
+                .removePendingNotificationRequests(withIdentifiers: ["flowline.weekly.summary"])
             return
         }
-        let streak = StreakManager.shared.currentStreak
-        NotificationManager.shared.scheduleWeeklySummary(completedDays: 0, streak: streak)
+        NotificationManager.shared.scheduleWeeklySummary(
+            completedDays: 0, streak: StreakManager.shared.currentStreak)
     }
 
     private func updateBreakNotifications() {

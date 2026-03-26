@@ -48,6 +48,14 @@ final class NotificationManager {
         return v > 0 ? v : 10
     }
 
+    /// Reads a boolean preference, defaulting to `true` when the key was never written.
+    /// `UserDefaults.bool(forKey:)` returns `false` for absent keys regardless of
+    /// the `@AppStorage` default declared in the view — this method closes that gap.
+    private func isEnabled(_ key: String) -> Bool {
+        guard UserDefaults.standard.object(forKey: key) != nil else { return true }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+
     // MARK: - Permission
 
     func requestAuthorization() async -> Bool {
@@ -112,7 +120,7 @@ final class NotificationManager {
 
     func scheduleMorning(name: String, wakeTime: Date) {
         center.removePendingNotificationRequests(withIdentifiers: [kMorningID])
-        guard UserDefaults.standard.bool(forKey: Self.morningReminderEnabledKey) else { return }
+        guard isEnabled(Self.morningReminderEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Good morning, \(name)! ☀️"
@@ -137,7 +145,7 @@ final class NotificationManager {
 
     func scheduleEvening(sleepTime: Date) {
         center.removePendingNotificationRequests(withIdentifiers: [kEveningID])
-        guard UserDefaults.standard.bool(forKey: Self.eveningReminderEnabledKey) else { return }
+        guard isEnabled(Self.eveningReminderEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "How did today go? 🌙"
@@ -236,7 +244,7 @@ final class NotificationManager {
     /// Daily 9:00 pm nudge — plan tomorrow's day before bed.
     func scheduleTomorrowNudge() {
         center.removePendingNotificationRequests(withIdentifiers: [kTomorrowID])
-        guard UserDefaults.standard.bool(forKey: Self.tomorrowNudgeEnabledKey) else { return }
+        guard isEnabled(Self.tomorrowNudgeEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Plan tomorrow before you sleep? 🌙"
@@ -265,7 +273,7 @@ final class NotificationManager {
 
     func scheduleStreakReminder(streakDays: Int, sleepTime: Date) {
         center.removePendingNotificationRequests(withIdentifiers: [kStreakID])
-        guard UserDefaults.standard.bool(forKey: Self.streakAlertsEnabledKey) else { return }
+        guard isEnabled(Self.streakAlertsEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
         if streakDays >= 7 {

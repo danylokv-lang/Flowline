@@ -181,6 +181,17 @@ struct FlowlineApp: App {
         UserDefaults.standard.removeObject(forKey: "chats.lastSyncTimestamp")
         // Reset per-device paywall flag so new account sees the post-first-save paywall
         UserDefaults.standard.removeObject(forKey: "paywallShownAfterFirstPlan")
+        // Default all notification toggles to ON for the new account.
+        // Each new account starts with a clean slate — previous user's opt-outs don't carry over.
+        for key in [NotificationManager.morningReminderEnabledKey,
+                    NotificationManager.eveningReminderEnabledKey,
+                    NotificationManager.tomorrowNudgeEnabledKey,
+                    NotificationManager.streakAlertsEnabledKey,
+                    NotificationManager.weeklyNudgeEnabledKey,
+                    "breakRemindersEnabled"] {
+            UserDefaults.standard.set(true, forKey: key)
+        }
+        UserDefaults.standard.set(10, forKey: NotificationManager.blockReminderMinutesKey)
     }
 
     private var appSetup: some View {
