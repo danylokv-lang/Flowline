@@ -4,34 +4,33 @@ import RevenueCat
 
 /// Manages all subscription state via RevenueCat.
 /// Entitlement: "Flowline Pro"
-/// Products:    monthly · yearly · lifetime
 ///
 /// Gating model:
 ///   Free  — up to 3 day-plan saves per week
-///   Pro   — unlimited saves (+ all features)
+///   Pro   — unlimited (entitlement active, covers RC-managed free trials too)
+///
+/// NOTE: There is NO separate local trial. Trials are configured in App Store Connect
+/// as introductory offers on the Pro product and surfaced through RevenueCat.
+/// `isPro` returns true during an active trial, so the UI doesn't need to special-case them.
 @MainActor
 final class SubscriptionManager: ObservableObject {
 
     // MARK: - Published
 
-    @Published private(set) var customerInfo: CustomerInfo?  = nil
-    @Published private(set) var currentOffering: Offering?  = nil
-    @Published private(set) var plansThisWeek: Int           = 0
-    @Published private(set) var isLoading: Bool              = false
-    @Published var errorMessage: String?                     = nil
+    @Published private(set) var customerInfo:      CustomerInfo? = nil
+    @Published private(set) var currentOffering:   Offering?     = nil
+    @Published private(set) var plansThisWeek:     Int           = 0
+    @Published private(set) var isLoading:         Bool          = false
+    @Published var errorMessage: String?                         = nil
 
     // MARK: - Constants
 
-    /// Must exactly match the entitlement identifier in RevenueCat dashboard
     static let entitlementID   = "Flowline Pro"
-
-    static let weeklyFreeLimit = 3          // plan saves/week — free tier
-    static let trialDays       = 3
-
+    static let weeklyFreeLimit = 3
     static let monthlyPrice    = "$4.99"
     static let yearlyPrice     = "$34.99"
 
-    // MARK: - Computed Pro Status
+    // MARK: - Pro / Trial status (all derived from RevenueCat)
 
     var isPro: Bool {
         customerInfo?.entitlements[Self.entitlementID]?.isActive == true
@@ -41,124 +40,114 @@ final class SubscriptionManager: ObservableObject {
         customerInfo?.entitlements[Self.entitlementID]?.productIdentifier.contains("lifetime") == true
     }
 
-    // MARK: - Trial (local 3-day trial)
-
-    private let kTrialStart   = "trial_start_date"
-    private let kPlansWeek    = "plans_this_week"
-    private let kWeekMonday   = "plans_week_monday"   // ISO date of the Monday that started this window
-    private let kTotalSaves   = "total_plan_saves"
-
-    var trialStartDate: Date? {
-        UserDefaults.standard.object(forKey: kTrialStart) as? Date
-    }
-
+    /// True while the active entitlement is in its introductory trial period.
     var isInTrial: Bool {
-        guard !isPro, let start = trialStartDate else { return false }
-        let elapsed = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
-        return elapsed < Self.trialDays
+        guard let ent = customerInfo?.entitlements[Self.entitlementID], ent.isActive else { return false }
+        return ent.periodType == .trial
     }
 
+    /// Days remaining in a RC-managed trial (0 if not in trial or no expiry date).
     var trialDaysRemaining: Int {
-        guard let start = trialStartDate else { return 0 }
-        let elapsed = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
-        return max(0, Self.trialDays - elapsed)
-    }
-
-    var trialExpired: Bool {
-        trialStartDate != nil && !isInTrial && !isPro
-    }
-
-    func startTrialIfNeeded() {
-        if trialStartDate == nil {
-            UserDefaults.standard.set(Date(), forKey: kTrialStart)
-        }
+        guard isInTrial,
+              let expiry = customerInfo?.entitlements[Self.entitlementID]?.expirationDate else { return 0 }
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: expiry).day ?? 0
+        return max(0, days)
     }
 
     // MARK: - Weekly Plan Limit
 
+    private let kPlansWeek  = "plans_this_week"
+    private let kWeekMonday = "plans_week_monday"
+    private let kTotalSaves = "total_plan_saves"
+
     /// Whether the user can save another plan right now.
     var canSavePlan: Bool {
-        isPro || isInTrial || plansThisWeek < Self.weeklyFreeLimit
+        isPro || plansThisWeek < Self.weeklyFreeLimit
     }
 
-    /// Convenience inverse used by UI to disable controls.
     var isAtLimit: Bool { !canSavePlan }
 
-    /// Total lifetime plan saves — used to trigger review prompts.
+    /// Lifetime total plan saves — used to trigger the first-save paywall and review prompts.
+    /// Keyed to the device but reset on account switch via `clearLocalUserData()` in FlowlineApp.
     var totalPlanSaves: Int {
         UserDefaults.standard.integer(forKey: kTotalSaves)
     }
 
-    /// Call once per successful plan save. Increments locally immediately, then
-    /// confirms with the server and syncs back the authoritative count.
+    /// Call once per successful plan save.
     func recordPlanSave(token: String?) {
         resetIfNewWeek()
         plansThisWeek += 1
         let monday = Self.currentMondayString()
         UserDefaults.standard.set(plansThisWeek, forKey: kPlansWeek)
         UserDefaults.standard.set(monday,        forKey: kWeekMonday)
-
         let total = UserDefaults.standard.integer(forKey: kTotalSaves) + 1
-        UserDefaults.standard.set(total, forKey: kTotalSaves)
+        UserDefaults.standard.set(total,         forKey: kTotalSaves)
 
-        // Ask the server to increment its authoritative counter.
-        // The server enforces the limit and resets the week — we sync back its result
-        // so the local count matches exactly (prevents proxy-based bypass).
         if let token, !token.isEmpty {
             Task {
                 if let result = await SyncService.shared.incrementPlanSave(token: token) {
-                    await MainActor.run {
-                        self.refreshFromServer(count: result.count, monday: result.monday)
-                    }
+                    self.refreshFromServer(count: result.count, monday: result.monday)
                 }
             }
         }
     }
 
-    /// Called by SyncService after pulling the profile — syncs server's authoritative count.
+    /// Called by SyncService after pulling the profile — syncs server's authoritative weekly count.
     func refreshFromServer(count: Int, monday: String) {
-        // Empty monday means the DB migration hasn't run yet or no saves recorded —
-        // don't wipe the locally-tracked count.
         guard !monday.isEmpty else { return }
         let currentMonday = Self.currentMondayString()
         if monday == currentMonday {
-            // Same week — server is authoritative
             plansThisWeek = count
             UserDefaults.standard.set(count,         forKey: kPlansWeek)
             UserDefaults.standard.set(currentMonday, forKey: kWeekMonday)
         } else {
-            // Server data is from a past week — current week starts at 0
             plansThisWeek = 0
             UserDefaults.standard.set(0,             forKey: kPlansWeek)
             UserDefaults.standard.set(currentMonday, forKey: kWeekMonday)
         }
     }
 
-    /// Reset local weekly saves when switching accounts (server pull will restore the correct value).
+    /// Reset local counters when switching accounts.
+    /// Server count is restored once pullAll completes.
     func resetForAccountSwitch() {
         plansThisWeek = 0
         UserDefaults.standard.removeObject(forKey: kPlansWeek)
         UserDefaults.standard.removeObject(forKey: kWeekMonday)
     }
 
-    // MARK: - Init
+    // MARK: - RevenueCat Identity (account-tied subscriptions)
+
+    /// Call immediately after login/registration so RevenueCat links the subscription
+    /// to the account, not the device. This is what makes purchases restore on other devices.
+    func loginRevenueCat(userId: String) async {
+        guard !userId.isEmpty else { return }
+        do {
+            let (info, _) = try await Purchases.shared.logIn(userId)
+            customerInfo = info
+        } catch {
+            // Non-fatal — RC retries on next launch. Don't block the user.
+        }
+    }
+
+    /// Call on sign-out so RevenueCat falls back to an anonymous session.
+    func logoutRevenueCat() async {
+        do {
+            customerInfo = try await Purchases.shared.logOut()
+        } catch {}
+    }
+
+    // MARK: - Init / Setup
 
     init() {
-        // Configure RevenueCat synchronously so Purchases.shared is always
-        // valid — even if the user taps "Restore" before setup() runs.
         Self.configureIfNeeded()
         Purchases.shared.delegate = RCDelegateHandler.shared
         RCDelegateHandler.shared.onCustomerInfoUpdate = { [weak self] info in
-            Task { @MainActor [weak self] in
-                self?.customerInfo = info
-            }
+            Task { @MainActor [weak self] in self?.customerInfo = info }
         }
         resetIfNewWeek()
         plansThisWeek = UserDefaults.standard.integer(forKey: kPlansWeek)
     }
 
-    /// Call from the root view's `.task {}` to fetch the latest data from
-    /// RevenueCat's servers without blocking the initial launch.
     func setup() async {
         await refreshCustomerInfo()
         await fetchOfferings()
@@ -199,9 +188,7 @@ final class SubscriptionManager: ObservableObject {
             customerInfo = result.customerInfo
             return isPro
         } catch let error as ErrorCode {
-            if error != .purchaseCancelledError {
-                errorMessage = error.localizedDescription
-            }
+            if error != .purchaseCancelledError { errorMessage = error.localizedDescription }
             return false
         } catch {
             errorMessage = error.localizedDescription
@@ -254,8 +241,6 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    /// Returns the ISO-8601 date string of the Monday that starts the current week.
-    /// Using the ISO calendar guarantees Monday is always day 1, locale-independent.
     static func currentMondayString() -> String {
         var cal = Calendar(identifier: .iso8601)
         cal.locale = Locale(identifier: "en_US_POSIX")
@@ -267,7 +252,7 @@ final class SubscriptionManager: ObservableObject {
     }
 }
 
-// MARK: - RCDelegateHandler (singleton bridge to @MainActor)
+// MARK: - RCDelegateHandler
 
 final class RCDelegateHandler: NSObject, PurchasesDelegate, @unchecked Sendable {
     static let shared = RCDelegateHandler()

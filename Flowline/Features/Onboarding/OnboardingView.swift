@@ -581,7 +581,6 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
-        subscriptionManager.startTrialIfNeeded()
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
 
         let displayName = name.trimmingCharacters(in: .whitespaces)

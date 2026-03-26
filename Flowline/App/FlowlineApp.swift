@@ -84,13 +84,13 @@ struct FlowlineApp: App {
             }
             .onChange(of: authService.currentUser?.userId) { _, newUserId in
                 guard let newUserId else { return }
-                // Scope streak data to this user — must happen before clearLocalUserData
                 StreakManager.shared.configure(userId: newUserId)
+                // Tie RevenueCat to this account so subscription state follows the user,
+                // not the device. Must happen on every login, not just on account switch.
+                Task { await subscriptionManager.loginRevenueCat(userId: newUserId) }
                 if newUserId != lastLoggedInUserId {
                     clearLocalUserData()
                     lastLoggedInUserId = newUserId
-                    // Pull fresh data from server — show spinner until done so we
-                    // never flash the wrong screen (e.g. onboarding for a returning user)
                     if let token = authService.token {
                         isSyncingAfterLogin = true
                         Task {
@@ -99,7 +99,6 @@ struct FlowlineApp: App {
                         }
                     }
                 }
-                subscriptionManager.startTrialIfNeeded()
             }
             .task {
                 // Set up RevenueCat AFTER first frame so launch completes
@@ -109,12 +108,6 @@ struct FlowlineApp: App {
                 // Pull server data on every launch if already logged in
                 if authService.isLoggedIn, let token = authService.token {
                     await SyncService.shared.pullAll(token: token, context: sharedModelContainer.mainContext, subscriptionManager: subscriptionManager)
-                }
-
-                // Start trial on every device on first launch (not just on userId change,
-                // since onChange only fires when userId actually changes in the session).
-                if authService.isLoggedIn {
-                    subscriptionManager.startTrialIfNeeded()
                 }
 
                 // Re-arm daily notification schedules every launch.
@@ -186,6 +179,8 @@ struct FlowlineApp: App {
         subscriptionManager.resetForAccountSwitch()
         UserDefaults.standard.removeObject(forKey: "total_plan_saves")
         UserDefaults.standard.removeObject(forKey: "chats.lastSyncTimestamp")
+        // Reset per-device paywall flag so new account sees the post-first-save paywall
+        UserDefaults.standard.removeObject(forKey: "paywallShownAfterFirstPlan")
     }
 
     private var appSetup: some View {
