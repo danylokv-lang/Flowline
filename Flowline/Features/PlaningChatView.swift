@@ -93,6 +93,7 @@ struct PlanningChatView: View {
     @State private var lastFailedMessage: String? = nil
     @State private var editorHeight: CGFloat = 17
     @State private var emptyGlow = false
+    @State private var selectedTemplate: DayTemplate? = nil
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @AppStorage("lastUsedCalendarID") private var lastUsedCalendarID: String = ""
     @AppStorage("lastPlanDate") private var lastPlanDate: String = ""
@@ -763,12 +764,18 @@ struct PlanningChatView: View {
                     .multilineTextAlignment(.center)
             }
 
+            // ── Day template selector ─────────────────────────────────────────
+            if isNewDay {
+                templateSelector
+            }
+
             // ── Hero "Plan my day" button (new day) / profile nudge ──────────
             if isNewDay {
                 // Prominent one-tap hero button shown when it's a fresh day
                 Button {
                     lastPlanDate = todayKey
                     sendMessage(heroPlanPrompt)
+                    selectedTemplate = nil
                 } label: {
                     HStack(spacing: 14) {
                         VStack(alignment: .leading, spacing: 3) {
@@ -898,7 +905,74 @@ struct PlanningChatView: View {
             let list = inboxTasks.prefix(5).map { "• \($0.text)" }.joined(separator: "\n")
             extras = "\n\nI have these tasks in my inbox to slot in:\n\(list)"
         }
-        return "Plan my whole day for \(dateStr). Current time is \(timeStr). Build a complete, realistic time-blocked schedule.\(extras)"
+
+        var templateExtra = ""
+        if let t = selectedTemplate {
+            templateExtra = "\n\n---\nTEMPLATE SELECTED: \(t.name)\n\(t.promptConstraints)"
+        }
+
+        return "Plan my whole day for \(dateStr). Current time is \(timeStr). Build a complete, realistic time-blocked schedule.\(extras)\(templateExtra)"
+    }
+
+    // ── Template selector ─────────────────────────────────────────────────────
+    private var templateSelector: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("WHAT KIND OF DAY?")
+                .font(.system(size: 9, weight: .bold))
+                .tracking(2)
+                .foregroundColor(FlowLineTheme.dimTxt)
+                .padding(.horizontal, 4)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(DayTemplate.all) { template in
+                        templateChip(template)
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+            }
+        }
+        .frame(maxWidth: 340)
+    }
+
+    private func templateChip(_ template: DayTemplate) -> some View {
+        let isSelected = selectedTemplate?.id == template.id
+
+        return Button {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                selectedTemplate = isSelected ? nil : template
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Text(template.emoji)
+                    .font(.system(size: 14))
+                Text(template.name)
+                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                    .foregroundColor(isSelected ? .white : FlowLineTheme.secondTxt)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(isSelected
+                          ? template.accent
+                          : FlowLineTheme.secondBg.opacity(0.8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(isSelected
+                                    ? template.accent.opacity(0.0)
+                                    : FlowLineTheme.borderHi.opacity(0.4),
+                                    lineWidth: 1)
+                    )
+            )
+            .shadow(color: isSelected ? template.accent.opacity(0.4) : .clear,
+                    radius: 8, x: 0, y: 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isSelected ? 1.04 : 1.0)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isSelected)
     }
 
     private var timeGreeting: String {
@@ -1227,6 +1301,9 @@ After planning, tell the user which inbox tasks you included):
     private func sendMessage(_ overrideText: String? = nil) {
         let text = overrideText ?? inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, !isLoading, !isSaving else { return }
+
+        // Clear template after it's been baked into the outgoing prompt
+        if overrideText == nil { selectedTemplate = nil }
 
         refreshSystemPrompt()
 
