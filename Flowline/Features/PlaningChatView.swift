@@ -219,6 +219,9 @@ struct PlanningChatView: View {
                     Day1ChecklistView()
                 }
 
+                // ── Widget education (shown once after first plan) ─────────
+                WidgetEducationCard()
+
                 // ── Chat area ────────────────────────────────────────────
                 if messages.isEmpty {
                     Spacer()
