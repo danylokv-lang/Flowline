@@ -75,30 +75,6 @@ Flowline/
 
 ---
 
-## Requirements
-
-- macOS **14.6** or later
-- iOS **17.0** or later
-- Xcode **15+**
-- An Anthropic API key (or deploy the included Cloudflare Worker proxy)
-
----
-
-## Getting Started
-
-```bash
-git clone https://github.com/danylokv-lang/Flowline.git
-cd Flowline
-open Flowline.xcodeproj
-```
-
-1. Open `Flowline/App/Config.swift`
-2. Set `proxyURL` to your proxy endpoint, or `nil` to call Anthropic directly
-3. Add your RevenueCat API key to `revenueCatAPIKey`
-4. Build & run (`⌘R`)
-
----
-
 ## Privacy
 
 Flowline takes privacy seriously:
