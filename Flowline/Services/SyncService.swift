@@ -106,6 +106,7 @@ final class SyncService {
             "hasWorkHours":          profile.hasWorkHours ? 1 : 0,
             "bio":                   profile.bio,
             "recurringCommitments":  profile.recurringCommitments,
+            "weeklySchedule":        profile.weeklySchedule,
         ]
         if profile.hasWorkHours {
             if let ws = profile.workStartTime { profileDict["workStart"] = hhmmFmt.string(from: ws) }
@@ -166,6 +167,7 @@ final class SyncService {
         let hasWork               = (p["has_work_hours"]               as? Int ?? 0) == 1
         let bio                   = p["bio"]                           as? String ?? ""
         let recurringCommitments  = p["recurring_commitments"]         as? String ?? ""
+        let weeklySchedule        = p["weekly_schedule"]               as? String ?? ""
         let onboardingDone        = (p["onboarding_done"]              as? Int ?? 0) == 1
         let weeklySaves           = p["weekly_saves"]                  as? Int    ?? 0
         let weeklySavesMonday     = p["weekly_saves_monday"]           as? String ?? ""
@@ -179,11 +181,13 @@ final class SyncService {
             existing.workEndTime          = workEnd
             existing.bio                  = bio
             existing.recurringCommitments = recurringCommitments
+            existing.weeklySchedule       = weeklySchedule
         } else {
             context.insert(UserProfile(name: name, wakeTime: wakeTime, sleepTime: sleepTime,
                                        hasWorkHours: hasWork, workStartTime: workStart,
                                        workEndTime: workEnd, bio: bio,
-                                       recurringCommitments: recurringCommitments))
+                                       recurringCommitments: recurringCommitments,
+                                       weeklySchedule: weeklySchedule))
         }
         try? context.save()
 

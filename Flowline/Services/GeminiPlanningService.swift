@@ -41,7 +41,9 @@ HARD CONSTRAINTS:
 - Wake: \(timeFormatter.string(from: profile.wakeTime)) / Sleep: \(timeFormatter.string(from: profile.sleepTime))
 """
 
-        if profile.hasWorkHours, let start = profile.workStartTime, let end = profile.workEndTime {
+        if let sched = WeeklySchedule.from(profile.weeklySchedule), !sched.promptText.isEmpty {
+            prompt += "- Fixed schedule (blocked — never schedule anything here):\n\(sched.promptText)\n"
+        } else if profile.hasWorkHours, let start = profile.workStartTime, let end = profile.workEndTime {
             prompt += "- Work hours: \(timeFormatter.string(from: start)) – \(timeFormatter.string(from: end))\n"
         }
 

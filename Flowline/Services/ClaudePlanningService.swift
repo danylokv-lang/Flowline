@@ -42,7 +42,13 @@ USER SCHEDULE FOUNDATION:
 - Sleep: \(timeFormatter.string(from: profile.sleepTime))
 """
 
-        if profile.hasWorkHours, let start = profile.workStartTime, let end = profile.workEndTime {
+        // Per-day schedule — takes priority over legacy single work block
+        if let sched = WeeklySchedule.from(profile.weeklySchedule), !sched.promptText.isEmpty {
+            prompt += """
+- Fixed schedule (these hours are BLOCKED — never schedule anything else here):
+\(sched.promptText)
+"""
+        } else if profile.hasWorkHours, let start = profile.workStartTime, let end = profile.workEndTime {
             prompt += "- Work block: \(timeFormatter.string(from: start)) – \(timeFormatter.string(from: end))\n"
         }
 

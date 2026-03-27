@@ -429,15 +429,20 @@ private struct ProfileForm: View {
     @Bindable var profile: UserProfile
     @State private var wakeTime: Date
     @State private var sleepTime: Date
-    @State private var workStart: Date
-    @State private var workEnd: Date
+    @State private var weeklySchedule: WeeklySchedule
+    @State private var expandedDay: Int? = nil  // weekday 1=Mon…7=Sun currently showing pickers
 
     init(profile: UserProfile) {
         self.profile = profile
-        _wakeTime   = State(initialValue: profile.wakeTime)
-        _sleepTime  = State(initialValue: profile.sleepTime)
-        _workStart  = State(initialValue: profile.workStartTime ?? profile.wakeTime)
-        _workEnd    = State(initialValue: profile.workEndTime ?? profile.sleepTime)
+        _wakeTime        = State(initialValue: profile.wakeTime)
+        _sleepTime       = State(initialValue: profile.sleepTime)
+        _weeklySchedule  = State(
+            initialValue: WeeklySchedule.from(profile.weeklySchedule)
+                ?? (profile.hasWorkHours
+                    ? WeeklySchedule.fromLegacy(start: profile.workStartTime,
+                                                end: profile.workEndTime)
+                    : .default)
+        )
     }
 
     var body: some View {
@@ -461,26 +466,37 @@ private struct ProfileForm: View {
                         NotificationManager.shared.reschedule(
                             name: profile.name, wakeTime: wakeTime, sleepTime: sleepTime)
                     }
+            }
 
-                Toggle("Fixed work hours", isOn: $profile.hasWorkHours)
+            // ── Per-day fixed schedule ─────────────────────────────────────
+            Section {
+                Toggle("Fixed weekly schedule", isOn: $profile.hasWorkHours)
                     .onChange(of: profile.hasWorkHours) {
                         UserDefaults.standard.set(profile.hasWorkHours, forKey: "profile.hasWorkHours")
+                        if profile.hasWorkHours {
+                            saveSchedule()
+                        }
                     }
 
                 if profile.hasWorkHours {
-                    DatePicker("Work starts", selection: $workStart, displayedComponents: .hourAndMinute)
-                        .onChange(of: workStart) {
-                            profile.workStartTime = workStart
-                            let h = Calendar.current.component(.hour, from: workStart)
-                            UserDefaults.standard.set(h, forKey: "profile.workStartHour")
-                        }
-                    DatePicker("Work ends", selection: $workEnd, displayedComponents: .hourAndMinute)
-                        .onChange(of: workEnd) {
-                            profile.workEndTime = workEnd
-                            let h = Calendar.current.component(.hour, from: workEnd)
-                            UserDefaults.standard.set(h, forKey: "profile.workEndHour")
-                        }
+                    ForEach($weeklySchedule.days) { $day in
+                        WeekdayRow(day: $day,
+                                   isExpanded: expandedDay == day.weekday,
+                                   onHeaderTap: {
+                                       withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
+                                           expandedDay = expandedDay == day.weekday ? nil : day.weekday
+                                       }
+                                       saveSchedule()
+                                   },
+                                   onChange: { saveSchedule() })
+                    }
                 }
+            } header: {
+                Text("Weekly Schedule")
+            } footer: {
+                Text("Set the hours you're unavailable each day — school, work, classes, etc. The AI will plan around them.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
             }
 
             Section("About you — AI uses this to plan smarter") {
@@ -527,6 +543,118 @@ private struct ProfileForm: View {
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
+    }
+
+    private func saveSchedule() {
+        profile.weeklySchedule = weeklySchedule.toJSON()
+        profile.hasWorkHours   = weeklySchedule.days.contains { $0.isEnabled }
+        UserDefaults.standard.set(profile.hasWorkHours, forKey: "profile.hasWorkHours")
+        // Keep legacy fields in sync with the first enabled weekday, for older code paths.
+        if let first = weeklySchedule.days.first(where: { $0.isEnabled }) {
+            let cal  = Calendar.current
+            var cs   = cal.dateComponents([.hour, .minute], from: Date())
+            let parts = first.block.start.split(separator: ":").compactMap { Int($0) }
+            let partE = first.block.end.split(separator: ":").compactMap { Int($0) }
+            cs.hour = parts.first; cs.minute = parts.last
+            profile.workStartTime = cal.date(from: cs)
+            cs.hour = partE.first; cs.minute = partE.last
+            profile.workEndTime = cal.date(from: cs)
+            if let ws = profile.workStartTime {
+                UserDefaults.standard.set(cal.component(.hour, from: ws), forKey: "profile.workStartHour")
+            }
+            if let we = profile.workEndTime {
+                UserDefaults.standard.set(cal.component(.hour, from: we), forKey: "profile.workEndHour")
+            }
+        }
+    }
+}
+
+// MARK: - WeekdayRow
+
+private struct WeekdayRow: View {
+    @Binding var day: WeekdaySchedule
+    let isExpanded: Bool
+    let onHeaderTap: () -> Void
+    let onChange: () -> Void
+
+    // Local Date state so DatePicker works smoothly
+    @State private var startDate: Date = Date()
+    @State private var endDate: Date   = Date()
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // ── Header row ─────────────────────────────────────────────────
+            HStack {
+                Toggle(isOn: $day.isEnabled) {
+                    HStack(spacing: 10) {
+                        Text(day.shortName)
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 34, alignment: .leading)
+                        Text(day.displayText)
+                            .font(.system(size: 13))
+                            .foregroundColor(day.isEnabled ? .primary : .secondary)
+                    }
+                }
+                .onChange(of: day.isEnabled) {
+                    if day.isEnabled && isExpanded == false { onHeaderTap() }
+                    onChange()
+                }
+                .toggleStyle(.switch)
+
+                if day.isEnabled {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .onTapGesture { onHeaderTap() }
+                        .frame(width: 24)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard day.isEnabled else { return }
+                onHeaderTap()
+            }
+
+            // ── Expanded time pickers ───────────────────────────────────────
+            if isExpanded && day.isEnabled {
+                VStack(spacing: 0) {
+                    Divider().padding(.vertical, 4)
+                    DatePicker("From", selection: $startDate, displayedComponents: .hourAndMinute)
+                        .onChange(of: startDate) {
+                            day.block.start = hhmm(startDate)
+                            onChange()
+                        }
+                    DatePicker("To", selection: $endDate, displayedComponents: .hourAndMinute)
+                        .onChange(of: endDate) {
+                            day.block.end = hhmm(endDate)
+                            onChange()
+                        }
+                }
+                .padding(.leading, 44)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .onAppear { loadDates() }
+            }
+        }
+        .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isExpanded)
+        .onAppear { loadDates() }
+    }
+
+    private func loadDates() {
+        startDate = parseHHMM(day.block.start)
+        endDate   = parseHHMM(day.block.end)
+    }
+
+    private func parseHHMM(_ s: String) -> Date {
+        let parts = s.split(separator: ":").compactMap { Int($0) }
+        var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        c.hour = parts.first ?? 9
+        c.minute = parts.last ?? 0
+        return Calendar.current.date(from: c) ?? Date()
+    }
+
+    private func hhmm(_ d: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 }
 
