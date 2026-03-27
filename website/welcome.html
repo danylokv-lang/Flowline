@@ -185,7 +185,7 @@
       You're in, <span id="userName">friend</span>.
     </h1>
     <p class="welcome-sub">
-      Your Flowline account is ready. The macOS app is coming to the App Store soon — we'll email you the moment it goes live.
+      Your Flowline account is ready. Get the app on your iPhone or Mac — sign in with your account and start planning smarter.
     </p>
 
     <div class="plan-badge" id="planBadge">
@@ -193,30 +193,41 @@
       <span id="planLabel">Free plan</span>
     </div>
 
-    <!-- Download card -->
+    <!-- Download cards -->
     <div class="download-card">
-      <h3>Get the macOS app</h3>
-      <p>Flowline runs natively on macOS — no browser, no tabs, just a clean app in your menu bar.</p>
+      <h3>Get Flowline on your device</h3>
+      <p>Download the app for your iPhone or Mac and sign in with your account. Everything syncs in real-time.</p>
 
-      <button class="download-btn" disabled>
-        <div class="btn-icon">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".6"/>
-            <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
-          </svg>
-        </div>
-        <div class="download-btn-text">
-          <span class="line1">Available on</span>
-          <span class="line2">Mac App Store</span>
-        </div>
-        <span class="coming-tag">Soon</span>
-      </button>
+      <div style="display: flex; gap: 12px; flex-direction: column;">
+        <button class="download-btn" disabled>
+          <div class="btn-icon">📱</div>
+          <div class="download-btn-text">
+            <span class="line1">Download on</span>
+            <span class="line2">App Store (iPhone)</span>
+          </div>
+          <span class="coming-tag">Now</span>
+        </button>
+
+        <button class="download-btn" disabled>
+          <div class="btn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".6"/>
+              <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
+            </svg>
+          </div>
+          <div class="download-btn-text">
+            <span class="line1">Available on</span>
+            <span class="line2">Mac App Store</span>
+          </div>
+          <span class="coming-tag">Soon</span>
+        </button>
+      </div>
     </div>
 
     <!-- Notify strip -->
     <div class="notify-strip">
       <span class="n-icon">📬</span>
-      <p><strong>We've got your email.</strong> As soon as Flowline launches on the App Store, you'll be the first to know. No spam — just one email.</p>
+      <p><strong>We've got your email.</strong> We'll notify you about important updates, new features, and when macOS launches. No spam — just meaningful news.</p>
     </div>
 
     <!-- Account info -->
