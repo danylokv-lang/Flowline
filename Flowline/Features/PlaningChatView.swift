@@ -90,6 +90,7 @@ struct PlanningChatView: View {
     @State private var showPaywall = false
     @State private var planValidationWarnings: [String] = []
     @State private var showValidationWarnings = false
+    @State private var skipValidationOnNextSave = false
     @State private var lastFailedMessage: String? = nil
     @State private var editorHeight: CGFloat = 17
     @State private var emptyGlow = false
@@ -599,7 +600,8 @@ struct PlanningChatView: View {
 
                     Button {
                         showValidationWarnings = false
-                        // Save anyway - call save again
+                        // Skip validation on this save attempt
+                        skipValidationOnNextSave = true
                         savePlan()
                     } label: {
                         Text("Save Anyway")
@@ -1506,19 +1508,6 @@ After planning, tell the user which inbox tasks you included):
             }
         }
 
-        // Check total hours in day
-        var totalMinutes = 0
-        for block in plan.blocks {
-            if let start = timeComponents(block.startTime), let end = timeComponents(block.endTime) {
-                let minutes = (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute)
-                totalMinutes += minutes
-            }
-        }
-        let totalHours = totalMinutes / 60
-        if totalHours > 16 {
-            warnings.append("⚠️ Total scheduled time is \(totalHours) hours — very ambitious for one day")
-        }
-
         return PlanValidationResult(isValid: warnings.isEmpty, warnings: warnings)
     }
 
@@ -1573,18 +1562,23 @@ After planning, tell the user which inbox tasks you included):
             do {
                 let plan = try await aiService.generatePlan(for: planDate, history: history)
 
-                // Validate plan and show warnings if needed
-                let validation = validatePlan(plan)
-                if !validation.isValid {
-                    await MainActor.run {
-                        planValidationWarnings = validation.warnings
-                        showValidationWarnings = true
+                // Validate plan and show warnings if needed (unless user chose "Save Anyway")
+                if !skipValidationOnNextSave {
+                    let validation = validatePlan(plan)
+                    if !validation.isValid {
+                        await MainActor.run {
+                            planValidationWarnings = validation.warnings
+                            showValidationWarnings = true
+                        }
+                        if let index = messages.lastIndex(where: { $0.isThinking }) {
+                            messages.remove(at: index)
+                        }
+                        isSaving = false
+                        return
                     }
-                    if let index = messages.lastIndex(where: { $0.isThinking }) {
-                        messages.remove(at: index)
-                    }
-                    isSaving = false
-                    return
+                } else {
+                    // Reset flag after use
+                    skipValidationOnNextSave = false
                 }
 
                 let isFirstPlan = StreakManager.shared.totalPlansCreated == 0
