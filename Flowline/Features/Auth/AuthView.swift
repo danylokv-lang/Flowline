@@ -55,6 +55,7 @@ struct AuthView: View {
                     if mode == .register {
                         authField("Name", text: $name, icon: "person")
                     }
+                    #if os(iOS)
                     authField("Email", text: $email, icon: "envelope", keyboardType: .emailAddress) {
                         if !email.isEmpty {
                             emailError = EmailValidator.isValid(email) ? nil : EmailValidator.errorMessage(for: email)
@@ -62,6 +63,15 @@ struct AuthView: View {
                             emailError = nil
                         }
                     }
+                    #else
+                    authField("Email", text: $email, icon: "envelope") {
+                        if !email.isEmpty {
+                            emailError = EmailValidator.isValid(email) ? nil : EmailValidator.errorMessage(for: email)
+                        } else {
+                            emailError = nil
+                        }
+                    }
+                    #endif
                     if let err = emailError {
                         Text(err)
                             .font(.system(size: 11))
@@ -168,6 +178,7 @@ struct AuthView: View {
         .frame(maxWidth: .infinity)
     }
 
+    #if os(iOS)
     private func authField(_ placeholder: String, text: Binding<String>,
                            icon: String, isSecure: Bool = false,
                            keyboardType: UIKeyboardType = .default,
@@ -203,6 +214,41 @@ struct AuthView: View {
                 )
         )
     }
+    #else
+    private func authField(_ placeholder: String, text: Binding<String>,
+                           icon: String, isSecure: Bool = false,
+                           onChange: @escaping () -> Void = {}) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(FlowLineTheme.secondTxt)
+                .frame(width: 16)
+
+            if isSecure {
+                SecureField(placeholder, text: text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+            } else {
+                TextField(placeholder, text: text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+                    .onChange(of: text.wrappedValue) { _, _ in onChange() }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(FlowLineTheme.tertiaryBg)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(FlowLineTheme.borderHi, lineWidth: 1)
+                )
+        )
+    }
+    #endif
 
     // MARK: - Logic
 
@@ -296,7 +342,9 @@ struct ForgotPasswordSheet: View {
                         .textFieldStyle(.plain)
                         .font(.system(size: 13))
                         .foregroundColor(FlowLineTheme.mainTxt)
+                        #if os(iOS)
                         .keyboardType(.emailAddress)
+                        #endif
                         .onChange(of: email) { _, _ in
                             if !email.isEmpty {
                                 emailError = EmailValidator.isValid(email) ? nil : EmailValidator.errorMessage(for: email)

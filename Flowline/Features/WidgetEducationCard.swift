@@ -216,6 +216,7 @@ struct WidgetHowToSheet: View {
                 }
             }
             .navigationTitle("Add a Widget")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -223,6 +224,14 @@ struct WidgetHowToSheet: View {
                         .foregroundColor(FlowLineTheme.secondTxt)
                 }
             }
+            #else
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button("Close") { dismiss() }
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                }
+            }
+            #endif
         }
     }
 
