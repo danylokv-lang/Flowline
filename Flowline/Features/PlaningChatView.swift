@@ -92,6 +92,8 @@ struct PlanningChatView: View {
     @State private var showValidationWarnings = false
     @State private var skipValidationOnNextSave = false
     @State private var lastFailedMessage: String? = nil
+    @State private var canRetrySave = false
+    @State private var showCalendarDeniedAlert = false
     @State private var editorHeight: CGFloat = 17
     @State private var emptyGlow = false
     @State private var selectedTemplate: DayTemplate? = nil
@@ -197,7 +199,11 @@ struct PlanningChatView: View {
 
                     // Settings gear
                     Button {
+                        #if os(macOS)
+                        openSettings()
+                        #else
                         showSettings = true
+                        #endif
                     } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 16, weight: .regular))
@@ -297,8 +303,24 @@ struct PlanningChatView: View {
                     if !subscriptionManager.isPro {
                         HStack {
                             Spacer()
-                            if subscriptionManager.isInTrial {
-                                Text("Free trial — unlimited saves · \(subscriptionManager.trialDaysRemaining)d remaining")
+                            if subscriptionManager.isAtLimit {
+                                Button { showPaywall = true } label: {
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "lock.fill")
+                                            .font(.system(size: 9, weight: .bold))
+                                        Text("Weekly limit reached — Upgrade for more")
+                                            .font(.system(size: 10, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(FlowLineTheme.accent)
+                                    .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            } else if subscriptionManager.isInTrial {
+                                let days = subscriptionManager.trialDaysRemaining
+                                Text("Free trial — unlimited saves · \(days == 0 ? "Ends today" : "\(days)d remaining")")
                                     #if os(macOS)
                                     .font(.system(size: 11))
                                     .foregroundColor(FlowLineTheme.accent.opacity(0.85))
@@ -307,7 +329,6 @@ struct PlanningChatView: View {
                                     .foregroundColor(FlowLineTheme.accent.opacity(0.7))
                                     #endif
                             } else if subscriptionManager.plansThisWeek == 0 {
-                                // Show "0/3" on first week or after reset, even without active trial
                                 Text("0/\(SubscriptionManager.weeklyFreeLimit) plans saved this week")
                                     #if os(macOS)
                                     .font(.system(size: 11))
@@ -316,7 +337,7 @@ struct PlanningChatView: View {
                                     .font(.system(size: 10))
                                     .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
                                     #endif
-                            } else if !subscriptionManager.isAtLimit {
+                            } else {
                                 Text("\(subscriptionManager.plansThisWeek)/\(SubscriptionManager.weeklyFreeLimit) plans saved this week")
                                     #if os(macOS)
                                     .font(.system(size: 11))
@@ -379,6 +400,10 @@ struct PlanningChatView: View {
                                 Button {
                                     _Concurrency.Task { @MainActor in
                                         await calendarService.requestAccess()
+                                        guard calendarService.isAuthorized else {
+                                            showCalendarDeniedAlert = true
+                                            return
+                                        }
                                         var cals = calendarService.writableCalendars()
                                         if cals.isEmpty {
                                             try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 400_000_000)
@@ -619,9 +644,11 @@ struct PlanningChatView: View {
             }
             .background(FlowLineTheme.mainBg)
         }
+        #if !os(macOS)
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
+        #endif
     }
 
     // MARK: - End-of-Day Review
@@ -889,6 +916,7 @@ struct PlanningChatView: View {
                     Button {
                         sendMessage(prompt)
                     } label: {
+
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.up.right")
                                 .font(.system(size: 10, weight: .bold))
@@ -929,7 +957,8 @@ struct PlanningChatView: View {
                         .shadow(color: FlowLineTheme.accent.opacity(0.08), radius: 6, x: 0, y: 2)
                     }
                     .buttonStyle(.plain)
-                    .disabled(isLoading || isSaving)
+                    .disabled(isLoading || isSaving || subscriptionManager.isAtLimit)
+                    .opacity(subscriptionManager.isAtLimit ? 0.4 : 1)
                 }
             }
             .frame(maxWidth: 320)

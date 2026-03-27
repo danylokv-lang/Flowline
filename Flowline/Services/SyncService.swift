@@ -194,6 +194,8 @@ final class SyncService {
         // Only skip onboarding if the user has explicitly completed it on another device
         if onboardingDone {
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        } else {
+            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
         }
 
         // Restore server-authoritative weekly save count (survives reinstalls + device switches)

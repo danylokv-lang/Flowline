@@ -13,150 +13,165 @@
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; }
 
-    /* ── Welcome wrap ── */
     .welcome-wrap {
       flex: 1;
       display: flex; align-items: center; justify-content: center;
-      padding: 120px 28px 80px;
+      padding: 100px 20px 80px;
       position: relative; overflow: hidden;
     }
     .welcome-wrap::before {
       content: '';
-      position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
-      width: 700px; height: 700px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(109,76,250,.14) 0%, transparent 65%);
+      position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(109,76,250,.11) 0%, transparent 65%);
       pointer-events: none;
     }
 
     .welcome-card {
-      width: 100%; max-width: 560px;
+      width: 100%; max-width: 480px;
       text-align: center;
     }
 
     /* ── Icon ── */
     .welcome-icon {
-      width: 72px; height: 72px;
-      background: linear-gradient(135deg, rgba(109,76,250,.2), rgba(139,109,255,.1));
-      border: 1px solid rgba(109,76,250,.35);
-      border-radius: 20px;
+      width: 76px; height: 76px;
+      background: linear-gradient(135deg, rgba(109,76,250,.22), rgba(139,109,255,.1));
+      border: 1px solid rgba(109,76,250,.4);
+      border-radius: 22px;
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 28px;
-      font-size: 30px;
-      box-shadow: 0 0 40px rgba(109,76,250,.2);
+      margin: 0 auto 32px;
+      font-size: 32px;
+      box-shadow: 0 0 50px rgba(109,76,250,.25), 0 2px 8px rgba(0,0,0,.4);
     }
 
     /* ── Heading ── */
     .welcome-title {
-      font-size: clamp(32px, 5vw, 52px);
-      font-weight: 900; letter-spacing: -2px; line-height: 1.1;
-      margin-bottom: 12px;
+      font-size: clamp(30px, 6vw, 48px);
+      font-weight: 900; letter-spacing: -1.5px; line-height: 1.12;
+      margin-bottom: 14px; color: var(--txt);
     }
-    .welcome-title span {
-      background: linear-gradient(135deg, #c4b5fd, #8b6dff);
+    .welcome-title .name-highlight {
+      background: linear-gradient(135deg, #c4b5fd 0%, #8b6dff 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     .welcome-sub {
-      font-size: 16px; color: var(--txt2); line-height: 1.65;
-      max-width: 420px; margin: 0 auto 36px;
+      font-size: 15.5px; color: var(--txt2); line-height: 1.65;
+      max-width: 380px; margin: 0 auto 32px;
     }
 
     /* ── Plan badge ── */
     .plan-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(109,76,250,.12); border: 1px solid rgba(109,76,250,.3);
-      border-radius: 100px; padding: 6px 16px; margin-bottom: 40px;
-      font-size: 13px; font-weight: 600; color: var(--accent-hi);
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(109,76,250,.12); border: 1px solid rgba(109,76,250,.28);
+      border-radius: 100px; padding: 5px 14px; margin-bottom: 40px;
+      font-size: 12.5px; font-weight: 700; color: var(--accent-hi);
+      letter-spacing: .01em;
     }
     .plan-badge .dot {
-      width: 7px; height: 7px; border-radius: 50%;
+      width: 6px; height: 6px; border-radius: 50%;
       background: var(--accent-hi);
       box-shadow: 0 0 8px var(--accent);
     }
-    .plan-badge.pro { background: rgba(251,191,36,.1); border-color: rgba(251,191,36,.3); color: #fbbf24; }
-    .plan-badge.pro .dot { background: #fbbf24; box-shadow: 0 0 8px rgba(251,191,36,.6); }
+    .plan-badge.pro { background: rgba(251,191,36,.1); border-color: rgba(251,191,36,.28); color: #fbbf24; }
+    .plan-badge.pro .dot { background: #fbbf24; box-shadow: 0 0 8px rgba(251,191,36,.55); }
 
-    /* ── Download card ── */
-    .download-card {
+    /* ── App cards ── */
+    .app-cards {
+      display: flex; flex-direction: column; gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .app-card {
       background: var(--bg-s);
       border: 1px solid var(--border-hi);
-      border-radius: 20px; padding: 32px;
-      margin-bottom: 20px;
-      box-shadow: 0 1px 2px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.05);
+      border-radius: 18px; padding: 20px 22px;
+      display: flex; align-items: center; gap: 18px;
+      text-align: left;
+      transition: border-color .2s, transform .15s;
     }
-    .download-card h3 {
-      font-size: 18px; font-weight: 800; letter-spacing: -.4px;
-      margin-bottom: 8px;
-    }
-    .download-card p {
-      font-size: 14px; color: var(--txt2); line-height: 1.6; margin-bottom: 24px;
-    }
+    .app-card:hover { border-color: rgba(109,76,250,.45); transform: translateY(-1px); }
 
-    /* Coming soon button */
-    .download-btn {
-      position: relative; overflow: hidden;
-      width: 100%; padding: 15px 24px;
-      background: rgba(255,255,255,.04);
-      border: 1.5px solid var(--border-hi);
-      border-radius: 12px;
-      color: var(--txt2); font-size: 15px; font-weight: 600; font-family: inherit;
-      display: flex; align-items: center; justify-content: center; gap: 12px;
+    .app-card-icon {
+      width: 52px; height: 52px; flex-shrink: 0;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .app-card-icon.purple { background: linear-gradient(135deg, rgba(109,76,250,.22), rgba(139,109,255,.1)); border: 1px solid rgba(109,76,250,.3); }
+    .app-card-icon.dark { background: rgba(255,255,255,.05); border: 1px solid var(--border-hi); }
+
+    .app-card-info { flex: 1; }
+    .app-card-info h3 { font-size: 15px; font-weight: 700; letter-spacing: -.3px; color: var(--txt); margin-bottom: 3px; }
+    .app-card-info p { font-size: 12.5px; color: var(--txt2); margin: 0; }
+
+    .app-card-action {
+      flex-shrink: 0;
+    }
+    .app-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 16px; border-radius: 10px;
+      font-size: 13px; font-weight: 700; font-family: inherit;
+      cursor: pointer; border: none; transition: opacity .15s, transform .1s;
+      text-decoration: none;
+    }
+    .app-btn:active { transform: scale(.97); }
+    .app-btn.primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(109,76,250,.4);
+    }
+    .app-btn.primary:hover { opacity: .88; }
+    .app-btn.secondary {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border-hi);
+      color: var(--txt2);
       cursor: default;
     }
-    .download-btn .btn-icon {
-      width: 32px; height: 32px;
-      background: rgba(255,255,255,.06);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-    }
-    .download-btn-text { text-align: left; }
-    .download-btn-text .line1 { font-size: 11px; color: var(--txt3); font-weight: 500; display: block; }
-    .download-btn-text .line2 { font-size: 15px; color: var(--txt2); font-weight: 700; display: block; }
-    .coming-tag {
-      margin-left: auto;
-      background: rgba(109,76,250,.15); border: 1px solid rgba(109,76,250,.3);
-      border-radius: 100px; padding: 3px 10px;
-      font-size: 11px; font-weight: 700; color: var(--accent-hi); letter-spacing: .04em;
-      text-transform: uppercase;
+    .app-btn .btn-tag {
+      font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      background: rgba(255,255,255,.15); border-radius: 4px; padding: 2px 5px;
     }
 
-    /* ── Notify strip ── */
-    .notify-strip {
-      background: linear-gradient(135deg, rgba(109,76,250,.08), rgba(139,109,255,.05));
-      border: 1px solid rgba(109,76,250,.18);
-      border-radius: 12px; padding: 16px 20px;
-      display: flex; align-items: center; gap: 14px;
-      text-align: left;
+    /* ── Info section ── */
+    .section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--txt3);
+      margin-bottom: 10px; text-align: left;
     }
-    .notify-strip .n-icon { font-size: 20px; flex-shrink: 0; }
-    .notify-strip p { font-size: 13.5px; color: var(--txt2); line-height: 1.55; margin: 0; }
-    .notify-strip p strong { color: var(--txt); }
 
-    /* ── Account info ── */
-    .account-info {
-      margin-top: 32px;
+    .account-card {
       background: var(--bg-s); border: 1px solid var(--border);
-      border-radius: 16px; padding: 20px 24px;
-      display: flex; flex-direction: column; gap: 12px;
-      text-align: left;
+      border-radius: 16px; overflow: hidden;
+      margin-top: 24px; text-align: left;
     }
     .info-row {
       display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 20px;
     }
-    .info-label { font-size: 12px; color: var(--txt3); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
-    .info-val { font-size: 14px; color: var(--txt); font-weight: 500; }
-    .info-divider { height: 1px; background: var(--border); }
+    .info-row + .info-row { border-top: 1px solid var(--border); }
+    .info-label { font-size: 12px; color: var(--txt3); font-weight: 600; }
+    .info-val { font-size: 13.5px; color: var(--txt); font-weight: 500; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* ── Sign out ── */
-    .signout-row {
-      margin-top: 24px; text-align: center;
+    /* ── Footer actions ── */
+    .welcome-footer-actions {
+      margin-top: 28px;
+      display: flex; align-items: center; justify-content: center; gap: 20px;
     }
-    .signout-btn {
-      background: none; border: none; cursor: pointer;
-      font-size: 13px; color: var(--txt3); font-family: inherit;
+    .welcome-footer-actions a, .welcome-footer-actions button {
+      font-size: 13px; color: var(--txt3); background: none; border: none;
+      cursor: pointer; font-family: inherit; text-decoration: none;
       transition: color .2s;
     }
-    .signout-btn:hover { color: var(--txt2); }
+    .welcome-footer-actions a:hover, .welcome-footer-actions button:hover { color: var(--txt2); }
+    .welcome-footer-actions .sep { color: var(--border-hi); font-size: 11px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .app-card { padding: 16px; gap: 14px; }
+      .app-card-icon { width: 44px; height: 44px; font-size: 18px; border-radius: 12px; }
+      .app-card-info h3 { font-size: 14px; }
+    }
   </style>
 </head>
 <body>
@@ -182,10 +197,10 @@
     <div class="welcome-icon">✦</div>
 
     <h1 class="welcome-title">
-      You're in, <span id="userName">friend</span>.
+      You're in,<br><span class="name-highlight" id="userName">friend</span>.
     </h1>
     <p class="welcome-sub">
-      Your Flowline account is ready. Get the app on your iPhone or Mac — sign in with your account and start planning smarter.
+      Your Flowline account is ready. Download the app and sign in to start planning smarter.
     </p>
 
     <div class="plan-badge" id="planBadge">
@@ -193,58 +208,58 @@
       <span id="planLabel">Free plan</span>
     </div>
 
-    <!-- Download cards -->
-    <div class="download-card">
-      <h3>Get Flowline on your device</h3>
-      <p>Download the app for your iPhone or Mac and sign in with your account. Everything syncs in real-time.</p>
-
-      <div style="display: flex; gap: 12px; flex-direction: column;">
-        <button class="download-btn" disabled>
-          <div class="btn-icon">📱</div>
-          <div class="download-btn-text">
-            <span class="line1">Download on</span>
-            <span class="line2">App Store (iPhone)</span>
-          </div>
-          <span class="coming-tag">Now</span>
-        </button>
-
-        <button class="download-btn" disabled>
-          <div class="btn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".6"/>
-              <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
-            </svg>
-          </div>
-          <div class="download-btn-text">
-            <span class="line1">Available on</span>
-            <span class="line2">Mac App Store</span>
-          </div>
-          <span class="coming-tag">Soon</span>
-        </button>
+    <!-- App download cards -->
+    <div class="app-cards">
+      <div class="app-card">
+        <div class="app-card-icon purple">📱</div>
+        <div class="app-card-info">
+          <h3>Flowline for iPhone</h3>
+          <p>Plan your day from anywhere.</p>
+        </div>
+        <div class="app-card-action">
+          <button class="app-btn secondary" disabled>
+            App Store
+            <span class="btn-tag">Soon</span>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <!-- Notify strip -->
-    <div class="notify-strip">
-      <span class="n-icon">📬</span>
-      <p><strong>We've got your email.</strong> We'll notify you about important updates, new features, and when macOS launches. No spam — just meaningful news.</p>
+      <div class="app-card">
+        <div class="app-card-icon dark">
+          <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
+            <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".7"/>
+            <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
+          </svg>
+        </div>
+        <div class="app-card-info">
+          <h3>Flowline for Mac</h3>
+          <p>Menu bar + full app. Published.</p>
+        </div>
+        <div class="app-card-action">
+          <button class="app-btn secondary" disabled>
+            Mac App Store
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Account info -->
-    <div class="account-info">
+    <div class="section-label">Your account</div>
+    <div class="account-card">
       <div class="info-row">
-        <span class="info-label">Account</span>
+        <span class="info-label">Email</span>
         <span class="info-val" id="infoEmail">—</span>
       </div>
-      <div class="info-divider"></div>
       <div class="info-row">
         <span class="info-label">Plan</span>
         <span class="info-val" id="infoPlan">Free</span>
       </div>
     </div>
 
-    <div class="signout-row">
-      <button class="signout-btn" onclick="signOut()">Sign out</button>
+    <div class="welcome-footer-actions">
+      <a href="/">Back to site</a>
+      <span class="sep">·</span>
+      <button onclick="signOut()">Sign out</button>
     </div>
 
   </div>
@@ -279,7 +294,6 @@ if (!user) {
   window.location.replace('/');
 }
 
-// ── Populate page ─────────────────────────────────────────────────────────
 if (user) {
   const firstName = user.name?.split(' ')[0] || 'friend';
   document.getElementById('userName').textContent = firstName;
@@ -300,28 +314,23 @@ if (user) {
   }
 }
 
-// ── Nav ───────────────────────────────────────────────────────────────────
 function updateNav() {
   const u = getUser();
   const navEnd = document.getElementById('navEnd');
   if (!navEnd) return;
   if (u) {
     const initials = u.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    navEnd.innerHTML = `
-      <span class="nav-avatar" title="${u.name}" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6d4cfa,#9b6dff);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">${initials}</span>
-    `;
+    navEnd.innerHTML = `<span style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6d4cfa,#9b6dff);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">${initials}</span>`;
   }
 }
 updateNav();
 
-// ── Sign out ──────────────────────────────────────────────────────────────
 function signOut() {
   localStorage.removeItem('fl_token');
   localStorage.removeItem('fl_user');
   window.location.replace('/');
 }
 
-// ── Scroll nav ────────────────────────────────────────────────────────────
 window.addEventListener('scroll', () => {
   document.getElementById('nav').classList.toggle('scrolled', scrollY > 20);
 }, { passive: true });

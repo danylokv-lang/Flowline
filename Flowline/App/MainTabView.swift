@@ -156,10 +156,6 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showStreakToast = false
     @ObservedObject private var streakManager = StreakManager.shared
-    #if os(macOS)
-    @Environment(\.openSettings) private var openSettings
-    #endif
-
     @Query(filter: #Predicate<CapturedTask> { !$0.isScheduled })
     private var pendingTasks: [CapturedTask]
     private var pendingCount: Int { pendingTasks.count }
@@ -189,19 +185,13 @@ struct MainTabView: View {
                     .badge(pendingCount > 0 ? pendingCount : 0)
                     .help("Capture tasks here — the AI will slot them into your plan when you ask")
                     .tag(4)
+#if !os(macOS)
+                SettingsView()
+                    .tabItem { Label("Settings", systemImage: "gearshape") }
+                    .tag(5)
+#endif
             }
             .tint(FlowLineTheme.accent)
-            #if os(macOS)
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button { openSettings() } label: {
-                        Image(systemName: "gearshape")
-                            .foregroundColor(FlowLineTheme.secondTxt)
-                    }
-                    .help("Settings  ⌘,")
-                }
-            }
-            #endif
 
             // ── Streak launch toast ────────────────────────────────────────
             if showStreakToast {

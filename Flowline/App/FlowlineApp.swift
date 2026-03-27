@@ -178,9 +178,9 @@ struct FlowlineApp: App {
         if let items = try? ctx.fetch(FetchDescriptor<CapturedTask>())   { items.forEach { ctx.delete($0) } }
         if let items = try? ctx.fetch(FetchDescriptor<FlowTask>())       { items.forEach { ctx.delete($0) } }
         try? ctx.save()
-        // NOTE: hasCompletedOnboarding is NOT reset here.
-        // pullProfile() always writes the server's onboarding_done value,
-        // so the correct state is set once the pull completes.
+        // Reset onboarding flag so new accounts always see onboarding.
+        // pullProfile() will set it to true if the server says onboarding is done.
+        hasCompletedOnboarding = false
         StreakManager.shared.resetForAccountSwitch()
         // Reset weekly plan limit locally — pullAll will restore the server's count
         subscriptionManager.resetForAccountSwitch()

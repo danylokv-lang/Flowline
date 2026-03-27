@@ -44,6 +44,7 @@ struct OnboardingView: View {
 
     // Navigation
     @State private var currentStep = 0
+    @State private var isGoingForward = true
     private let totalSteps = 4
 
     // Step 1 — Name
@@ -110,8 +111,8 @@ struct OnboardingView: View {
                         }
                     }
                     .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal:   .move(edge: .leading).combined(with: .opacity)
+                        insertion: .move(edge: isGoingForward ? .trailing : .leading).combined(with: .opacity),
+                        removal:   .move(edge: isGoingForward ? .leading : .trailing).combined(with: .opacity)
                     ))
                     .id("step-\(currentStep)")
                 }
@@ -122,6 +123,7 @@ struct OnboardingView: View {
                 HStack {
                     if currentStep > 0 {
                         Button {
+                            isGoingForward = false
                             withAnimation(.easeInOut(duration: 0.25)) { currentStep -= 1 }
                         } label: {
                             HStack(spacing: 4) {
@@ -139,7 +141,10 @@ struct OnboardingView: View {
 
                     Spacer()
 
-                    Button { advance() } label: {
+                    Button {
+                        isGoingForward = true
+                        advance()
+                    } label: {
                         HStack(spacing: 6) {
                             Text(currentStep == totalSteps - 1 ? "Create my first plan" : "Continue")
                                 .font(.system(size: 14, weight: .bold))
