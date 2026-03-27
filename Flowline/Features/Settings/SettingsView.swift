@@ -454,13 +454,14 @@ private struct ProfileForm: View {
 
             Section("Schedule") {
                 DatePicker("Wake up", selection: $wakeTime, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.compact)
                     .onChange(of: wakeTime) {
                         profile.wakeTime = wakeTime
                         NotificationManager.shared.reschedule(
                             name: profile.name, wakeTime: wakeTime, sleepTime: sleepTime)
                     }
-
                 DatePicker("Bedtime", selection: $sleepTime, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.compact)
                     .onChange(of: sleepTime) {
                         profile.sleepTime = sleepTime
                         NotificationManager.shared.reschedule(

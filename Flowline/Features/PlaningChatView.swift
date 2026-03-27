@@ -95,6 +95,7 @@ struct PlanningChatView: View {
     @State private var emptyGlow = false
     @State private var selectedTemplate: DayTemplate? = nil
     @State private var streakPulse: Bool = false
+    @State private var showSettings = false
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @AppStorage("lastUsedCalendarID") private var lastUsedCalendarID: String = ""
     @AppStorage("lastPlanDate") private var lastPlanDate: String = ""
@@ -192,6 +193,18 @@ struct PlanningChatView: View {
                         .fill(isLoading ? FlowLineTheme.accent : FlowLineTheme.secondTxt.opacity(0.3))
                         .frame(width: 8, height: 8)
                         .animation(.easeInOut(duration: 0.3), value: isLoading)
+
+                    // Settings gear
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
@@ -600,6 +613,9 @@ struct PlanningChatView: View {
                 Spacer()
             }
             .background(FlowLineTheme.mainBg)
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
         }
     }
 

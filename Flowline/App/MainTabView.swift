@@ -189,12 +189,6 @@ struct MainTabView: View {
                     .badge(pendingCount > 0 ? pendingCount : 0)
                     .help("Capture tasks here — the AI will slot them into your plan when you ask")
                     .tag(4)
-
-                #if os(iOS)
-                SettingsView()
-                    .tabItem { Label("Settings", systemImage: "gearshape") }
-                    .tag(5)
-                #endif
             }
             .tint(FlowLineTheme.accent)
             #if os(macOS)
