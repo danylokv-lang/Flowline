@@ -237,6 +237,7 @@ struct MainTabView: View {
             if tab == 3 { UserDefaults.standard.set(true, forKey: "hasUsedFocusTimer") }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showStreakToast)
+        .withCelebrations()
     }
 
     private func showStreakToastBriefly() {

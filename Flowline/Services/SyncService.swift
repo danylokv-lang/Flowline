@@ -280,9 +280,18 @@ final class SyncService {
                 predicate: #Predicate<DayPlan> { $0.date >= dayStart && $0.date < nextDay }
             )
             let plan: DayPlan
+
+            // Snapshot check-in results keyed by "HH:mm|title" before wiping blocks.
+            // The server never stores check-in state, so we preserve it locally.
+            var checkInCache: [String: (CheckInResult?, Bool)] = [:]
+
             if let existing = (try? context.fetch(descriptor))?.first {
                 plan = existing
                 plan.aiNotes = aiNotes
+                for block in plan.blocks {
+                    let key = "\(hhmmFmt.string(from: block.startTime))|\(block.title)"
+                    checkInCache[key] = (block.checkInResult, block.isCompleted)
+                }
                 plan.blocks.forEach { context.delete($0) }
                 plan.blocks = []
             } else {
@@ -308,6 +317,19 @@ final class SyncService {
                 let block = ScheduleBlock(title: title, category: category,
                                           startTime: timeDate(startStr),
                                           endTime:   timeDate(endStr))
+
+                // Restore check-in result from local cache.
+                // If the server ever starts returning checkInResult, it takes precedence.
+                let serverResult = (b["checkInResult"] as? String).flatMap { CheckInResult(rawValue: $0) }
+                let cacheKey = "\(startStr)|\(title)"
+                if let sr = serverResult {
+                    block.checkInResult = sr
+                    block.isCompleted   = (sr == .done)
+                } else if let cached = checkInCache[cacheKey] {
+                    block.checkInResult = cached.0
+                    block.isCompleted   = cached.1
+                }
+
                 context.insert(block)
                 plan.blocks.append(block)
             }
@@ -346,12 +368,17 @@ final class SyncService {
     // MARK: - Helpers
 
     private func planToJSON(_ plan: DayPlan) -> [String: Any] {
-        let blocks: [[String: Any]] = plan.blocks.map { b in [
-            "title":     b.title,
-            "category":  b.category?.rawValue ?? "personal",
-            "startTime": hhmmFmt.string(from: b.startTime),
-            "endTime":   hhmmFmt.string(from: b.endTime),
-        ]}
+        let blocks: [[String: Any]] = plan.blocks.map { b in
+            var dict: [String: Any] = [
+                "title":       b.title,
+                "category":    b.category?.rawValue ?? "personal",
+                "startTime":   hhmmFmt.string(from: b.startTime),
+                "endTime":     hhmmFmt.string(from: b.endTime),
+                "isCompleted": b.isCompleted,
+            ]
+            if let r = b.checkInResult { dict["checkInResult"] = r.rawValue }
+            return dict
+        }
         var day: [String: Any] = ["date": dateFmt.string(from: plan.date), "blocks": blocks]
         if let notes = plan.aiNotes { day["aiNotes"] = notes }
         return day

@@ -13,6 +13,8 @@ enum StatsPeriod: String, CaseIterable {
 
 struct StatsView: View {
     @Query private var dayPlans: [DayPlan]
+    /// Direct block query — avoids SwiftData lazy-loading relationships on iOS
+    @Query private var allBlocks: [ScheduleBlock]
     @EnvironmentObject private var colorManager: CategoryColorManager
     @ObservedObject private var streak = StreakManager.shared
 
@@ -114,7 +116,7 @@ struct StatsView: View {
                 }
             }
 
-            if total == 0 {
+            if filteredBlocks.isEmpty {
                 emptyHint("No blocks \(periodLabel) — start by planning your day.")
             } else {
                 // 2 × 2 cards
@@ -364,27 +366,26 @@ struct StatsView: View {
         }
     }
 
-    /// DayPlans whose date falls within the selected period.
-    private var filteredPlans: [DayPlan] {
+    /// Blocks whose startTime falls within the selected period.
+    /// Uses the direct @Query instead of DayPlan.blocks to avoid SwiftData
+    /// lazy-relationship loading returning empty arrays on iOS.
+    private var filteredBlocks: [ScheduleBlock] {
         let (start, end) = periodRange
-        return dayPlans.filter {
-            let d = cal.startOfDay(for: $0.date)
-            return d >= start && d < end
-        }
+        return allBlocks.filter { $0.startTime >= start && $0.startTime < end }
     }
 
-    /// (done, partly, skipped, noCheckIn) for all past blocks in the selected period.
+    /// (done, partly, skipped, noCheckIn) for blocks in the selected period.
+    /// Done/Partly/Skipped: all blocks regardless of time (check-in can be set any time).
+    /// No check-in: only past blocks (endTime <= now) that were never rated.
     private var completionStats: (Int, Int, Int, Int) {
         var done = 0, partly = 0, skipped = 0, noData = 0
         let now = Date()
-        for plan in filteredPlans {
-            for block in plan.blocks where block.endTime <= now {
-                switch block.checkInResult {
-                case .done:    done    += 1
-                case .partly:  partly  += 1
-                case .skipped: skipped += 1
-                case .none:    noData  += 1
-                }
+        for block in filteredBlocks {
+            switch block.checkInResult {
+            case .done:    done    += 1
+            case .partly:  partly  += 1
+            case .skipped: skipped += 1
+            case .none:    if block.endTime <= now { noData += 1 }
             }
         }
         return (done, partly, skipped, noData)
@@ -393,11 +394,9 @@ struct StatsView: View {
     /// Hours per category for the selected period (all blocks, not just past ones).
     private var hoursBreakdown: [Category: Double] {
         var result: [Category: Double] = [:]
-        for plan in filteredPlans {
-            for block in plan.blocks {
-                let hours = block.endTime.timeIntervalSince(block.startTime) / 3600.0
-                result[block.category ?? .personal, default: 0] += hours
-            }
+        for block in filteredBlocks {
+            let hours = block.endTime.timeIntervalSince(block.startTime) / 3600.0
+            result[block.category ?? .personal, default: 0] += hours
         }
         return result
     }
@@ -405,10 +404,8 @@ struct StatsView: View {
     /// Hour of day (0-23) with the most Done check-ins in the selected period.
     private var peakFocusHour: Int? {
         var counts = [Int: Int]()
-        for plan in filteredPlans {
-            for block in plan.blocks where block.checkInResult == .done {
-                counts[cal.component(.hour, from: block.startTime), default: 0] += 1
-            }
+        for block in filteredBlocks where block.checkInResult == .done {
+            counts[cal.component(.hour, from: block.startTime), default: 0] += 1
         }
         return counts.max(by: { $0.value < $1.value })?.key
     }

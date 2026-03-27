@@ -224,17 +224,10 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
         <table role="presentation" cellspacing="0" cellpadding="0" border="0">
           <tr>
             <td style="vertical-align:middle;padding-right:8px;">
-              <img src="https://flowline.ink/icon-email.png" width="28" height="28" alt="Flowline"
-                   style="display:block;width:28px;height:28px;"
-                   onerror="this.style.display='none'"/>
-              <!--[if !mso]><!-->
-              <div style="display:none;">
               <svg width="28" height="28" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
                 <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="#6d4cfa"/>
                 <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#07070f"/>
               </svg>
-              </div>
-              <!--<![endif]-->
             </td>
             <td style="vertical-align:middle;">
               <span style="font-family:${F};font-size:17px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Flowline</span>
@@ -764,7 +757,8 @@ async function handleGetCalendar(userId, url, env) {
       cd.id, cd.date, cd.ai_notes,
       json_group_array(json_object(
         'id', sb.id, 'title', sb.title, 'category', sb.category,
-        'startTime', sb.start_time, 'endTime', sb.end_time
+        'startTime', sb.start_time, 'endTime', sb.end_time,
+        'checkInResult', sb.check_in_result
       )) AS blocks
     FROM calendar_days cd
     LEFT JOIN schedule_blocks sb ON sb.day_id = cd.id
@@ -863,10 +857,10 @@ async function handleSyncCalendar(userId, req, env) {
     for (const block of day.blocks ?? []) {
       stmts.push(
         env.DB.prepare(`
-          INSERT INTO schedule_blocks (id, day_id, user_id, title, category, start_time, end_time, created_at)
-          VALUES (?,?,?,?,?,?,?,?)
+          INSERT INTO schedule_blocks (id, day_id, user_id, title, category, start_time, end_time, check_in_result, created_at)
+          VALUES (?,?,?,?,?,?,?,?,?)
         `).bind(crypto.randomUUID(), dayId, userId, block.title, block.category,
-                block.startTime, block.endTime, ts)
+                block.startTime, block.endTime, block.checkInResult ?? '', ts)
       );
     }
   }

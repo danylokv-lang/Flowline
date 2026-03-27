@@ -94,6 +94,7 @@ struct PlanningChatView: View {
     @State private var editorHeight: CGFloat = 17
     @State private var emptyGlow = false
     @State private var selectedTemplate: DayTemplate? = nil
+    @State private var streakPulse: Bool = false
     @AppStorage("currentSessionID") private var currentSessionID: String = UUID().uuidString
     @AppStorage("lastUsedCalendarID") private var lastUsedCalendarID: String = ""
     @AppStorage("lastPlanDate") private var lastPlanDate: String = ""
@@ -162,6 +163,7 @@ struct PlanningChatView: View {
                                  : "Day 1")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(streak.currentStreak > 1 ? .orange : FlowLineTheme.accent)
+                                .contentTransition(.numericText(value: Double(streak.currentStreak)))
                         }
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
@@ -170,7 +172,19 @@ struct PlanningChatView: View {
                                 .opacity(0.12)
                         )
                         .clipShape(Capsule())
+                        .scaleEffect(streakPulse ? 1.18 : 1.0)
                         .transition(.scale.combined(with: .opacity))
+                        .onChange(of: streak.currentStreak) { _, _ in
+                            guard streak.currentStreak > 1 else { return }
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.4)) {
+                                streakPulse = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    streakPulse = false
+                                }
+                            }
+                        }
                     }
 
                     // Session dot indicator
@@ -1543,6 +1557,7 @@ After planning, tell the user which inbox tasks you included):
 
                 let isFirstPlan = StreakManager.shared.totalPlansCreated == 0
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                await MainActor.run { CelebrationManager.shared.triggerConfetti() }
                 WidgetDataWriter.shared.refresh(context: modelContext)
                 scheduleNotificationsAfterSave()
                 if let token = authService.token {
@@ -1615,6 +1630,7 @@ After planning, tell the user which inbox tasks you included):
                 }
 
                 try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                await MainActor.run { CelebrationManager.shared.triggerConfetti() }
                 WidgetDataWriter.shared.refresh(context: modelContext)
                 scheduleNotificationsAfterSave()
                 if let token = authService.token {

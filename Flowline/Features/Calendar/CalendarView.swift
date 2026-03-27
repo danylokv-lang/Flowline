@@ -5,6 +5,7 @@ struct CalendarView: View {
     @Query private var dayPlans: [DayPlan]
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var colorManager: CategoryColorManager
+    @EnvironmentObject private var authService: AuthService
     @State private var currentWeekStart: Date = CalendarView.mondayOfCurrentWeek()
     @State private var confirmDeleteDay: Date? = nil
     @State private var confirmDeleteWeek = false
@@ -767,6 +768,7 @@ struct CalendarView: View {
                         .background(Circle().fill(s.badgeColor.opacity(0.18)))
                         .padding(.top, 3)
                         .padding(.trailing, 4)
+                        .symbolEffect(.bounce, value: status == .done)
                 }
                 Spacer()
             }
@@ -868,6 +870,33 @@ struct CalendarView: View {
     private func setCheckIn(_ block: ScheduleBlock, result: CheckInResult?) {
         block.checkInResult = result
         block.isCompleted   = (result == .done)
+
+        // Push the updated day to the server so check-in survives across devices/reinstalls.
+        if let token = authService.token,
+           let plan  = dayPlans.first(where: { $0.blocks.contains(where: { $0.persistentModelID == block.persistentModelID }) }) {
+            Task { await SyncService.shared.pushDay(plan, token: token) }
+        }
+
+        guard result == .done else { return }
+
+        // Haptic on iOS
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+
+        // Confetti when every past block on the visible day is now done
+        #if os(iOS)
+        let day = selectedDay
+        #else
+        let day = currentWeekStart
+        #endif
+        let now = Date()
+        if let plan = dayPlans.first(where: { calendar.isDate($0.date, inSameDayAs: day) }) {
+            let pastBlocks = plan.blocks.filter { $0.endTime <= now }
+            if !pastBlocks.isEmpty, pastBlocks.allSatisfy({ $0.checkInResult == .done }) {
+                CelebrationManager.shared.triggerConfetti()
+            }
+        }
     }
 
     static func mondayOfCurrentWeek() -> Date {
