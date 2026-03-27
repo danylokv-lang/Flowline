@@ -83,7 +83,7 @@ final class NotificationManager {
         scheduleMorning(name: name, wakeTime: wakeTime)
         scheduleEvening(sleepTime: sleepTime)
         schedulePlanningNudge()
-        scheduleTomorrowNudge()
+        scheduleTomorrowNudge(sleepTime: sleepTime)
         scheduleStreakReminder(streakDays: 0, sleepTime: sleepTime)
     }
 
@@ -94,6 +94,9 @@ final class NotificationManager {
         }
         if UserDefaults.standard.bool(forKey: Self.eveningReminderEnabledKey) {
             scheduleEvening(sleepTime: sleepTime)
+        }
+        if UserDefaults.standard.bool(forKey: Self.tomorrowNudgeEnabledKey) {
+            scheduleTomorrowNudge(sleepTime: sleepTime)
         }
         scheduleStreakReminder(streakDays: 0, sleepTime: sleepTime)
     }
@@ -239,24 +242,29 @@ final class NotificationManager {
         center.removePendingNotificationRequests(withIdentifiers: [kNudgeID])
     }
 
-    // MARK: - Tomorrow Nudge (9pm — plan tomorrow before you sleep)
+    // MARK: - Tomorrow Nudge (60–15 min before sleep)
 
-    /// Daily 9:00 pm nudge — plan tomorrow's day before bed.
-    func scheduleTomorrowNudge() {
+    /// Daily nudge — plan tomorrow 30-60 minutes before bed.
+    /// Fires 45 minutes before sleep time for a good buffer before wind-down.
+    func scheduleTomorrowNudge(sleepTime: Date) {
         center.removePendingNotificationRequests(withIdentifiers: [kTomorrowID])
         guard isEnabled(Self.tomorrowNudgeEnabledKey) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Plan tomorrow before you sleep? 🌙"
-        content.body = "30 seconds to set yourself up for a great day."
+        content.body = "Set yourself up for a great day — 30 seconds is all it takes."
         content.sound = .default
         content.userInfo = [
             "action": "openChat",
             "prompt": "Help me plan tomorrow"
         ]
 
-        var comps = DateComponents()
-        comps.hour = 21; comps.minute = 0
+        // Fire 45 minutes before sleep time (middle of 60-15 min window)
+        var comps = Calendar.current.dateComponents([.hour, .minute], from: sleepTime)
+        var h = comps.hour ?? 23
+        var m = (comps.minute ?? 0) - 45
+        if m < 0 { m += 60; h = max(h - 1, 0) }
+        comps.hour = h; comps.minute = m
 
         center.add(UNNotificationRequest(
             identifier: kTomorrowID,

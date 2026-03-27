@@ -376,13 +376,24 @@ struct PlanningChatView: View {
                                         showCalendarPicker = true
                                     }
                                 } label: {
-                                    Image(systemName: "calendar.badge.plus")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(FlowLineTheme.secondTxt)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 7)
-                                        .background(FlowLineTheme.tertiaryBg)
-                                        .clipShape(Capsule())
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "calendar.badge.plus")
+                                            .font(.system(size: 12, weight: .bold))
+                                        Text("Add to Calendar")
+                                            .font(.system(size: 12, weight: .bold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [FlowLineTheme.accent.opacity(0.75), Color(hex: "#8b6dff").opacity(0.75)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .clipShape(Capsule())
+                                    .shadow(color: FlowLineTheme.accent.opacity(0.3), radius: 6, x: 0, y: 2)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -1536,10 +1547,12 @@ After planning, tell the user which inbox tasks you included):
             .filter { !$0.isThinking && !$0.isSavedPlan }
             .map { msg in (role: msg.role == .user ? "user" : "assistant", content: msg.content) }
 
+        let planDate = Date()
+
         _Concurrency.Task {
             aiService.token = authService.token ?? ""
             do {
-                let plan = try await aiService.generatePlan(for: Date(), history: history)
+                let plan = try await aiService.generatePlan(for: planDate, history: history)
 
                 // Validate plan and show warnings if needed
                 let validation = validatePlan(plan)
@@ -1556,12 +1569,12 @@ After planning, tell the user which inbox tasks you included):
                 }
 
                 let isFirstPlan = StreakManager.shared.totalPlansCreated == 0
-                try planSaver.save(plan: plan, for: Date(), context: modelContext)
+                try planSaver.save(plan: plan, for: planDate, context: modelContext)
                 await MainActor.run { CelebrationManager.shared.triggerConfetti() }
                 WidgetDataWriter.shared.refresh(context: modelContext)
                 scheduleNotificationsAfterSave()
                 if let token = authService.token {
-                    await SyncService.shared.pushWeek(for: Date(), token: token, context: modelContext)
+                    await SyncService.shared.pushWeek(for: planDate, token: token, context: modelContext)
                 }
                 StreakManager.shared.recordPlan()
                 subscriptionManager.recordPlanSave(token: authService.token)
@@ -1799,6 +1812,9 @@ After planning, tell the user which inbox tasks you included):
                 .frame(width: 0.5)
         }
     }
+
+    // MARK: - Plan Tomorrow
+
 }
 
 // MARK: - Calendar Picker Sheet

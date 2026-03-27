@@ -116,7 +116,14 @@ struct FlowlineApp: App {
                 // Weekly summary fires every Sunday at 8pm if the toggle is on.
                 #if os(iOS)
                 NotificationManager.shared.schedulePlanningNudge()
-                NotificationManager.shared.scheduleTomorrowNudge()
+                let profileSleepTime: Date = {
+                    let descriptor = FetchDescriptor<UserProfile>()
+                    let profiles = try? sharedModelContainer.mainContext.fetch(descriptor)
+                    return profiles?.first?.sleepTime ?? Calendar.current.date(
+                        bySettingHour: 23, minute: 0, second: 0, of: Date()
+                    ) ?? Date()
+                }()
+                NotificationManager.shared.scheduleTomorrowNudge(sleepTime: profileSleepTime)
                 let streak = StreakManager.shared.currentStreak
                 // clamp totalPlansCreated to 7 as a rough "this week" proxy
                 let daysThisWeek = min(StreakManager.shared.totalPlansCreated, 7)

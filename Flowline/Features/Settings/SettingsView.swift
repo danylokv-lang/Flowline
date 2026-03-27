@@ -754,12 +754,15 @@ private struct NotificationSettingsTab: View {
                     }
 
                     Toggle(isOn: $tomorrowEnabled) {
-                        Label("Plan tomorrow (9 pm)", systemImage: "moon.fill")
+                        Label("Plan tomorrow (45 min before sleep)", systemImage: "moon.fill")
                     }
                     .onChange(of: tomorrowEnabled) { _, on in
                         withPermission(onEnable: on) {
-                            if on { NotificationManager.shared.scheduleTomorrowNudge() }
-                            else  { NotificationManager.shared.cancelTomorrowNudge() }
+                            if on, let p = profile {
+                                NotificationManager.shared.scheduleTomorrowNudge(sleepTime: p.sleepTime)
+                            } else {
+                                NotificationManager.shared.cancelTomorrowNudge()
+                            }
                         }
                     }
                 } header: {
@@ -863,7 +866,7 @@ private struct NotificationSettingsTab: View {
         guard let p = profile else { return }
         NotificationManager.shared.scheduleMorning(name: p.name, wakeTime: p.wakeTime)
         NotificationManager.shared.scheduleEvening(sleepTime: p.sleepTime)
-        NotificationManager.shared.scheduleTomorrowNudge()
+        NotificationManager.shared.scheduleTomorrowNudge(sleepTime: p.sleepTime)
         NotificationManager.shared.scheduleStreakReminder(
             streakDays: StreakManager.shared.currentStreak, sleepTime: p.sleepTime)
         if weeklyEnabled {
