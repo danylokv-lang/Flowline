@@ -752,6 +752,7 @@ body {
   .feature-row { grid-template-columns: 1fr; gap: 40px; }
   .feature-row-flip .feature-text { order: 0; }
   .feature-row-flip .feature-visual { order: 0; }
+  .ios-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
   .nav-links { display: none; }
@@ -759,6 +760,9 @@ body {
   .divider-v { display: none; }
   .menubar-callout-inner { flex-direction: column; }
   .footer-links { margin-left: 0; }
+  .ios-grid { grid-template-columns: 1fr; }
+  .ios-section { padding: 80px 20px; }
+  .ios-header { margin-bottom: 60px; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -906,6 +910,106 @@ body {
       #a78bfa calc(75% / 5),
       #8b6dff calc(100% / 5)
     );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   iOS APP SECTION
+───────────────────────────────────────────────────────────────────────── */
+.ios-section {
+  padding: 120px 28px;
+  background: linear-gradient(180deg, rgba(109 76 250/.06) 0%, transparent 100%);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.ios-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.ios-header {
+  text-align: center;
+  margin-bottom: 80px;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ios-header .kicker {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.ios-header h2 {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 14px;
+  color: var(--txt);
+}
+
+.ios-header p {
+  font-size: 16px;
+  color: var(--txt2);
+  line-height: 1.7;
+}
+
+.ios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 60px;
+}
+
+.ios-card {
+  background: var(--bg-s);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 32px;
+  text-align: center;
+  transition: border-color .2s, transform .2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.ios-card:hover {
+  border-color: var(--border-hi);
+  transform: translateY(-4px);
+}
+
+.ios-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.ios-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--txt);
+  letter-spacing: -0.5px;
+}
+
+.ios-card p {
+  font-size: 14px;
+  color: var(--txt2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ios-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.ios-note {
+  font-size: 13px;
+  color: var(--txt3);
+  margin: 0;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

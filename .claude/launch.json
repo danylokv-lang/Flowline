@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-p", "4321", "backend"],
       "port": 4321
+    },
+    {
+      "name": "website",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "4322", "website"],
+      "port": 4322
     }
   ]
 }
