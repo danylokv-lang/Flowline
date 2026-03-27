@@ -121,7 +121,7 @@ Areas of focus:
 
 ---
 
-## Changelog jij
+## Changelog
 
 ### 2026-03-24
 - Updated README.md to include iOS platform info

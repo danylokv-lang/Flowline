@@ -9,6 +9,8 @@ struct AuthView: View {
     @State private var password = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var emailError: String?
+    @State private var showForgotPassword = false
 
     enum Mode { case login, register }
 
@@ -53,7 +55,20 @@ struct AuthView: View {
                     if mode == .register {
                         authField("Name", text: $name, icon: "person")
                     }
-                    authField("Email", text: $email, icon: "envelope")
+                    authField("Email", text: $email, icon: "envelope", keyboardType: .emailAddress) {
+                        if !email.isEmpty {
+                            emailError = EmailValidator.isValid(email) ? nil : EmailValidator.errorMessage(for: email)
+                        } else {
+                            emailError = nil
+                        }
+                    }
+                    if let err = emailError {
+                        Text(err)
+                            .font(.system(size: 11))
+                            .foregroundColor(.red.opacity(0.85))
+                            .padding(.horizontal, 14)
+                            .padding(.top, -8)
+                    }
                     authField("Password", text: $password, icon: "lock", isSecure: true)
                 }
                 .padding(.horizontal, 48)
@@ -97,6 +112,17 @@ struct AuthView: View {
                 .padding(.horizontal, 48)
                 .padding(.top, 20)
 
+                // ── Forgot Password link (login only) ────────────────────
+                if mode == .login {
+                    Button(action: { showForgotPassword = true }) {
+                        Text("Forgot password?")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(FlowLineTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 12)
+                }
+
                 Spacer()
 
                 // ── Footer ──────────────────────────────────────────────
@@ -116,6 +142,11 @@ struct AuthView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: mode)
         .animation(.easeInOut(duration: 0.15), value: errorMessage)
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordSheet(isPresented: $showForgotPassword)
+                .presentationDetents([.height(320)])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Sub-views
@@ -138,7 +169,9 @@ struct AuthView: View {
     }
 
     private func authField(_ placeholder: String, text: Binding<String>,
-                           icon: String, isSecure: Bool = false) -> some View {
+                           icon: String, isSecure: Bool = false,
+                           keyboardType: UIKeyboardType = .default,
+                           onChange: @escaping () -> Void = {}) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 13))
@@ -155,6 +188,8 @@ struct AuthView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .foregroundColor(FlowLineTheme.mainTxt)
+                    .keyboardType(keyboardType)
+                    .onChange(of: text.wrappedValue) { _, _ in onChange() }
             }
         }
         .padding(.horizontal, 14)
@@ -172,13 +207,23 @@ struct AuthView: View {
     // MARK: - Logic
 
     private var isFormValid: Bool {
-        let base = !email.isEmpty && password.count >= 6
+        let emailValid = EmailValidator.isValid(email)
+        let passwordValid = password.count >= 6
+        let base = emailValid && passwordValid
         return mode == .register ? base && !name.isEmpty : base
     }
 
     private func submit() {
         guard !isLoading else { return }
+
+        // Validate email format first
+        guard EmailValidator.isValid(email) else {
+            errorMessage = EmailValidator.errorMessage(for: email)
+            return
+        }
+
         errorMessage = nil
+        emailError = nil
         isLoading = true
 
         Task {
@@ -197,3 +242,164 @@ struct AuthView: View {
         }
     }
 }
+
+// MARK: - Forgot Password Sheet
+
+struct ForgotPasswordSheet: View {
+    @EnvironmentObject private var authService: AuthService
+    @Binding var isPresented: Bool
+
+    @State private var email = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var successMessage: String?
+    @State private var emailError: String?
+
+    var isFormValid: Bool {
+        EmailValidator.isValid(email)
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // ── Header ──────────────────────────────────────────────
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Reset your password")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                    Text("We'll send you a reset link via email")
+                        .font(.system(size: 12))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                }
+                Spacer()
+                Button { isPresented = false } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+
+            // ── Email field ─────────────────────────────────────────
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    Image(systemName: "envelope")
+                        .font(.system(size: 13))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                        .frame(width: 16)
+
+                    TextField("Your email", text: $email)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13))
+                        .foregroundColor(FlowLineTheme.mainTxt)
+                        .keyboardType(.emailAddress)
+                        .onChange(of: email) { _, _ in
+                            if !email.isEmpty {
+                                emailError = EmailValidator.isValid(email) ? nil : EmailValidator.errorMessage(for: email)
+                            } else {
+                                emailError = nil
+                            }
+                        }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(FlowLineTheme.tertiaryBg)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(FlowLineTheme.borderHi, lineWidth: 1)
+                        )
+                )
+
+                if let err = emailError {
+                    Text(err)
+                        .font(.system(size: 11))
+                        .foregroundColor(.red.opacity(0.85))
+                        .padding(.horizontal, 14)
+                }
+            }
+            .padding(.horizontal, 16)
+
+            // ── Status messages ─────────────────────────────────────
+            if let err = errorMessage {
+                Text(err)
+                    .font(.system(size: 12))
+                    .foregroundColor(.red.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+            }
+
+            if let success = successMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text(success)
+                        .font(.system(size: 12))
+                        .foregroundColor(.green)
+                }
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+            }
+
+            Spacer()
+
+            // ── Send button ─────────────────────────────────────────
+            Button(action: sendReset) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(FlowLineTheme.accent)
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .scaleEffect(0.7)
+                            .tint(.white)
+                    } else {
+                        Text("Send reset link")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .frame(height: 44)
+            }
+            .buttonStyle(.plain)
+            .disabled(isLoading || !isFormValid)
+            .opacity(isFormValid ? 1 : 0.5)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+        .background(FlowLineTheme.mainBg)
+    }
+
+    private func sendReset() {
+        guard !isLoading else { return }
+        guard EmailValidator.isValid(email) else {
+            errorMessage = EmailValidator.errorMessage(for: email)
+            return
+        }
+
+        errorMessage = nil
+        emailError = nil
+        isLoading = true
+
+        Task {
+            do {
+                try await authService.forgotPassword(email: email)
+                successMessage = "Check your email for a reset link"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    isPresented = false
+                }
+            } catch let err as AuthError {
+                errorMessage = err.errorDescription
+            } catch {
+                errorMessage = "Something went wrong. Try again."
+            }
+            isLoading = false
+        }
+    }
+}
+

@@ -2,6 +2,15 @@ import Foundation
 import Security
 import Combine
 
+// ── Email Validation Strategy ────────────────────────────────────────
+// Frontend: EmailValidator.swift validates format before submission
+// Backend: Cloudflare Worker at /auth/register and /auth/login should:
+//   1. Validate email format (RFC 5322 simplified pattern)
+//   2. Return 400 Bad Request if email is invalid
+//   3. Return 409 Conflict if email already exists
+//   4. Sanitize/normalize email before DB operations
+// This defense-in-depth approach protects against clients that bypass validation
+
 // ── User model returned by the API ────────────────────────────────────────
 
 struct AuthUser: Codable {
@@ -15,6 +24,7 @@ struct AuthUser: Codable {
 
 enum AuthError: LocalizedError {
     case invalidCredentials
+    case invalidEmail
     case emailTaken
     case networkError
     case serverError(String)
@@ -22,6 +32,7 @@ enum AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidCredentials: return "Invalid email or password."
+        case .invalidEmail:       return "Please enter a valid email address."
         case .emailTaken:         return "An account with this email already exists."
         case .networkError:       return "No internet connection."
         case .serverError(let m): return m
@@ -68,6 +79,42 @@ final class AuthService: ObservableObject {
         let body: [String: String] = ["email": email, "password": password]
         let (user, jwt) = try await post("/auth/login", body: body)
         persist(user: user, token: jwt)
+    }
+
+    // MARK: - Forgot Password
+
+    func forgotPassword(email: String) async throws {
+        guard let url = URL(string: baseURL + "/auth/forgot-password") else {
+            throw AuthError.networkError
+        }
+
+        let body: [String: String] = ["email": email]
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.httpBody = try? JSONEncoder().encode(body)
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: req)
+        } catch {
+            throw AuthError.networkError
+        }
+
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+
+        // 400 = invalid email, 404 = email not found (treat as invalid)
+        if statusCode == 400 || statusCode == 404 {
+            throw AuthError.invalidEmail
+        }
+
+        // 200 = success, any 5xx = server error
+        if statusCode >= 500 {
+            let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+            throw AuthError.serverError(msg ?? "Server error. Try again later.")
+        }
+
+        // For forgot password, we don't return user/token—just confirm the request was sent
     }
 
     // MARK: - Delete Account
@@ -127,6 +174,7 @@ final class AuthService: ObservableObject {
 
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
 
+        if statusCode == 400 { throw AuthError.invalidEmail }
         if statusCode == 409 { throw AuthError.emailTaken }
         if statusCode == 401 { throw AuthError.invalidCredentials }
 
