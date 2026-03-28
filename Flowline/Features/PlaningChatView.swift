@@ -570,6 +570,22 @@ struct PlanningChatView: View {
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showSidebar)
         .hideKeyboardOnTap()
+        .alert("Calendar Access Required", isPresented: $showCalendarDeniedAlert) {
+            Button("Open Settings") {
+                #if os(iOS)
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+                #elseif os(macOS)
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+                    NSWorkspace.shared.open(url)
+                }
+                #endif
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("To add your plan to Calendar, allow Flowline access in Settings → Privacy → Calendars.")
+        }
         .sheet(isPresented: $showCalendarPicker) {
             CalendarPickerSheet(
                 initialCalendars: calendarPickerItems,
