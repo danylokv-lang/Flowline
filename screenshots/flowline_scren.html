@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flowline – Screenshot Shot Lists</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #080810;
+      --surface: #0e0e1c;
+      --surface-soft: #141428;
+      --border: rgba(255,255,255,0.07);
+      --text: #eeeef5;
+      --text-muted: #7a7a9a;
+      --accent: #6d4cfa;
+      --orange: #f97316;
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --purple: #6d4cfa;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-pill: 999px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: radial-gradient(circle at top, rgba(109,76,250,0.14), transparent 55%), var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: var(--space-8);
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: var(--space-2);
+    }
+    .subtitle {
+      color: var(--text-muted);
+      margin-bottom: var(--space-8);
+      max-width: 80ch;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-bottom: var(--space-6);
+    }
+    .tag {
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .section-title {
+      font-size: 20px;
+      margin: var(--space-6) 0 var(--space-3);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .card {
+      background: radial-gradient(circle at top, rgba(109,76,250,0.18), transparent 55%), var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: var(--space-5);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.55);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--space-3);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .headline {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .subheadline {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .device-spec {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .chip {
+      padding: 3px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+    }
+
+    .block {
+      background: var(--surface-soft);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .block + .block {
+      margin-top: var(--space-2);
+    }
+
+    .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: var(--space-2);
+    }
+    th, td {
+      padding: 4px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      text-align: left;
+    }
+    th {
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 11px;
+    }
+
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .dot-purple { background: var(--purple); }
+    .dot-blue { background: var(--blue); }
+    .dot-green { background: var(--green); }
+    .dot-orange { background: var(--orange); }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      body { padding: var(--space-4); }
+      .card { padding: var(--space-4); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Flowline – Screenshot Shot Lists</h1>
+    <p class="subtitle">
+      Execution-ready spec for 12 App Store screenshots (6 iOS, 6 macOS) with text, UI state, and layout notes.
+    </p>
+
+    <div class="tag-row">
+      <span class="tag">Dark mode · #080810</span>
+      <span class="tag">Accent · #6d4cfa</span>
+      <span class="tag">Platforms: iOS &amp; macOS</span>
+      <span class="tag">Style: serious, aesthetic, Apple-like</span>
+    </div>
+
+    <h2 class="section-title">iOS Screens (iPhone 15 Pro)</h2>
+    <div class="grid">
+
+      <!-- iOS 1 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            iOS #1
+            <span class="pill">Hook · AI chat → plan</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">iPhone 15 Pro</span>
+            <span class="chip">1290×2796</span>
+            <span class="chip">Glow bg</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Plan Your Day</div>
+          <div class="subheadline">Tell AI your tasks. Get a schedule that works.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – PlaningChatView</div>
+          <p>User prompt:</p>
+          <p>“Plan my Thursday — I have a team standup at 10am, need to finish the landing page, go to the gym, buy groceries, and read chapter 5.”</p>
+          <p>AI response intro + schedule:</p>
+          <table>
+            <thead>
+            <tr><th>Time</th><th>Block</th><th>Category</th></tr>
+            </thead>
+            <tbody>
+            <tr><td>7:00 – 7:30</td><td>Morning routine &amp; breakfast</td><td><span class="color-dot dot-orange"></span>Personal</td></tr>
+            <tr><td>7:30 – 9:45</td><td>Deep work — Landing page (HTML + features)</td><td><span class="color-dot dot-purple"></span>Work</td></tr>
+            <tr><td>10:00 – 10:30</td><td>Team standup</td><td><span class="color-dot dot-purple"></span>Work</td></tr>
+            <tr><td>10:30 – 12:00</td><td>Deep work — Landing page (finish + deploy)</td><td><span class="color-dot dot-purple"></span>Work</td></tr>
+            <tr><td>12:00 – 12:45</td><td>Lunch break</td><td><span class="color-dot dot-orange"></span>Personal</td></tr>
+            <tr><td>13:00 – 14:00</td><td>Gym</td><td><span class="color-dot dot-green"></span>Health</td></tr>
+            <tr><td>14:30 – 15:15</td><td>Buy groceries</td><td><span class="color-dot dot-orange"></span>Personal</td></tr>
+            <tr><td>16:00 – 16:45</td><td>Read — Chapter 5</td><td><span class="color-dot dot-blue"></span>Study</td></tr>
+            </tbody>
+          </table>
+          <p class="meta">Show “Save to Calendar” &amp; “Replan” buttons; chat input placeholder: “Describe your tasks…”. All category dots visible.</p>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Device centered; text zone ≈ top 25%, phone ≈ bottom 75%.</li>
+            <li>Background #080810 with subtle purple radial glow (~6–8% opacity).</li>
+            <li>Phone bottom edge slightly off-canvas for depth; ~80px side padding.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- iOS 2 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            iOS #2
+            <span class="pill">Payoff · Day calendar</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">iPhone 15 Pro</span>
+            <span class="chip">Solid bg</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">See Your Day</div>
+          <div class="subheadline">Color-coded blocks. Every hour accounted for.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – CalendarView (day)</div>
+          <p>Date: Thursday, Mar 27. Visible 7:00–17:00.</p>
+          <table>
+            <thead>
+            <tr><th>Time</th><th>Block</th><th>Cat / State</th></tr>
+            </thead>
+            <tbody>
+            <tr><td>7:00 – 7:30</td><td>Morning routine</td><td><span class="color-dot dot-orange"></span>Personal · Completed ✓</td></tr>
+            <tr><td>7:30 – 9:45</td><td>Landing page (HTML + features)</td><td><span class="color-dot dot-purple"></span>Work · Active</td></tr>
+            <tr><td>10:00 – 10:30</td><td>Team standup</td><td><span class="color-dot dot-purple"></span>Work · Upcoming</td></tr>
+            <tr><td>10:30 – 12:00</td><td>Landing page (finish + deploy)</td><td><span class="color-dot dot-purple"></span>Work · Upcoming</td></tr>
+            <tr><td>12:00 – 12:45</td><td>Lunch break</td><td><span class="color-dot dot-orange"></span>Personal · Upcoming</td></tr>
+            <tr><td>13:00 – 14:00</td><td>Gym</td><td><span class="color-dot dot-green"></span>Health · Upcoming</td></tr>
+            <tr><td>14:30 – 15:15</td><td>Buy groceries</td><td><span class="color-dot dot-orange"></span>Personal · Upcoming</td></tr>
+            <tr><td>16:00 – 16:45</td><td>Read — Chapter 5</td><td><span class="color-dot dot-blue"></span>Study · Upcoming</td></tr>
+            </tbody>
+          </table>
+          <p class="meta">Current time line at ~8:15 cutting through the Landing page block. Hour rail on the left.</p>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Same top text / bottom device structure as #1.</li>
+            <li>Background solid #080810, no glow.</li>
+            <li>Blocks scaled by duration; all 4 colors visible.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- iOS 3 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            iOS #3
+            <span class="pill">Trust · Calendar sync</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">iPhone 15 Pro</span>
+            <span class="chip">Solid bg</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Syncs Your Calendars</div>
+          <div class="subheadline">AI plans around your existing events.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – CalendarView (day)</div>
+          <p>Date: Friday, Mar 28. Mixed external + Flowline blocks.</p>
+          <table>
+            <thead>
+            <tr><th>Time</th><th>Block</th><th>Source</th></tr>
+            </thead>
+            <tbody>
+            <tr><td>9:00 – 9:30</td><td>Team standup</td><td>Google (muted, small “G”)</td></tr>
+            <tr><td>9:30 – 11:30</td><td>Deep work — API integration</td><td>Flowline · <span class="color-dot dot-purple"></span>Work</td></tr>
+            <tr><td>12:00 – 13:00</td><td>Lunch with Sarah</td><td>Apple Calendar (muted icon)</td></tr>
+            <tr><td>13:30 – 15:00</td><td>Finish slide deck</td><td>Flowline · <span class="color-dot dot-purple"></span>Work</td></tr>
+            <tr><td>15:00 – 15:30</td><td>Coffee break</td><td>Flowline · <span class="color-dot dot-orange"></span>Personal</td></tr>
+            <tr><td>15:30 – 16:30</td><td>Review pull requests</td><td>Flowline · <span class="color-dot dot-purple"></span>Work</td></tr>
+            <tr><td>17:00 – 18:00</td><td>Run</td><td>Flowline · <span class="color-dot dot-green"></span>Health</td></tr>
+            </tbody>
+          </table>
+          <p class="meta">External events: translucent, thin left border, tiny Google/Apple icon. Flowline blocks: solid, vibrant.</p>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Same top text / bottom device structure.</li>
+            <li>Background #080810; optional small floating Google &amp; Apple icons near device.</li>
+            <li>Visible gap between blocks to show no overlaps.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- iOS 4 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            iOS #4
+            <span class="pill">Habit · Stats</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">iPhone 15 Pro</span>
+            <span class="chip">StatsView</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Build the Habit</div>
+          <div class="subheadline">Track your streaks and see your progress.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – StatsView</div>
+          <ul>
+            <li>Streak: big “12” with fire effect, label “Day streak”.</li>
+            <li>Completion: “85% · This week” (ring or bold number).</li>
+            <li>Weekly bars Mon–Sun: 100, 90, 75, 100, 80, 60, 0%.</li>
+            <li>Plan history: 3 rows (Thu 27, Wed 26, Tue 25).</li>
+            <li>Secondary stat: “4.5 hrs focused today”.</li>
+          </ul>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Device centered; background solid #080810.</li>
+            <li>Streak “12” clearly dominant; bars minimal but tall.</li>
+            <li>History list 2–3 rows, no scroll feeling.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- iOS 5 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            iOS #5
+            <span class="pill">Execution · Focus timer</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">iPhone 15 Pro</span>
+            <span class="chip">Glow bg</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Stay in the Zone</div>
+          <div class="subheadline">Per-block timer. Break reminders built in.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – FocusTimerView</div>
+          <ul>
+            <li>Active block: “Deep work — Finish report”, Work · purple.</li>
+            <li>Timer ring, 23:41 remaining (45 min block, ~21 min elapsed).</li>
+            <li>Controls: Pause (active), Skip.</li>
+            <li>Upcoming list: standup, review PRs, lunch, gym.</li>
+            <li>Small note: “5 min break at 10:30”.</li>
+          </ul>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Large circular timer dominates screen.</li>
+            <li>Background #080810 with soft purple glow (~5–6%).</li>
+            <li>Progress ring thick enough to read at thumbnail.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- iOS 6 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            iOS #6
+            <span class="pill">Convenience · Capture &amp; widget</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">iPhone 15 Pro</span>
+            <span class="chip">Composite</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Capture Anything</div>
+          <div class="subheadline">Quick inbox. Home screen widgets.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – Inbox + Widget</div>
+          <p><strong>Inbox</strong> (TaskInboxView):</p>
+          <ul>
+            <li>Tasks:
+              <br>• Call dentist about appointment – Personal · orange · “2m ago”
+              <br>• Research competitor pricing – Work · purple · “1h ago”
+              <br>• Buy new running shoes – Personal · orange · “3h ago”
+            </li>
+            <li>Input: “Add a task…”, filter “Pending” active.</li>
+          </ul>
+          <p><strong>Widget</strong> (medium):</p>
+          <ul>
+            <li>Title “Flowline”, label “Next up”.</li>
+            <li>Main: “Team standup · 10:00 AM” (purple).</li>
+            <li>Secondary: “Then: Landing page · 10:30 AM”.</li>
+          </ul>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Inbox full-screen on device; widget as overlapping mini-card or side card.</li>
+            <li>Background solid #080810.</li>
+            <li>Widget looks like real iOS widget (proper radius, subtle lighter surface).</li>
+          </ul>
+        </div>
+      </article>
+
+    </div>
+
+    <h2 class="section-title">macOS Screens (2560×1600)</h2>
+    <div class="grid">
+
+      <!-- macOS 1 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            macOS #1
+            <span class="pill">Hook · AI chat</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">2560×1600</span>
+            <span class="chip">Glow bg</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Plan Your Day</div>
+          <div class="subheadline">Tell AI your tasks. Get a schedule that works.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – PlaningChatView (macOS)</div>
+          <ul>
+            <li>Window ~1600×1000, traffic lights visible.</li>
+            <li>Sidebar: “Today’s Plan”, “Wednesday’s Plan”, “Quick Question”.</li>
+            <li>User prompt: Thursday with standup, client call, landing page, gym, chapter 5.</li>
+            <li>AI schedule similar to iOS #1 but with client call added.</li>
+            <li>“Save to Calendar” (purple) &amp; “Replan” buttons below schedule.</li>
+          </ul>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Canvas 2560×1600; text block at top ~22% height.</li>
+            <li>Window centered with soft purple radial glow behind.</li>
+            <li>Match style of your existing macOS 01 chat screenshot, but text moved to top.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- macOS 2 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            macOS #2
+            <span class="pill">Week view</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">2560×1600</span>
+            <span class="chip">Week calendar</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Your Week at a Glance</div>
+          <div class="subheadline">Seven days. Color-coded. Always current.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – CalendarView (week)</div>
+          <p>Week Mon Mar 23 – Sun Mar 29; today (Thu) highlighted.</p>
+          <p>Each day column 3–5 blocks across 4 categories, plus right “Today at a glance” sidebar (focus hours, breaks, blocks, legend).</p>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Window ~1900px wide, centered; background solid #080810.</li>
+            <li>Text at top; full-width week grid below.</li>
+            <li>Visual “mosaic” of purple/blue/green/orange across 7 days.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- macOS 3 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            macOS #3
+            <span class="pill">Menu bar</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">2560×1600</span>
+            <span class="chip">Desktop context</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Always There</div>
+          <div class="subheadline">Timer and quick plan. Right from the menu bar.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – MenuBarFlowlineView</div>
+          <ul>
+            <li>Mac desktop dimmed; menu bar visible with Flowline icon active.</li>
+            <li>Dropdown: date, 23:41 timer, current block “Team standup”, short list of today’s blocks, “+ New plan” and “Open app”.</li>
+            <li>Main app window faint in background-left.</li>
+          </ul>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Text at top, menu bar runs full width.</li>
+            <li>Dropdown panel crisp and sharp; background slightly darkened overlay.</li>
+            <li>Match feel of your existing menubar screenshot; just update copy &amp; top text.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- macOS 4 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            macOS #4
+            <span class="pill">Calendar sync (week)</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">2560×1600</span>
+            <span class="chip">Week view</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Works With Your Calendar</div>
+          <div class="subheadline">Reads Google and Apple Calendar. Plans around them.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – CalendarView (week with external)</div>
+          <p>Week view with multiple muted external events (Google/Apple) embedded among solid Flowline blocks; right sidebar same as macOS #2.</p>
+          <p>External events have thin left border + tiny provider icon; Flowline blocks are full opacity category colors.</p>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Window ~1900px, centered; text top, calendar bottom.</li>
+            <li>Optional small Google/Apple icons near subheadline.</li>
+            <li>Gaps show AI filled between external events without overlap.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- macOS 5 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            macOS #5
+            <span class="pill">Stats dashboard</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">2560×1600</span>
+            <span class="chip">Wide stats</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Build the Habit</div>
+          <div class="subheadline">Streaks, completion rates, weekly insights.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – StatsView (wide)</div>
+          <ul>
+            <li>Left: big “12” streak with fire, “Best streak: 18 days”.</li>
+            <li>Center: week bars + “This week: 85% average”.</li>
+            <li>Right: stat cards (“4.5 hrs today”, “32 hrs this month”, “47 plans”).</li>
+            <li>Bottom: plan history 3 rows.</li>
+          </ul>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Window ~1600px; three-column layout inside.</li>
+            <li>Background solid #080810; no extra glow.</li>
+            <li>Streak still main focal point, but chart more dramatic than iOS.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- macOS 6 -->
+      <article class="card">
+        <header class="card-header">
+          <div class="card-title">
+            macOS #6
+            <span class="pill">Focus timer (desktop)</span>
+          </div>
+          <div class="device-spec">
+            <span class="chip">2560×1600</span>
+            <span class="chip">Glow bg</span>
+          </div>
+        </header>
+        <div>
+          <div class="headline">Deep Focus, Built In</div>
+          <div class="subheadline">Block-by-block timer with break reminders.</div>
+        </div>
+        <div class="block">
+          <div class="label">UI state – FocusTimerView (macOS)</div>
+          <ul>
+            <li>Large timer ring (23:41) on left, active block “Deep work — Finish report”.</li>
+            <li>Right list of today’s blocks with ✓ for completed, “Active ←” on standup.</li>
+            <li>Note “5 min break at 10:30”.</li>
+          </ul>
+        </div>
+        <div class="block">
+          <div class="label">Framing &amp; layout</div>
+          <ul>
+            <li>Window ~1500px, centered; subtle purple glow behind window.</li>
+            <li>Two-column layout: timer large, list medium.</li>
+            <li>Completes plan → execute → track story visually.</li>
+          </ul>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</body>
+</html>
