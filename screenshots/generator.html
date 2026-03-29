@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flowline — App Store Screenshots</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif; background:#060609; color:#e8e8f0; padding:48px 24px; }
+.container { max-width:1900px; margin:0 auto; }
+header { text-align:center; margin-bottom:72px; }
+.logo { font-size:12px; font-weight:800; letter-spacing:6px; color:#3b82f6; margin-bottom:14px; }
+h1 { font-size:52px; font-weight:800; color:#fff; line-height:1.05; margin-bottom:10px; }
+.sub { color:#6b6b80; font-size:15px; }
+.section { margin-bottom:100px; }
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,.05); }
+.section-label { font-size:11px; font-weight:700; letter-spacing:4px; color:#6b6b80; }
+.section-name { font-size:24px; font-weight:800; color:#fff; margin-top:4px; }
+.dl-btn { padding:12px 28px; background:#3b82f6; color:#fff; border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; }
+.gallery { display:flex; gap:24px; overflow-x:auto; padding-bottom:20px; }
+.gallery::-webkit-scrollbar { height:4px; }
+.gallery::-webkit-scrollbar-thumb { background:#16161f; border-radius:4px; }
+.thumb { flex:0 0 auto; text-align:center; }
+.thumb canvas { display:block; border-radius:14px; box-shadow:0 40px 100px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.04); }
+.thumb-label { margin-top:12px; font-size:11px; color:#3a3a4a; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+footer { text-align:center; color:#3a3a4a; font-size:12px; padding-top:40px; border-top:1px solid rgba(255,255,255,.03); margin-top:40px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">F L O W L I N E</div>
+    <h1>App Store Screenshots</h1>
+    <p class="sub">iPhone 6.7" Pro Max &nbsp;·&nbsp; macOS &nbsp;·&nbsp; Print-ready PNG</p>
+  </header>
+  <div class="section">
+    <div class="section-header">
+      <div><div class="section-label">IPHONE 6.7" PRO MAX</div><div class="section-name">1290 × 2796 px</div></div>
+      <button class="dl-btn" onclick="downloadAll('ios')">↓ Download All iOS</button>
+    </div>
+    <div class="gallery" id="ios-gallery"></div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div><div class="section-label">MACOS</div><div class="section-name">1440 × 900 px</div></div>
+      <button class="dl-btn" onclick="downloadAll('mac')">↓ Download All macOS</button>
+    </div>
+    <div class="gallery" id="mac-gallery"></div>
+  </div>
+  <footer>Flowline · Ready for App Store Connect</footer>
+</div>
+
+<script>
+// ── helpers ───────────────────────────────────────────────────────────────────
+function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+
+function rr(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+const fill=(ctx,x,y,w,h,r,c)=>{ctx.fillStyle=c;rr(ctx,x,y,w,h,r);ctx.fill();};
+const stroke=(ctx,x,y,w,h,r,c,lw=1.5)=>{ctx.strokeStyle=c;ctx.lineWidth=lw;rr(ctx,x,y,w,h,r);ctx.stroke();};
+
+function txt(ctx,s,x,y,sz,wt,c,al='left'){
+  if(!s)return;
+  ctx.save();ctx.fillStyle=c||'#e8e8f0';ctx.textAlign=al;
+  ctx.font=`${wt||400} ${sz}px -apple-system,BlinkMacSystemFont,sans-serif`;
+  ctx.fillText(String(s),x,y);ctx.restore();
+}
+
+function lg(ctx,x0,y0,x1,y1,...stops){
+  const g=ctx.createLinearGradient(x0,y0,x1,y1);
+  stops.forEach(([t,c])=>g.addColorStop(t,c));return g;
+}
+function rg(ctx,cx,cy,r,...stops){
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  stops.forEach(([t,c])=>g.addColorStop(t,c));return g;
+}
+
+// ── iPhone frame (draw ORDER: bezel → content clip → island) ─────────────────
+// PX=115, PY=480, PW=1060, PH=2090
+const PX=115,PY=480,PW=1060,PH=2090;
+// usable screen content area (inside status bar, above tab bar)
+const SY=PY+155;   // content start y (below status bar + nav)
+const SB=PY+PH-158; // tab bar top y
+
+function drawBezel(ctx){
+  // drop shadow
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.95)';ctx.shadowBlur=90;ctx.shadowOffsetY=40;
+  fill(ctx,PX-5,PY-5,PW+10,PH+10,62,'#141420');
+  ctx.restore();
+  // frame
+  const fg=lg(ctx,PX,PY,PX+PW,PY+PH,[0,'#2c2c42'],[0.4,'#1e1e30'],[1,'#2c2c42']);
+  ctx.fillStyle=fg;rr(ctx,PX-5,PY-5,PW+10,PH+10,62);ctx.fill();
+  // side buttons
+  ctx.fillStyle='#252535';
+  ctx.fillRect(PX-16,PY+280,10,60); // volume up
+  ctx.fillRect(PX-16,PY+360,10,60); // volume down
+  ctx.fillRect(PX+PW+6,PY+300,10,90); // power
+}
+
+function clipToScreen(ctx){
+  rr(ctx,PX,PY,PW,PH,56);ctx.clip();
+}
+
+function drawIsland(ctx){
+  fill(ctx,PX+PW/2-100,PY+22,200,54,27,'#000');
+}
+
+function drawTabBar(ctx,active=0){
+  const by=SB;
+  // frosted bg
+  ctx.fillStyle='rgba(6,6,12,0.94)';ctx.fillRect(PX,by,PW,PY+PH-by);
+  ctx.fillStyle='rgba(255,255,255,0.07)';ctx.fillRect(PX,by,PW,1);
+  const tabs=[['☁️','Plan'],['📅','Calendar'],['⏱','Focus'],['📊','Stats'],['👤','Profile']];
+  const sw=PW/5;
+  tabs.forEach(([ic,nm],i)=>{
+    const cx=PX+sw*i+sw/2,on=i===active;
+    if(on){ctx.fillStyle=C.acc+'20';ctx.fillRect(PX+sw*i+10,by,sw-20,3);}
+    txt(ctx,ic,cx,by+68,44,400,'','center');
+    txt(ctx,nm,cx,by+116,26,on?600:400,on?C.acc:C.dim,'center');
+  });
+}
+
+function statusBar(ctx){
+  txt(ctx,'9:41',PX+50,PY+82,40,600,'#e8e8f0');
+  txt(ctx,'●●● ▼ ⬛',PX+PW-60,PY+82,30,500,'#e8e8f0','right');
+}
+
+// ── Palette ───────────────────────────────────────────────────────────────────
+const C={
+  bg:'#0a0a0f',bg2:'#111118',bg3:'#16161f',
+  txt:'#e8e8f0',sub:'#6b6b80',dim:'#3a3a4a',
+  acc:'#3b82f6',accHi:'#60a5fa',
+  grn:'#10b981',pur:'#8b5cf6',yel:'#f59e0b',red:'#ef4444',
+  bord:'rgba(255,255,255,0.08)',
+};
+
+// ── Outer background per screen ───────────────────────────────────────────────
+function outerBg(ctx,W,H,glow){
+  ctx.fillStyle=lg(ctx,0,0,0,H,[0,'#030308'],[1,'#050a15']);ctx.fillRect(0,0,W,H);
+  if(glow){ctx.fillStyle=rg(ctx,W/2,0,900,[0,glow],[1,'transparent']);ctx.fillRect(0,0,W,H);}
+}
+
+// helper: draw a chat bubble, returns bottom y
+function bubble(ctx,isUser,text,y){
+  const lines=text.split('\n');
+  const BW=820,LH=44,PAD=36,PT=30;
+  const bh=PT*2+lines.length*LH;
+  const bx=isUser?PX+PW-BW-60:PX+60;
+  fill(ctx,bx,y,BW,bh,24,isUser?C.acc:C.bg3);
+  if(!isUser)stroke(ctx,bx,y,BW,bh,24,C.bord);
+  lines.forEach((l,i)=>txt(ctx,l,bx+PAD,y+PT+LH*i+LH*0.72,30,400,isUser?'#fff':C.txt));
+  return y+bh+20;
+}
+
+// helper: time slot row
+function slot(ctx,y,time,label,color,tag){
+  fill(ctx,PX+60,y,PW-120,100,18,C.bg3);
+  stroke(ctx,PX+60,y,PW-120,100,18,C.bord);
+  ctx.fillStyle=color;ctx.fillRect(PX+60,y,6,100);
+  txt(ctx,time,PX+96,y+40,28,600,C.sub);
+  txt(ctx,label,PX+240,y+62,38,600,C.txt);
+  if(tag){
+    const tw=ctx.measureText(tag).width+44;
+    fill(ctx,PX+PW-120-tw,y+26,tw,48,24,color+'28');
+    txt(ctx,tag,PX+PW-120-tw/2,y+56,28,700,color,'center');
+  }
+  return y+118;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// iOS 1 — "Your whole day, planned in seconds."
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ios1(){
+  const W=1290,H=2796,cv=mk(W,H),ctx=cv.getContext('2d');
+  outerBg(ctx,W,H,'rgba(59,130,246,0.22)');
+
+  // headline
+  txt(ctx,'Your whole day,',W/2,180,94,800,'#fff','center');
+  txt(ctx,'planned in seconds.',W/2,300,94,800,C.acc,'center');
+  txt(ctx,'Describe your day to Flowline AI — get a full schedule back.',W/2,394,38,400,C.sub,'center');
+
+  drawBezel(ctx);
+  ctx.save();clipToScreen(ctx);
+  // screen bg
+  ctx.fillStyle=C.bg;ctx.fillRect(PX,PY,PW,PH);
+  ctx.fillStyle=rg(ctx,PX+PW/2,PY+200,700,[0,'rgba(59,130,246,0.13)'],[1,'transparent']);
+  ctx.fillRect(PX,PY,PW,PH);
+
+  statusBar(ctx);
+  txt(ctx,'FLOWLINE',PX+PW/2,PY+148,34,900,C.txt,'center');
+
+  // greeting card
+  fill(ctx,PX+60,SY,PW-120,130,22,C.bg3);
+  stroke(ctx,PX+60,SY,PW-120,130,22,C.bord);
+  ctx.fillStyle=C.acc;ctx.fillRect(PX+60,SY,6,130);
+  txt(ctx,'Good morning, Alex 👋',PX+100,SY+48,38,700,C.txt);
+  txt(ctx,"Here's what we'll plan for you today:",PX+100,SY+96,30,400,C.sub);
+
+  // quick chat
+  let y=SY+158;
+  y=bubble(ctx,false,"What's on your plate today?\nI'll build your perfect time-blocked schedule.",y);
+  y=bubble(ctx,true,'3 meetings, need 2h deep work & gym at 6pm',y);
+  y=bubble(ctx,false,'Got it! Here\'s your optimized schedule 👇',y);
+
+  // schedule label
+  txt(ctx,'TODAY\'S SCHEDULE',PX+60,y+30,24,800,C.acc);
+  y+=54;
+
+  // slots — exactly 5 to avoid overflow
+  y=slot(ctx,y,'9:00','Deep Work Block',C.acc,'2h');
+  y=slot(ctx,y,'11:00','Team Standup',C.grn,'30m');
+  y=slot(ctx,y,'12:00','Lunch Break',C.yel,'1h');
+  y=slot(ctx,y,'14:00','Product Review',C.pur,'1.5h');
+  y=slot(ctx,y,'16:00','Focus Session',C.acc,'2h');
+
+  // save button — pinned above tab bar
+  const btnY=SB-136;
+  fill(ctx,PX+60,btnY,PW-120,108,26,C.acc);
+  txt(ctx,'✓  Save Plan to Calendar',PX+PW/2,btnY+72,42,700,'#fff','center');
+
+  drawTabBar(ctx,0);
+  ctx.restore();
+  drawIsland(ctx);
+  txt(ctx,'✦ Flowline · Free to download on the App Store',W/2,H-50,32,400,C.dim,'center');
+  return cv;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// iOS 2 — "Just talk to it."
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ios2(){
+  const W=1290,H=2796,cv=mk(W,H),ctx=cv.getContext('2d');
+  outerBg(ctx,W,H,'rgba(59,130,246,0.2)');
+
+  txt(ctx,'Just talk to it.',W/2,180,94,800,'#fff','center');
+  txt(ctx,'It handles the rest.',W/2,300,94,800,C.acc,'center');
+  txt(ctx,'AI that understands your real schedule — not just tasks.',W/2,394,38,400,C.sub,'center');
+
+  drawBezel(ctx);
+  ctx.save();clipToScreen(ctx);
+  ctx.fillStyle=C.bg;ctx.fillRect(PX,PY,PW,PH);
+  ctx.fillStyle=rg(ctx,PX+PW/2,PY,600,[0,'rgba(59,130,246,0.11)'],[1,'transparent']);
+  ctx.fillRect(PX,PY,PW,PH);
+
+  statusBar(ctx);
+  txt(ctx,'FLOWLINE',PX+PW/2,PY+148,34,900,C.txt,'center');
+
+  // Conversation — fixed positions
+  const msgs=[
+    {u:false,t:"Good morning! What does your day look like?"},
+    {u:true, t:"Board meeting at 10, deep work after, gym at 7pm"},
+    {u:false,t:"Perfect. Here's your day:\n\n9–10am  →  Prep & deep focus\n10–11:30  →  Board meeting\n12–1pm  →  Lunch break\n1:30–5pm  →  Deep work sprint\n7pm  →  Gym 🏋️"},
+    {u:true, t:"Can you add 30min review after gym?"},
+    {u:false,t:"Done! Added 8:30pm reflection block 🌙"},
+  ];
+
+  let y=SY+10;
+  msgs.forEach(m=>{y=bubble(ctx,m.u,m.t,y);});
+
+  // Typing indicator
+  fill(ctx,PX+60,y,160,72,36,C.bg3);
+  stroke(ctx,PX+60,y,160,72,36,C.bord);
+  [0,1,2].forEach(i=>{ctx.fillStyle=C.sub;ctx.beginPath();ctx.arc(PX+100+i*36,y+36,10,0,Math.PI*2);ctx.fill();});
+
+  // input bar — pinned above tab bar
+  const inputY=SB-106;
+  fill(ctx,PX+50,inputY,PW-100,90,45,C.bg3);
+  stroke(ctx,PX+50,inputY,PW-100,90,45,C.bord);
+  txt(ctx,'Message Flowline...',PX+110,inputY+60,34,400,C.dim);
+  fill(ctx,PX+PW-120,inputY+14,62,62,31,C.acc);
+  txt(ctx,'↑',PX+PW-89,inputY+58,34,700,'#fff','center');
+
+  drawTabBar(ctx,0);
+  ctx.restore();drawIsland(ctx);
+  txt(ctx,'✦ Flowline · Free to download on the App Store',W/2,H-50,32,400,C.dim,'center');
+  return cv;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// iOS 3 — "Syncs to Apple Calendar in one tap."
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ios3(){
+  const W=1290,H=2796,cv=mk(W,H),ctx=cv.getContext('2d');
+  outerBg(ctx,W,H,'rgba(16,185,129,0.2)');
+
+  txt(ctx,'Never miss an event.',W/2,180,94,800,'#fff','center');
+  txt(ctx,'Syncs in one tap.',W/2,300,94,800,C.grn,'center');
+  txt(ctx,'Your AI plan flows straight into Apple Calendar.',W/2,394,38,400,C.sub,'center');
+
+  drawBezel(ctx);
+  ctx.save();clipToScreen(ctx);
+  ctx.fillStyle=C.bg;ctx.fillRect(PX,PY,PW,PH);
+  ctx.fillStyle=rg(ctx,PX+PW/2,PY,700,[0,'rgba(16,185,129,0.1)'],[1,'transparent']);
+  ctx.fillRect(PX,PY,PW,PH);
+
+  statusBar(ctx);
+  txt(ctx,'CALENDAR',PX+PW/2,PY+148,34,900,C.txt,'center');
+
+  // Month + nav
+  txt(ctx,'‹',PX+90,PY+218,52,400,C.sub);
+  txt(ctx,'March 2025',PX+PW/2,PY+218,48,700,C.txt,'center');
+  txt(ctx,'›',PX+PW-90,PY+218,52,400,C.sub,'right');
+
+  // Week strip
+  const dayLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dayNums=[24,25,26,27,28,1,2];
+  const dw=PW/7;
+  dayLabels.forEach((d,i)=>{
+    const cx=PX+dw*i+dw/2,today=(i===2);
+    txt(ctx,d,cx,PY+278,28,400,C.sub,'center');
+    if(today){fill(ctx,cx-36,PY+292,72,72,36,C.acc);}
+    txt(ctx,`${dayNums[i]}`,cx,PY+346,38,today?700:400,today?'#fff':C.txt,'center');
+  });
+  ctx.fillStyle=C.bord;ctx.fillRect(PX,PY+378,PW,1);
+
+  // Timeline
+  const hours=[8,9,10,11,12,13,14,15,16,17,18,19];
+  const rowH=130,timelineY=PY+390,colX=PX+120;
+  hours.forEach((h,i)=>{
+    txt(ctx,`${h}:00`,PX+28,timelineY+i*rowH+42,26,400,C.dim);
+    ctx.fillStyle='rgba(255,255,255,0.04)';ctx.fillRect(colX,timelineY+i*rowH,PW-120-PX+PX,1);
+  });
+
+  const evts=[
+    {h:9,span:2,l:'Deep Work Block',c:C.acc},
+    {h:11,span:0.5,l:'Standup',c:C.grn},
+    {h:12,span:1,l:'Lunch',c:C.yel},
+    {h:14,span:1.5,l:'Product Review',c:C.pur},
+    {h:16,span:2,l:'Focus Session',c:C.acc},
+    {h:18,span:1,l:'Gym 🏋️',c:C.red},
+  ];
+  evts.forEach(e=>{
+    const ey=timelineY+(e.h-8)*rowH+4,eh=e.span*rowH-8;
+    fill(ctx,colX,ey,PW-PX-colX+PX-20,eh,12,e.c+'28');
+    ctx.fillStyle=e.c;ctx.fillRect(colX,ey,5,eh);
+    if(eh>40)txt(ctx,e.l,colX+18,ey+eh/2+12,32,600,e.c);
+  });
+
+  // Add to Calendar button — pinned above tab bar
+  const btnY=SB-136;
+  fill(ctx,PX+60,btnY,PW-120,108,26,C.grn);
+  txt(ctx,'📅  Add to Calendar',PX+PW/2,btnY+72,42,700,'#fff','center');
+
+  drawTabBar(ctx,1);
+  ctx.restore();drawIsland(ctx);
+  txt(ctx,'✦ Flowline · Free to download on the App Store',W/2,H-50,32,400,C.dim,'center');
+  return cv;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// iOS 4 — "Deep work. Zero distractions."
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ios4(){
+  const W=1290,H=2796,cv=mk(W,H),ctx=cv.getContext('2d');
+  outerBg(ctx,W,H,'rgba(139,92,246,0.2)');
+
+  txt(ctx,'Deep work mode.',W/2,180,94,800,'#fff','center');
+  txt(ctx,'Zero distractions.',W/2,300,94,800,C.pur,'center');
+  txt(ctx,'Pomodoro timer built right into your daily plan.',W/2,394,38,400,C.sub,'center');
+
+  drawBezel(ctx);
+  ctx.save();clipToScreen(ctx);
+  ctx.fillStyle=C.bg;ctx.fillRect(PX,PY,PW,PH);
+  ctx.fillStyle=rg(ctx,PX+PW/2,PY+PH*0.4,1000,[0,'rgba(139,92,246,0.14)'],[1,'transparent']);
+  ctx.fillRect(PX,PY,PW,PH);
+
+  statusBar(ctx);
+  txt(ctx,'FOCUS',PX+PW/2,PY+148,34,900,C.txt,'center');
+
+  // Session info
+  txt(ctx,'Deep Work Block',PX+PW/2,SY+40,50,700,C.txt,'center');
+  txt(ctx,'Session 2 of 4',PX+PW/2,SY+100,32,400,C.sub,'center');
+
+  // Progress dots
+  [0,1,2,3].forEach(i=>{
+    ctx.fillStyle=i<2?C.pur:'rgba(255,255,255,0.15)';
+    ctx.beginPath();ctx.arc(PX+PW/2-54+i*36,SY+142,11,0,Math.PI*2);ctx.fill();
+  });
+
+  // Big timer ring
+  const cx=PX+PW/2,cy=SY+560,R=310;
+  // outer glow
+  ctx.strokeStyle='rgba(139,92,246,0.14)';ctx.lineWidth=60;
+  ctx.beginPath();ctx.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*0.66);ctx.stroke();
+  // track
+  ctx.strokeStyle=C.bg3;ctx.lineWidth=28;
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+  // progress
+  ctx.strokeStyle=C.pur;ctx.lineWidth=28;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*0.66);ctx.stroke();
+  // center
+  txt(ctx,'25:00',cx,cy+28,124,200,C.pur,'center');
+  txt(ctx,'REMAINING',cx,cy+90,26,800,C.sub,'center');
+
+  // Current task
+  const ty=cy+R+60;
+  fill(ctx,PX+60,ty,PW-120,118,20,C.bg3);
+  stroke(ctx,PX+60,ty,PW-120,118,20,'rgba(139,92,246,0.35)');
+  ctx.fillStyle=C.pur;ctx.fillRect(PX+60,ty,6,118);
+  txt(ctx,'Now working on',PX+106,ty+46,28,400,C.sub);
+  txt(ctx,'Implement authentication flow',PX+106,ty+92,36,600,C.txt);
+
+  // Stats row — 3 chips
+  const chipY=ty+138;
+  [[C.acc,'2h 15m','focused today'],[C.grn,'🔥 7d','current streak'],[C.pur,'94%','focus score']].forEach(([c,v,u],i)=>{
+    const cw=(PW-140)/3,cx2=PX+60+i*(cw+10);
+    fill(ctx,cx2,chipY,cw,128,16,C.bg3);
+    stroke(ctx,cx2,chipY,cw,128,16,C.bord);
+    txt(ctx,v,cx2+cw/2,chipY+62,36,700,c,'center');
+    txt(ctx,u,cx2+cw/2,chipY+102,24,400,C.sub,'center');
+  });
+
+  // Buttons — pinned above tab bar
+  const bY=SB-130;
+  fill(ctx,PX+60,bY,PW/2-80,100,50,C.pur);
+  txt(ctx,'⏸  Pause',PX+60+(PW/2-80)/2,bY+66,38,700,'#fff','center');
+  fill(ctx,PX+PW/2+20,bY,PW/2-80,100,50,C.bg3);
+  stroke(ctx,PX+PW/2+20,bY,PW/2-80,100,50,C.bord);
+  txt(ctx,'End Session',PX+PW/2+20+(PW/2-80)/2,bY+66,34,600,C.sub,'center');
+
+  drawTabBar(ctx,2);
+  ctx.restore();drawIsland(ctx);
+  txt(ctx,'✦ Flowline · Free to download on the App Store',W/2,H-50,32,400,C.dim,'center');
+  return cv;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// iOS 5 — "Watch your streaks grow."
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ios5(){
+  const W=1290,H=2796,cv=mk(W,H),ctx=cv.getContext('2d');
+  outerBg(ctx,W,H,'rgba(245,158,11,0.18)');
+
+  txt(ctx,'Watch your streaks',W/2,180,94,800,'#fff','center');
+  txt(ctx,'grow.',W/2,300,94,800,C.yel,'center');
+  txt(ctx,'Productivity insights that keep you coming back.',W/2,394,38,400,C.sub,'center');
+
+  drawBezel(ctx);
+  ctx.save();clipToScreen(ctx);
+  ctx.fillStyle=C.bg;ctx.fillRect(PX,PY,PW,PH);
+  ctx.fillStyle=rg(ctx,PX+PW/2,PY,700,[0,'rgba(245,158,11,0.09)'],[1,'transparent']);
+  ctx.fillRect(PX,PY,PW,PH);
+
+  statusBar(ctx);
+  txt(ctx,'STATS',PX+PW/2,PY+148,34,900,C.txt,'center');
+  txt(ctx,'This Week',PX+PW/2,SY-20,48,700,C.txt,'center');
+
+  // Streak banner
+  fill(ctx,PX+60,SY+36,PW-120,100,24,'rgba(245,158,11,0.15)');
+  stroke(ctx,PX+60,SY+36,PW-120,100,24,'rgba(245,158,11,0.4)',2);
+  txt(ctx,'🔥  7 Day Streak',PX+PW/2,SY+76,38,700,C.yel,'center');
+  txt(ctx,'Personal best: 14 days',PX+PW/2,SY+112,28,400,C.sub,'center');
+
+  // Big metric cards 2×2
+  const mets=[
+    {v:'14',u:'Plans Created',c:C.acc},
+    {v:'87%',u:'Tasks Done',c:C.grn},
+    {v:'34h',u:'Deep Focus',c:C.pur},
+    {v:'12',u:'Cal Syncs',c:C.yel},
+  ];
+  const mw=(PW-140)/2,mh=178;
+  mets.forEach((m,i)=>{
+    const mx2=PX+60+(i%2)*(mw+20),my2=SY+166+Math.floor(i/2)*(mh+16);
+    fill(ctx,mx2,my2,mw,mh,20,C.bg3);
+    stroke(ctx,mx2,my2,mw,mh,20,C.bord);
+    ctx.fillStyle=m.c;ctx.fillRect(mx2,my2,mw,4);
+    txt(ctx,m.v,mx2+mw/2,my2+106,72,800,m.c,'center');
+    txt(ctx,m.u,mx2+mw/2,my2+152,28,400,C.sub,'center');
+  });
+
+  // Bar chart
+  const chartLabelY=SY+166+2*(mh+16)+16;
+  txt(ctx,'Daily Focus Hours',PX+60,chartLabelY+30,34,700,C.txt);
+  txt(ctx,'↑ +23% vs last week',PX+PW-60,chartLabelY+30,26,600,C.grn,'right');
+
+  const bvals=[3.5,5,4,6.5,5.5,7,4.5];
+  const bdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const bw2=(PW-120)/7-10,maxH=300,base=chartLabelY+380;
+  bvals.forEach((v,i)=>{
+    const bh=v/7*maxH,bx=PX+60+i*(bw2+10),today=(i===5);
+    fill(ctx,bx,base-bh,bw2,bh,8,today?C.acc:C.bg3);
+    if(today){stroke(ctx,bx,base-bh,bw2,bh,8,C.acc+88);}
+    txt(ctx,bdays[i],bx+bw2/2,base+40,26,400,today?C.acc:C.sub,'center');
+    if(today)txt(ctx,`${v}h`,bx+bw2/2,base-bh-14,24,700,C.acc,'center');
+  });
+
+  // Insight card
+  const insY=base+70;
+  fill(ctx,PX+60,insY,PW-120,100,18,C.bg3);
+  stroke(ctx,PX+60,insY,PW-120,100,18,C.bord);
+  txt(ctx,'💡',PX+100,insY+64,40,400,'');
+  txt(ctx,'Your peak focus window is 9–11am',PX+168,insY+54,32,600,C.txt);
+  txt(ctx,'3 of 5 deep work blocks completed this week',PX+168,insY+90,26,400,C.sub);
+
+  drawTabBar(ctx,3);
+  ctx.restore();drawIsland(ctx);
+  txt(ctx,'✦ Flowline · Free to download on the App Store',W/2,H-50,32,400,C.dim,'center');
+  return cv;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// iOS 6 — Paywall
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ios6(){
+  const W=1290,H=2796,cv=mk(W,H),ctx=cv.getContext('2d');
+  outerBg(ctx,W,H,'rgba(59,130,246,0.25)');
+
+  txt(ctx,'Unlimited planning.',W/2,180,94,800,'#fff','center');
+  txt(ctx,'Unlimited focus.',W/2,300,94,800,C.acc,'center');
+  txt(ctx,'Start free. Upgrade when you\'re ready.',W/2,394,38,400,C.sub,'center');
+
+  drawBezel(ctx);
+  ctx.save();clipToScreen(ctx);
+  ctx.fillStyle=C.bg;ctx.fillRect(PX,PY,PW,PH);
+  ctx.fillStyle=rg(ctx,PX+PW/2,PY,900,[0,'rgba(59,130,246,0.18)'],[1,'transparent']);
+  ctx.fillRect(PX,PY,PW,PH);
+
+  statusBar(ctx);
+  // Icon + title
+  fill(ctx,PX+PW/2-52,SY,104,104,22,C.acc+'22');
+  stroke(ctx,PX+PW/2-52,SY,104,104,22,'rgba(59,130,246,0.4)',1.5);
+  txt(ctx,'✦',PX+PW/2,SY+76,60,700,C.acc,'center');
+  txt(ctx,'Flowline Pro',PX+PW/2,SY+158,62,800,C.txt,'center');
+  txt(ctx,'Everything you need to own your day',PX+PW/2,SY+214,32,400,C.sub,'center');
+
+  // Feature list
+  const feats=[
+    {ic:'∞',tx:'Unlimited AI planning sessions'},
+    {ic:'📅',tx:'Calendar sync & auto-scheduling'},
+    {ic:'⏱',tx:'Unlimited Pomodoro sessions'},
+    {ic:'📊',tx:'Advanced stats & streak tracking'},
+    {ic:'☁️',tx:'Sync across iPhone, iPad & Mac'},
+    {ic:'🎯',tx:'Smart templates & quick plans'},
+  ];
+  let fy=SY+246;
+  feats.forEach(f=>{
+    ctx.fillStyle=C.bord;ctx.fillRect(PX+60,fy,PW-120,1);
+    txt(ctx,f.ic,PX+90,fy+68,42,400,'');
+    txt(ctx,f.tx,PX+180,fy+68,34,400,C.txt);
+    txt(ctx,'✓',PX+PW-80,fy+68,36,700,C.acc,'right');
+    fy+=96;
+  });
+  ctx.fillStyle=C.bord;ctx.fillRect(PX+60,fy,PW-120,1);
+  fy+=20;
+
+  // Plan cards
+  const plans=[
+    {n:'Monthly',p:'$4.99',s:'/month'},
+    {n:'Annual',p:'$29.99',s:'/year',best:true},
+    {n:'Lifetime',p:'$59.99',s:'one-time'},
+  ];
+  plans.forEach((p,i)=>{
+    const ph=112,sel=p.best;
+    fill(ctx,PX+60,fy,PW-120,ph,18,sel?'rgba(59,130,246,0.14)':C.bg3);
+    stroke(ctx,PX+60,fy,PW-120,ph,18,sel?C.acc:C.bord,sel?2:1);
+    txt(ctx,p.n,PX+110,fy+50,36,600,sel?C.acc:C.txt);
+    txt(ctx,p.s,PX+110,fy+88,26,400,C.sub);
+    txt(ctx,p.p,PX+PW-110,fy+68,44,700,sel?C.acc:C.txt,'right');
+    if(p.best){fill(ctx,PX+PW-310,fy+18,190,46,23,C.acc);txt(ctx,'SAVE 50%',PX+PW-215,fy+48,22,700,'#fff','center');}
+    fy+=130;
+  });
+
+  // CTA — pinned above bottom
+  const cY=SB-160;
+  fill(ctx,PX+60,cY,PW-120,108,26,C.acc);
+  txt(ctx,'Start Free Trial →',PX+PW/2,cY+72,44,700,'#fff','center');
+  txt(ctx,'7 days free · Cancel anytime · No commitment',PX+PW/2,cY+148,28,400,C.sub,'center');
+
+  ctx.restore();drawIsland(ctx);
+  txt(ctx,'✦ Flowline · Free to download on the App Store',W/2,H-50,32,400,C.dim,'center');
+  return cv;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// macOS helpers
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const MW=1440,MH=900;
+function macMk(){const cv=mk(MW,MH);return[cv,cv.getContext('2d')];}
+
+function macBg(ctx,glow){
+  ctx.fillStyle=lg(ctx,0,0,0,MH,[0,'#02020a'],[1,'#050d18']);ctx.fillRect(0,0,MW,MH);
+  if(glow){ctx.fillStyle=rg(ctx,MW/2,0,700,[0,glow],[1,'transparent']);ctx.fillRect(0,0,MW,MH);}
+}
+
+function macWindow(ctx,wx,wy,ww,wh){
+  ctx.save();ctx.shadowColor='rgba(0,0,0,0.95)';ctx.shadowBlur=90;ctx.shadowOffsetY=28;
+  fill(ctx,wx,wy,ww,wh,14,C.bg2);ctx.restore();
+  stroke(ctx,wx,wy,ww,wh,14,'rgba(255,255,255,0.07)',1);
+  // title bar
+  fill(ctx,wx,wy,ww,46,14,C.bg2);
+  ctx.fillStyle=C.bord;ctx.fillRect(wx,wy+46,ww,1);
+  [[wx+16,'#ff5f57'],[wx+38,'#febc2e'],[wx+60,'#28c840']].forEach(([x,c])=>{
+    ctx.fillStyle=c;ctx.beginPath();ctx.arc(x+6,wy+23,7,0,Math.PI*2);ctx.fill();
+  });
+  txt(ctx,'Flowline',wx+ww/2,wy+29,13,600,C.sub,'center');
+  // body
+  ctx.fillStyle=C.bg;ctx.fillRect(wx,wy+46,ww,wh-46);
+}
+
+function macSidebar(ctx,wx,wy,wh,active=0){
+  fill(ctx,wx,wy+46,220,wh-46,0,C.bg2);
+  ctx.fillStyle=C.bord;ctx.fillRect(wx+220,wy+46,1,wh-46);
+  const items=[['☁️','Plan'],['📅','Calendar'],['⏱','Focus'],['📊','Stats'],['👤','Profile']];
+  let ny=wy+76;
+  items.forEach(([ic,lb],i)=>{
+    const on=i===active;
+    if(on){fill(ctx,wx+10,ny-6,200,44,10,'rgba(59,130,246,0.15)');}
+    txt(ctx,ic,wx+22,ny+22,17,400,'');
+    txt(ctx,lb,wx+50,ny+22,14,on?600:400,on?C.acc:C.sub);
+    ny+=52;
+  });
+}
+
+// mac bubble helper
+function macBubble(ctx,isUser,text,x,y,maxW){
+  const lines=text.split('\n'),lh=22,pad=14;
+  const bh=pad*2+lines.length*lh;
+  const bw=Math.min(maxW,540);
+  const bx=isUser?x+maxW-bw:x;
+  fill(ctx,bx,y,bw,bh,8,isUser?C.acc:C.bg3);
+  if(!isUser)stroke(ctx,bx,y,bw,bh,8,C.bord,1);
+  lines.forEach((l,i)=>txt(ctx,l,bx+pad,y+pad+lh*i+lh*0.75,13,400,isUser?'#fff':C.txt));
+  return y+bh+10;
+}
+
+// ── macOS Screen 1 — Plan ─────────────────────────────────────────────────────
+function mac1(){
+  const[cv,ctx]=macMk();macBg(ctx,'rgba(59,130,246,0.18)');
+  txt(ctx,'AI-powered planning.',60,68,34,800,'#fff');
+  txt(ctx,'Now on Mac.',60,112,34,800,C.acc);
+  txt(ctx,'Flowline brings intelligent daily scheduling to your desktop.',60,146,16,400,C.sub);
+
+  const wx=44,wy=172,ww=MW-88,wh=MH-188;
+  macWindow(ctx,wx,wy,ww,wh);
+  macSidebar(ctx,wx,wy,wh,0);
+
+  const mx=wx+236,mw=ww-236,my=wy+46;
+  ctx.fillStyle=rg(ctx,mx+mw/2,my,500,[0,'rgba(59,130,246,0.1)'],[1,'transparent']);
+  ctx.fillRect(mx,my,mw,wh-46);
+
+  txt(ctx,'FLOWLINE',mx+mw/2,my+42,13,900,C.txt,'center');
+  txt(ctx,'Good morning, Alex 👋',mx+mw/2,my+78,20,700,C.txt,'center');
+  txt(ctx,"What does your day look like?",mx+mw/2,my+106,14,400,C.sub,'center');
+
+  const conv=[
+    {u:false,t:"Tell me your schedule — I'll build\nyour perfect time-blocked plan."},
+    {u:true, t:'3 meetings, need 2h deep work in the afternoon'},
+    {u:false,t:"Here's your day:\n9–11am: Deep work block\n11:30am: Team standup\n2pm: Product review\n4pm: Sprint planning"},
+  ];
+  let by=my+126;
+  conv.forEach(m=>{by=macBubble(ctx,m.u,m.t,mx+24,by,mw-48);});
+
+  // input bar
+  const iy=wy+wh-58;
+  fill(ctx,mx+20,iy,mw-40,42,21,C.bg3);stroke(ctx,mx+20,iy,mw-40,42,21,C.bord,1);
+  txt(ctx,'Ask Flowline anything...',mx+44,iy+28,13,400,C.dim);
+  fill(ctx,mx+mw-60,iy+6,30,30,15,C.acc);
+  txt(ctx,'↑',mx+mw-45,iy+26,13,700,'#fff','center');
+
+  txt(ctx,'✦ Flowline for Mac — macOS 13+',MW/2,MH-12,11,400,C.dim,'center');
+  return cv;
+}
+
+// ── macOS Screen 2 — Calendar ─────────────────────────────────────────────────
+function mac2(){
+  const[cv,ctx]=macMk();macBg(ctx,'rgba(16,185,129,0.16)');
+  txt(ctx,'Beautiful calendar view.',60,68,34,800,'#fff');
+  txt(ctx,'Every event, perfectly placed.',60,112,34,800,C.grn);
+  txt(ctx,'Your AI plan syncs to a rich color-coded weekly calendar.',60,146,16,400,C.sub);
+
+  const wx=44,wy=172,ww=MW-88,wh=MH-188;
+  macWindow(ctx,wx,wy,ww,wh);
+  macSidebar(ctx,wx,wy,wh,1);
+
+  const mx=wx+236,mw=ww-236,my=wy+46;
+  txt(ctx,'March 2025',mx+mw/2,my+38,16,700,C.txt,'center');
+
+  const dl=['Mon 24','Tue 25','Wed 26 ●','Thu 27','Fri 28'];
+  const dcw=(mw-20)/dl.length;
+  dl.forEach((d,i)=>{
+    const dx=mx+10+i*dcw,tod=(i===2);
+    txt(ctx,d,dx+dcw/2,my+66,13,tod?700:400,tod?C.acc:C.sub,'center');
+    ctx.fillStyle=C.bord;ctx.fillRect(dx,my+74,1,wh-74);
+  });
+  ctx.fillStyle=C.bord;ctx.fillRect(mx,my+74,mw,1);
+
+  const hours=[8,9,10,11,12,13,14,15,16,17];
+  const rh=(wh-82)/hours.length;
+  hours.forEach((h,i)=>{
+    txt(ctx,`${h}:00`,mx+2,my+80+i*rh,10,400,C.dim);
+    ctx.fillStyle='rgba(255,255,255,0.035)';ctx.fillRect(mx+38,my+76+i*rh,mw-38,1);
+  });
+
+  const evs=[
+    {d:0,h:9,sp:2,l:'Deep Work',c:C.acc},
+    {d:2,h:9,sp:2,l:'Deep Work',c:C.acc},
+    {d:2,h:11.5,sp:.5,l:'Standup',c:C.grn},
+    {d:1,h:10,sp:1,l:'Design Review',c:C.pur},
+    {d:3,h:14,sp:1.5,l:'Sprint Planning',c:C.yel},
+    {d:4,h:9,sp:3,l:'Focus Block',c:C.acc},
+    {d:0,h:12,sp:1,l:'Lunch',c:C.yel},
+    {d:3,h:9,sp:1.5,l:'Standup',c:C.grn},
+  ];
+  evs.forEach(e=>{
+    const ex=mx+12+e.d*dcw,ey=my+74+(e.h-8)*rh,eh=e.sp*rh-3;
+    fill(ctx,ex+2,ey,dcw-6,eh,5,e.c+'30');
+    ctx.fillStyle=e.c;ctx.fillRect(ex+2,ey,3,eh);
+    if(eh>18)txt(ctx,e.l,ex+10,ey+eh/2+5,11,600,e.c);
+  });
+
+  txt(ctx,'✦ Flowline for Mac — macOS 13+',MW/2,MH-12,11,400,C.dim,'center');
+  return cv;
+}
+
+// ── macOS Screen 3 — Focus ────────────────────────────────────────────────────
+function mac3(){
+  const[cv,ctx]=macMk();macBg(ctx,'rgba(139,92,246,0.16)');
+  txt(ctx,'Built-in Pomodoro.',60,68,34,800,'#fff');
+  txt(ctx,'Stay in flow, on Mac.',60,112,34,800,C.pur);
+  txt(ctx,'Focus sessions synced directly to your planned schedule.',60,146,16,400,C.sub);
+
+  const wx=44,wy=172,ww=MW-88,wh=MH-188;
+  macWindow(ctx,wx,wy,ww,wh);
+  macSidebar(ctx,wx,wy,wh,2);
+
+  const mx=wx+236,mw=ww-236,my=wy+46;
+
+  txt(ctx,'Deep Work Block — Session 2 of 4',mx+mw/2,my+38,15,700,C.txt,'center');
+  txt(ctx,'Focus score: 94%  ·  Streak: 7 days 🔥',mx+mw/2,my+60,13,400,C.sub,'center');
+
+  // Ring
+  const cx2=mx+mw/2,cy=my+260,Rr=140;
+  ctx.strokeStyle=C.bg3;ctx.lineWidth=14;ctx.beginPath();ctx.arc(cx2,cy,Rr,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle='rgba(139,92,246,0.2)';ctx.lineWidth=26;
+  ctx.beginPath();ctx.arc(cx2,cy,Rr,-Math.PI/2,-Math.PI/2+Math.PI*2*0.66);ctx.stroke();
+  ctx.strokeStyle=C.pur;ctx.lineWidth=14;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(cx2,cy,Rr,-Math.PI/2,-Math.PI/2+Math.PI*2*0.66);ctx.stroke();
+  txt(ctx,'25:00',cx2,cy+18,50,200,C.pur,'center');
+  txt(ctx,'REMAINING',cx2,cy+38,11,700,C.sub,'center');
+
+  fill(ctx,cx2-80,cy+60,72,36,18,C.pur);txt(ctx,'⏸ Pause',cx2-44,cy+83,13,600,'#fff','center');
+  fill(ctx,cx2+10,cy+60,72,36,18,C.bg3);stroke(ctx,cx2+10,cy+60,72,36,18,C.bord,1);
+  txt(ctx,'⏭ Skip',cx2+46,cy+83,13,600,C.sub,'center');
+
+  // Current task
+  const ty=cy+Rr+26;
+  fill(ctx,mx+20,ty,mw-40,50,8,'rgba(139,92,246,0.15)');
+  stroke(ctx,mx+20,ty,mw-40,50,8,'rgba(139,92,246,0.4)',1);
+  txt(ctx,'▶  Implement authentication flow',mx+36,ty+32,14,600,C.pur);
+
+  // Task list
+  const tasks=['✓ Morning standup','✓ Code review','▶ Auth flow','○ Write tests','○ Update docs'];
+  let ty2=ty+68;
+  tasks.forEach(t=>{
+    const done=t.startsWith('✓'),active=t.startsWith('▶');
+    if(active){fill(ctx,mx+20,ty2,mw-40,40,6,'rgba(59,130,246,0.1)');}
+    txt(ctx,t,mx+36,ty2+27,13,active?600:400,done?C.dim:active?C.acc:C.txt);
+    ty2+=44;
+  });
+
+  txt(ctx,'✦ Flowline for Mac — macOS 13+',MW/2,MH-12,11,400,C.dim,'center');
+  return cv;
+}
+
+// ── macOS Screen 4 — Stats ────────────────────────────────────────────────────
+function mac4(){
+  const[cv,ctx]=macMk();macBg(ctx,'rgba(245,158,11,0.13)');
+  txt(ctx,'Your productivity,',60,68,34,800,'#fff');
+  txt(ctx,'visualized.',60,112,34,800,C.yel);
+  txt(ctx,'Streaks, focus hours, completion rates — all at a glance.',60,146,16,400,C.sub);
+
+  const wx=44,wy=172,ww=MW-88,wh=MH-188;
+  macWindow(ctx,wx,wy,ww,wh);
+  macSidebar(ctx,wx,wy,wh,3);
+
+  const mx=wx+236,mw=ww-236,my=wy+46;
+
+  // Streak bar
+  fill(ctx,mx+20,my+10,mw-40,52,10,'rgba(245,158,11,0.12)');
+  stroke(ctx,mx+20,my+10,mw-40,52,10,'rgba(245,158,11,0.3)',1);
+  txt(ctx,'🔥  7 Day Streak  —  Best: 14 days',mx+mw/2,my+42,14,600,C.yel,'center');
+
+  // Stats cards
+  const sm=[{v:'14',u:'Plans',c:C.acc},{v:'87%',u:'Done',c:C.grn},{v:'34h',u:'Focus',c:C.pur},{v:'12',u:'Syncs',c:C.yel}];
+  const cw2=(mw-50)/4;
+  sm.forEach((s,i)=>{
+    const cx3=mx+14+i*(cw2+8);
+    fill(ctx,cx3,my+74,cw2,86,8,C.bg3);stroke(ctx,cx3,my+74,cw2,86,8,C.bord,1);
+    ctx.fillStyle=s.c;ctx.fillRect(cx3,my+74,cw2,3);
+    txt(ctx,s.v,cx3+cw2/2,my+126,26,800,s.c,'center');
+    txt(ctx,s.u,cx3+cw2/2,my+150,11,400,C.sub,'center');
+  });
+
+  // Bar chart
+  txt(ctx,'Daily Focus Hours — This Week',mx+20,my+182,13,700,C.txt);
+  txt(ctx,'↑ +23% vs last week',mx+mw-20,my+182,11,600,C.grn,'right');
+  const bvals=[3.5,5,4,6.5,5.5,7,4.5],bdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const bw3=(mw-50)/7-6,maxH2=180,base2=my+390;
+  bvals.forEach((v,i)=>{
+    const bh=v/7*maxH2,bx=mx+14+i*(bw3+6),tod=(i===5);
+    fill(ctx,bx,base2-bh,bw3,bh,5,tod?C.acc:C.bg3);
+    txt(ctx,bdays[i],bx+bw3/2,base2+18,11,400,tod?C.acc:C.sub,'center');
+    if(tod)txt(ctx,`${v}h`,bx+bw3/2,base2-bh-6,10,700,C.acc,'center');
+  });
+
+  // Insight
+  const iy=base2+36;
+  fill(ctx,mx+20,iy,mw-40,52,8,C.bg3);stroke(ctx,mx+20,iy,mw-40,52,8,C.bord,1);
+  txt(ctx,'💡  Your peak focus window is 9–11am · 3 of 5 deep work blocks completed this week',mx+36,iy+32,13,500,C.txt);
+
+  txt(ctx,'✦ Flowline for Mac — macOS 13+',MW/2,MH-12,11,400,C.dim,'center');
+  return cv;
+}
+
+// ── macOS Screen 5 — Paywall ──────────────────────────────────────────────────
+function mac5(){
+  const[cv,ctx]=macMk();macBg(ctx,'rgba(59,130,246,0.2)');
+  txt(ctx,'Flowline Pro.',60,68,34,800,'#fff');
+  txt(ctx,'Own your day, completely.',60,112,34,800,C.acc);
+  txt(ctx,'Unlimited plans, syncing, and deep focus tracking.',60,146,16,400,C.sub);
+
+  const wx=44,wy=172,ww=MW-88,wh=MH-188;
+  macWindow(ctx,wx,wy,ww,wh);
+  ctx.fillStyle=rg(ctx,wx+ww/2,wy,600,[0,'rgba(59,130,246,0.12)'],[1,'transparent']);
+  ctx.fillRect(wx,wy+46,ww,wh-46);
+  stroke(ctx,wx,wy,ww,wh,14,'rgba(255,255,255,0.07)',1);
+
+  txt(ctx,'✦',wx+ww/2,wy+90,30,700,C.acc,'center');
+  txt(ctx,'Flowline Pro',wx+ww/2,wy+128,26,800,C.txt,'center');
+  txt(ctx,'Everything you need to take back your day',wx+ww/2,wy+156,14,400,C.sub,'center');
+
+  // Features 2-col
+  const feats=['Unlimited AI planning','Calendar sync & auto-scheduling','Unlimited focus timer','Advanced stats & streaks','Sync across Mac & iPhone','Smart templates'];
+  const col=3,fw=(ww-80)/col;
+  feats.forEach((f,i)=>{
+    const row=Math.floor(i/col),col2=i%col;
+    const fx=wx+34+col2*fw,fy=wy+178+row*36;
+    txt(ctx,'✓',fx,fy,13,700,C.acc);txt(ctx,f,fx+18,fy,13,400,C.txt);
+  });
+
+  // Plans
+  const plans2=[{n:'Monthly',p:'$4.99/mo'},{n:'Annual',p:'$29.99/yr',sel:true,b:'SAVE 50%'},{n:'Lifetime',p:'$59.99'}];
+  const pw3=(ww-80)/3;
+  plans2.forEach((p,i)=>{
+    const px2=wx+28+i*(pw3+8);
+    fill(ctx,px2,wy+262,pw3,98,10,p.sel?'rgba(59,130,246,0.15)':C.bg3);
+    stroke(ctx,px2,wy+262,pw3,98,10,p.sel?C.acc:C.bord,p.sel?2:1);
+    txt(ctx,p.n,px2+pw3/2,wy+312,15,600,p.sel?C.acc:C.txt,'center');
+    txt(ctx,p.p,px2+pw3/2,wy+338,13,700,p.sel?C.acc:C.txt,'center');
+    if(p.b){fill(ctx,px2+pw3/2-40,wy+270,80,22,11,C.acc);txt(ctx,p.b,px2+pw3/2,wy+284,9,700,'#fff','center');}
+  });
+
+  // CTA
+  fill(ctx,wx+28,wy+376,ww-56,50,10,C.acc);
+  txt(ctx,'Start Free Trial — No Credit Card Required',wx+ww/2,wy+407,15,700,'#fff','center');
+  txt(ctx,'Cancel anytime · 7-day free trial',wx+ww/2,wy+440,12,400,C.sub,'center');
+
+  txt(ctx,'✦ Flowline for Mac — macOS 13+',MW/2,MH-12,11,400,C.dim,'center');
+  return cv;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+const STORED={ios:[],mac:[]};
+
+function addThumb(galleryId,cv,label,dispW){
+  const wrap=document.createElement('div');wrap.className='thumb';
+  cv.style.width=dispW+'px';cv.style.height='auto';
+  wrap.appendChild(cv);
+  const lb=document.createElement('div');lb.className='thumb-label';
+  lb.textContent=label.replace(/_/g,' ');wrap.appendChild(lb);
+  document.getElementById(galleryId).appendChild(wrap);
+}
+
+function render(){
+  [[ios1,'01_hero'],[ios2,'02_ai_chat'],[ios3,'03_calendar'],[ios4,'04_focus'],[ios5,'05_stats'],[ios6,'06_paywall']]
+    .forEach(([fn,id])=>{const cv=fn();STORED.ios.push({cv,id});addThumb('ios-gallery',cv,id,210);});
+  [[mac1,'01_hero'],[mac2,'02_calendar'],[mac3,'03_focus'],[mac4,'04_stats'],[mac5,'05_paywall']]
+    .forEach(([fn,id])=>{const cv=fn();STORED.mac.push({cv,id});addThumb('mac-gallery',cv,id,360);});
+}
+
+function downloadAll(type){
+  STORED[type].forEach(({cv,id})=>{
+    const a=document.createElement('a');
+    a.href=cv.toDataURL('image/png');
+    a.download=`flowline_${type}_${id}.png`;a.click();
+  });
+}
+
+render();
+</script>
+</body>
+</html>
