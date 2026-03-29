@@ -7,10 +7,14 @@ struct AuthView: View {
     @State private var name     = ""
     @State private var email    = ""
     @State private var password = ""
+    @State private var passwordConfirm = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var emailError: String?
     @State private var showForgotPassword = false
+    @State private var showPassword = false
+    @State private var showPasswordConfirm = false
+    @State private var passwordMatchError: String?
 
     enum Mode { case login, register }
 
@@ -71,7 +75,19 @@ struct AuthView: View {
                             .padding(.horizontal, 14)
                             .padding(.top, -6)
                     }
-                    authField("Password", text: $password, icon: "lock", isSecure: true)
+
+                    if mode == .register && !password.isEmpty && !passwordConfirm.isEmpty && password != passwordConfirm {
+                        Text("Passwords don't match")
+                            .font(.system(size: 11))
+                            .foregroundColor(.red.opacity(0.85))
+                            .padding(.horizontal, 14)
+                            .padding(.top, -6)
+                    }
+                    passwordField("Password", text: $password, isVisible: $showPassword, icon: "lock")
+
+                    if mode == .register {
+                        passwordField("Confirm password", text: $passwordConfirm, isVisible: $showPasswordConfirm, icon: "lock")
+                    }
                 }
                 .padding(.horizontal, 20)
 
@@ -168,7 +184,18 @@ struct AuthView: View {
     // MARK: - Sub-views
 
     private func modeTab(_ label: String, tab: Mode) -> some View {
-        Button { withAnimation { mode = tab; errorMessage = nil } } label: {
+        Button {
+            withAnimation {
+                mode = tab
+                errorMessage = nil
+                emailError = nil
+                passwordMatchError = nil
+                password = ""
+                passwordConfirm = ""
+                showPassword = false
+                showPasswordConfirm = false
+            }
+        } label: {
             Text(label)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(mode == tab ? .white : FlowLineTheme.secondTxt)
@@ -256,13 +283,101 @@ struct AuthView: View {
     }
     #endif
 
+    // MARK: - Password field with visibility toggle
+
+    #if os(iOS)
+    private func passwordField(_ placeholder: String, text: Binding<String>,
+                              isVisible: Binding<Bool>, icon: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(FlowLineTheme.secondTxt)
+                .frame(width: 16)
+
+            if isVisible.wrappedValue {
+                TextField(placeholder, text: text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+            } else {
+                SecureField(placeholder, text: text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+            }
+
+            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { isVisible.wrappedValue.toggle() } }) {
+                Image(systemName: isVisible.wrappedValue ? "eye.slash.fill" : "eye.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(FlowLineTheme.tertiaryBg)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(FlowLineTheme.borderHi, lineWidth: 1)
+                )
+        )
+    }
+    #else
+    private func passwordField(_ placeholder: String, text: Binding<String>,
+                              isVisible: Binding<Bool>, icon: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(FlowLineTheme.secondTxt)
+                .frame(width: 16)
+
+            if isVisible.wrappedValue {
+                TextField(placeholder, text: text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+            } else {
+                SecureField(placeholder, text: text)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.mainTxt)
+            }
+
+            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { isVisible.wrappedValue.toggle() } }) {
+                Image(systemName: isVisible.wrappedValue ? "eye.slash.fill" : "eye.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(FlowLineTheme.secondTxt)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(FlowLineTheme.tertiaryBg)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(FlowLineTheme.borderHi, lineWidth: 1)
+                )
+        )
+    }
+    #endif
+
     // MARK: - Logic
 
     private var isFormValid: Bool {
         let emailValid = EmailValidator.isValid(email)
         let passwordValid = password.count >= 6
         let base = emailValid && passwordValid
-        return mode == .register ? base && !name.isEmpty : base
+
+        if mode == .register {
+            let nameValid = !name.isEmpty
+            let passwordsMatch = password == passwordConfirm && passwordConfirm.count >= 6
+            return base && nameValid && passwordsMatch
+        }
+        return base
     }
 
     private func submit() {
