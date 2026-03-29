@@ -1,6 +1,9 @@
 import Combine
 import Foundation
 import StoreKit
+#if os(iOS)
+import UIKit
+#endif
 
 // ─────────────────────────────────────────────────────────────────────────────
 // StreakManager
@@ -121,7 +124,12 @@ final class StreakManager: ObservableObject {
         guard !defaults.bool(forKey: kReviewAsked), totalPlansCreated >= 5 else { return }
         defaults.set(true, forKey: kReviewAsked)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            SKStoreReviewController.requestReview()
+            #if os(iOS)
+            if let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                SKStoreReviewController.requestReview(in: scene)
+            }
+            #endif
         }
     }
 }

@@ -112,6 +112,7 @@ struct PlanningChatView: View {
     @AppStorage("shouldAutoSendFirstPlan") private var shouldAutoSendFirstPlan = false
     @StateObject private var aiService = GeminiPlanningService()
     @StateObject private var streak = StreakManager.shared
+    @StateObject private var guideManager = GuideOverlayManager()
     private let planSaver = PlanSavingService()
     private let calendarService = CalendarService.shared
 
@@ -148,12 +149,7 @@ struct PlanningChatView: View {
                     Text("FLOWLINE")
                         .font(.system(size: 12, weight: .heavy))
                         .tracking(6)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color(hex: "#c4b5fd"), FlowLineTheme.accentHi],
-                                startPoint: .leading, endPoint: .trailing
-                            )
-                        )
+                        .foregroundColor(FlowLineTheme.mainTxt)
 
                     Spacer()
 
@@ -303,22 +299,7 @@ struct PlanningChatView: View {
                     if !subscriptionManager.isPro {
                         HStack {
                             Spacer()
-                            if subscriptionManager.isAtLimit {
-                                Button { showPaywall = true } label: {
-                                    HStack(spacing: 5) {
-                                        Image(systemName: "lock.fill")
-                                            .font(.system(size: 9, weight: .bold))
-                                        Text("Weekly limit reached — Upgrade for more")
-                                            .font(.system(size: 10, weight: .semibold))
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(FlowLineTheme.accent)
-                                    .clipShape(Capsule())
-                                }
-                                .buttonStyle(.plain)
-                            } else if subscriptionManager.isInTrial {
+                            if subscriptionManager.isInTrial {
                                 let days = subscriptionManager.trialDaysRemaining
                                 Text("Free trial — unlimited saves · \(days == 0 ? "Ends today" : "\(days)d remaining")")
                                     #if os(macOS)
@@ -355,23 +336,7 @@ struct PlanningChatView: View {
                     if hasPlanInChat && !isLoading && !isSaving {
                         HStack(spacing: 8) {
                             Spacer()
-                            if subscriptionManager.isAtLimit {
-                                // Limit reached — save buttons replaced with Upgrade prompt
-                                Button { showPaywall = true } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "lock.fill")
-                                            .font(.system(size: 11, weight: .bold))
-                                        Text("Upgrade to Save")
-                                            .font(.system(size: 12, weight: .bold))
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 7)
-                                    .background(FlowLineTheme.accent)
-                                    .clipShape(Capsule())
-                                }
-                                .buttonStyle(.plain)
-                            } else {
+                            if !subscriptionManager.isAtLimit {
                                 // Save Plan button — saves to SwiftData
                                 Button {
                                     savePlan()
@@ -385,14 +350,8 @@ struct PlanningChatView: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 7)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
-                                            startPoint: .leading, endPoint: .trailing
-                                        )
-                                    )
+                                    .background(FlowLineTheme.accent)
                                     .clipShape(Capsule())
-                                    .shadow(color: FlowLineTheme.accent.opacity(0.45), radius: 10, x: 0, y: 4)
                                 }
                                 .buttonStyle(.plain)
 
@@ -424,18 +383,12 @@ struct PlanningChatView: View {
                                         Text("Add to Calendar")
                                             .font(.system(size: 12, weight: .bold))
                                     }
-                                    .foregroundColor(.white)
+                                    .foregroundColor(FlowLineTheme.accent)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [FlowLineTheme.accent.opacity(0.75), Color(hex: "#8b6dff").opacity(0.75)],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
+                                    .background(FlowLineTheme.tertiaryBg)
                                     .clipShape(Capsule())
-                                    .shadow(color: FlowLineTheme.accent.opacity(0.3), radius: 6, x: 0, y: 2)
+                                    .overlay(Capsule().stroke(FlowLineTheme.accent.opacity(0.5), lineWidth: 1))
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -522,21 +475,18 @@ struct PlanningChatView: View {
             .onAppear {
                 refreshSystemPrompt()
                 loadHistory()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    guideManager.start()
+                }
                 Task {
+                    // Delay calendar permission so it doesn't overlap with notification permission
+                    // (notification is requested at end of onboarding, calendar comes 4s later)
+                    try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 4_000_000_000)
                     await calendarService.requestAccess()
                     refreshSystemPrompt()
-                    // Auto-send personalized first plan prompt after onboarding
+                    // User-initiated first plan (removed auto-send for better UX control)
                     if shouldAutoSendFirstPlan {
                         shouldAutoSendFirstPlan = false
-                        // Small delay so the view is fully ready
-                        try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 800_000_000)
-                        let profile = profiles.first
-                        let focusLine = profile?.bio.components(separatedBy: "\n").first ?? ""
-                        let wakeStr = profile.map {
-                            let f = DateFormatter(); f.timeStyle = .short; return f.string(from: $0.wakeTime)
-                        } ?? "7:00 AM"
-                        let prompt = "Plan my day. \(focusLine.isEmpty ? "" : "\(focusLine). ")I wake at \(wakeStr). Make it realistic and actionable."
-                        await MainActor.run { sendMessage(prompt) }
                     }
                 }
                 checkReviewPrompt()
@@ -553,6 +503,12 @@ struct PlanningChatView: View {
                 if let prompt = note.object as? String, !prompt.isEmpty {
                     sendMessage(prompt)
                 }
+            }
+
+            // ── Guided Tour Overlay ──────────────────────────────────
+            if guideManager.isShowing {
+                GuideOverlayView(manager: guideManager)
+                    .zIndex(100)
             }
 
             // ── Sidebar ──────────────────────────────────────────────
@@ -796,7 +752,7 @@ struct PlanningChatView: View {
                     Circle()
                         .stroke(
                             LinearGradient(
-                                colors: [FlowLineTheme.accent.opacity(0.35), Color(hex: "#8b6dff").opacity(0.15)],
+                                colors: [FlowLineTheme.accent.opacity(0.35), Color(hex: "#60a5fa").opacity(0.15)],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             ),
                             lineWidth: 1.5
@@ -805,7 +761,7 @@ struct PlanningChatView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [FlowLineTheme.accent.opacity(0.18), Color(hex: "#8b6dff").opacity(0.08)],
+                                colors: [FlowLineTheme.accent.opacity(0.18), Color(hex: "#60a5fa").opacity(0.08)],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             )
                         )
@@ -814,7 +770,7 @@ struct PlanningChatView: View {
                         .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [Color(hex: "#c4b5fd"), FlowLineTheme.accentHi],
+                                colors: [Color(hex: "#93c5fd"), FlowLineTheme.accentHi],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             )
                         )
@@ -843,7 +799,7 @@ struct PlanningChatView: View {
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd").opacity(0.9)],
+                            colors: [FlowLineTheme.mainTxt, Color(hex: "#93c5fd").opacity(0.9)],
                             startPoint: .leading, endPoint: .trailing
                         )
                     )
@@ -884,7 +840,7 @@ struct PlanningChatView: View {
                     .padding(.vertical, 16)
                     .background(
                         LinearGradient(
-                            colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                            colors: [FlowLineTheme.accent, Color(hex: "#60a5fa")],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     )
@@ -938,7 +894,7 @@ struct PlanningChatView: View {
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(
                                     LinearGradient(
-                                        colors: [FlowLineTheme.accentHi, Color(hex: "#c4b5fd")],
+                                        colors: [FlowLineTheme.accentHi, Color(hex: "#93c5fd")],
                                         startPoint: .topLeading, endPoint: .bottomTrailing
                                     )
                                 )
@@ -963,7 +919,7 @@ struct PlanningChatView: View {
                                     LinearGradient(
                                         colors: [
                                             FlowLineTheme.accent.opacity(0.30),
-                                            Color(hex: "#8b6dff").opacity(0.12)
+                                            Color(hex: "#60a5fa").opacity(0.12)
                                         ],
                                         startPoint: .topLeading, endPoint: .bottomTrailing
                                     ),
@@ -1126,7 +1082,7 @@ struct PlanningChatView: View {
                         LinearGradient(
                             colors: [
                                 FlowLineTheme.accent.opacity(0.28),
-                                Color(hex: "#8b6dff").opacity(0.16)
+                                Color(hex: "#60a5fa").opacity(0.16)
                             ],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
@@ -1136,7 +1092,7 @@ struct PlanningChatView: View {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(
                                 LinearGradient(
-                                    colors: [FlowLineTheme.accent.opacity(0.50), Color(hex: "#8b6dff").opacity(0.30)],
+                                    colors: [FlowLineTheme.accent.opacity(0.50), Color(hex: "#60a5fa").opacity(0.30)],
                                     startPoint: .topLeading, endPoint: .bottomTrailing
                                 ),
                                 lineWidth: 1
@@ -1300,7 +1256,7 @@ struct PlanningChatView: View {
                 } else if accent {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(LinearGradient(
-                            colors: [FlowLineTheme.accent.opacity(0.14), Color(hex: "#8b6dff").opacity(0.07)],
+                            colors: [FlowLineTheme.accent.opacity(0.14), Color(hex: "#60a5fa").opacity(0.07)],
                             startPoint: .topLeading, endPoint: .bottomTrailing))
                 } else {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1317,7 +1273,7 @@ struct PlanningChatView: View {
                             ? AnyShapeStyle(Color.red.opacity(0.22))
                             : accent
                                 ? AnyShapeStyle(LinearGradient(
-                                    colors: [FlowLineTheme.accent.opacity(0.50), Color(hex: "#8b6dff").opacity(0.25)],
+                                    colors: [FlowLineTheme.accent.opacity(0.50), Color(hex: "#60a5fa").opacity(0.25)],
                                     startPoint: .topLeading, endPoint: .bottomTrailing))
                                 : AnyShapeStyle(LinearGradient(
                                     colors: [Color.white.opacity(0.14), Color.white.opacity(0.06)],
@@ -1637,8 +1593,9 @@ After planning, tell the user which inbox tasks you included):
                 StreakManager.shared.recordPlan()
                 subscriptionManager.recordPlanSave(token: authService.token)
 
-                // C.2 — show paywall after the very first plan save
-                if isFirstPlan && !paywallShownAfterFirstPlan {
+                // C.2 — show paywall after the 2nd plan save (better UX)
+                let totalSaves = subscriptionManager.totalPlanSaves
+                if totalSaves >= 2 && !paywallShownAfterFirstPlan && !subscriptionManager.isPro {
                     paywallShownAfterFirstPlan = true
                     try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_500_000_000)
                     await MainActor.run { showPaywall = true }
@@ -1653,13 +1610,12 @@ After planning, tell the user which inbox tasks you included):
                 }
 
                 // Rate Us on 2nd save
-                let totalSaves = subscriptionManager.totalPlanSaves
                 if totalSaves == 2 {
                     try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_000_000_000)
                     #if os(iOS)
                     if let scene = UIApplication.shared.connectedScenes
                         .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-                        SKStoreReviewController.requestReview(in: scene)
+                        AppStore.requestReview(in: scene)
                     }
                     #endif
                 }
@@ -1724,13 +1680,13 @@ After planning, tell the user which inbox tasks you included):
                 }
 
                 // Rate Us on 2nd save
-                let totalSaves = subscriptionManager.totalPlanSaves
-                if totalSaves == 2 {
+                let calTotalSaves = subscriptionManager.totalPlanSaves
+                if calTotalSaves == 2 {
                     try? await _Concurrency.Task<Never, Never>.sleep(nanoseconds: 1_000_000_000)
                     #if os(iOS)
                     if let scene = UIApplication.shared.connectedScenes
                         .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-                        SKStoreReviewController.requestReview(in: scene)
+                        AppStore.requestReview(in: scene)
                     }
                     #endif
                 }

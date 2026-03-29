@@ -63,7 +63,7 @@ struct FlowlineApp: App {
                 } else if isSyncingAfterLogin {
                     // Pulling profile from server — wait before deciding which screen to show
                     ZStack {
-                        Color(hex: "#080810").ignoresSafeArea()
+                        Color(hex: "#0a0a0f").ignoresSafeArea()
                         ProgressView()
                             .progressViewStyle(.circular)
                             .tint(.white)

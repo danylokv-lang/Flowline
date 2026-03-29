@@ -49,7 +49,7 @@ struct ConfettiOverlay: View {
     // Particles are generated once (deterministic) and shared across all bursts.
     private static let particles: [ConfettiParticle] = {
         let palette: [Color] = [
-            Color(hex: "#a78bfa"), Color(hex: "#818cf8"), Color(hex: "#c4b5fd"),
+            Color(hex: "#a78bfa"), Color(hex: "#818cf8"), Color(hex: "#93c5fd"),
             Color(hex: "#34d399"), Color(hex: "#6ee7b7"),
             Color(hex: "#fbbf24"), Color(hex: "#fde68a"),
             Color(hex: "#f87171"), Color(hex: "#38bdf8"),

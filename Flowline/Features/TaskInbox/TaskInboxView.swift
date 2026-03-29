@@ -6,11 +6,11 @@ import SwiftData
 private extension String {
     var categoryColor: Color {
         switch self {
-        case "work":     return Color(hex: "#6d4cfa")
+        case "work":     return Color(hex: "#3b82f6")
         case "study":    return Color(hex: "#3b82f6")
         case "health":   return Color(hex: "#22c55e")
         case "personal": return Color(hex: "#f97316")
-        default:         return Color(hex: "#6d4cfa")
+        default:         return Color(hex: "#3b82f6")
         }
     }
 

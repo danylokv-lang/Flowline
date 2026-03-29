@@ -87,7 +87,7 @@ struct OnboardingView: View {
                         Capsule()
                             .fill(i <= currentStep
                                   ? AnyShapeStyle(LinearGradient(
-                                        colors: [FlowLineTheme.accent, Color(hex: "#c4b5fd")],
+                                        colors: [FlowLineTheme.accent, Color(hex: "#93c5fd")],
                                         startPoint: .leading, endPoint: .trailing))
                                   : AnyShapeStyle(FlowLineTheme.borderHi))
                             .frame(height: 3)
@@ -162,8 +162,8 @@ struct OnboardingView: View {
                         .background(
                             LinearGradient(
                                 colors: ctaDisabled
-                                    ? [FlowLineTheme.accent.opacity(0.3), Color(hex: "#8b6dff").opacity(0.3)]
-                                    : [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                                    ? [FlowLineTheme.accent.opacity(0.3), Color(hex: "#60a5fa").opacity(0.3)]
+                                    : [FlowLineTheme.accent, Color(hex: "#60a5fa")],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             )
                         )
@@ -489,7 +489,7 @@ struct OnboardingView: View {
             Text(title)
                 .font(.system(size: 32, weight: .black))
                 .foregroundStyle(LinearGradient(
-                    colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd")],
+                    colors: [FlowLineTheme.mainTxt, Color(hex: "#93c5fd")],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
                 .lineSpacing(2)

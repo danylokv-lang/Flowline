@@ -27,7 +27,7 @@ struct FocusTimerView: View {
                         .font(.system(size: 26, weight: .black))
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd").opacity(0.85)],
+                                colors: [FlowLineTheme.mainTxt, Color(hex: "#93c5fd").opacity(0.85)],
                                 startPoint: .leading, endPoint: .trailing
                             )
                         )
@@ -195,7 +195,7 @@ struct FocusTimerView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [FlowLineTheme.accent, Color(hex: "#8b6dff")],
+                                    colors: [FlowLineTheme.accent, Color(hex: "#60a5fa")],
                                     startPoint: .topLeading, endPoint: .bottomTrailing
                                 )
                             )

@@ -1,18 +1,17 @@
 /*
-    Flowline Design System
-    Matches the website exactly — same tokens, same palette.
+    Flowline Design System — Cool Slate + Electric Blue
 
-    Website tokens → App names:
-      --bg        → mainBg      #080810  Deep navy black
-      --bg-s      → secondBg   #0e0e1c  Card / panel surface
-      --bg-t      → tertiaryBg #14142a  Input / elevated surface
-      --txt       → mainTxt    #eeeef5  Primary text
-      --txt2      → secondTxt  #7a7a9a  Secondary / muted text
-      --txt3      → dimTxt     #44445a  Placeholder / disabled
-      --accent    → accent     #6d4cfa  Purple — buttons, links
-      --accent-hi → accentHi   #8b6dff  Lighter purple — hover, glow
-      --border    → border     7% white  Subtle separator
-      --border-hi → borderHi  13% white  Emphasized separator
+    Tokens:
+      mainBg      #0a0a0f  Deep slate black
+      secondBg    #111118  Card / panel surface
+      tertiaryBg  #16161f  Input / elevated surface
+      mainTxt     #e8e8f0  Cool white
+      secondTxt   #6b6b80  Muted slate
+      dimTxt      #3a3a4a  Placeholder / disabled
+      accent      #3b82f6  Electric blue
+      accentHi    #60a5fa  Lighter blue
+      border      6% white  Subtle separator
+      borderHi    10% white  Emphasized separator
 */
 
 import SwiftUI
@@ -20,25 +19,25 @@ import SwiftUI
 enum FlowLineTheme {
 
     // ── Backgrounds ───────────────────────────────────────────────────────
-    static let mainBg      = Color(hex: "#080810")   // deepest bg
-    static let secondBg    = Color(hex: "#0e0e1c")   // panel / card
-    static let tertiaryBg  = Color(hex: "#14142a")   // input field / elevated
+    static let mainBg      = Color(hex: "#0a0a0f")   // deepest bg
+    static let secondBg    = Color(hex: "#111118")   // panel / card
+    static let tertiaryBg  = Color(hex: "#16161f")   // input field / elevated
 
     // ── Text ──────────────────────────────────────────────────────────────
-    static let mainTxt     = Color(hex: "#eeeef5")   // primary
-    static let secondTxt   = Color(hex: "#7a7a9a")   // secondary
-    static let dimTxt      = Color(hex: "#44445a")   // placeholder / disabled
+    static let mainTxt     = Color(hex: "#e8e8f0")   // primary
+    static let secondTxt   = Color(hex: "#6b6b80")   // secondary
+    static let dimTxt      = Color(hex: "#3a3a4a")   // placeholder / disabled
 
     // ── Accent ────────────────────────────────────────────────────────────
-    static let accent      = Color(hex: "#6d4cfa")   // brand purple
-    static let accentHi    = Color(hex: "#8b6dff")   // lighter purple
+    static let accent      = Color(hex: "#3b82f6")   // electric blue
+    static let accentHi    = Color(hex: "#60a5fa")   // lighter blue
 
     // ── Borders ───────────────────────────────────────────────────────────
-    static let border      = Color.white.opacity(0.07)
-    static let borderHi    = Color.white.opacity(0.13)
+    static let border      = Color.white.opacity(0.06)
+    static let borderHi    = Color.white.opacity(0.10)
 
-    // ── Accent tint (for backgrounds behind accent elements) ──────────────
-    static let accentBg    = Color(hex: "#6d4cfa").opacity(0.10)
+    // ── Accent tint ───────────────────────────────────────────────────────
+    static let accentBg    = Color(hex: "#3b82f6").opacity(0.10)
 }
 
 // MARK: - Keyboard dismiss helper (iOS only)
@@ -48,7 +47,6 @@ import UIKit
 #endif
 
 extension View {
-    /// Tapping anywhere on the background dismisses the software keyboard.
     func hideKeyboardOnTap() -> some View {
         #if os(iOS)
         return self.onTapGesture {

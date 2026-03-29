@@ -34,7 +34,7 @@ struct DayTemplate: Identifiable, Equatable {
             id: "workday",
             name: "Work",
             emoji: "💼",
-            accent: Color(hex: "#6d4cfa"),
+            accent: Color(hex: "#3b82f6"),
             promptConstraints: """
             This is a standard WORK DAY. Apply these constraints:
             • Protect a 2–4h deep-focus block in the morning for complex tasks.

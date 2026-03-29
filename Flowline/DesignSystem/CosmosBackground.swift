@@ -7,12 +7,12 @@ import SwiftUI
 /// Zero SwiftUI view overhead — no `@State`, no layout passes per particle.
 struct CosmosBackground: View {
 
-    // Accent purple (matches FlowLineTheme.accent #6d4cfa)
+    // Accent purple (matches FlowLineTheme.accent #3b82f6)
     private let aR: Double = 0.427
     private let aG: Double = 0.298
     private let aB: Double = 0.980
 
-    // Lavender highlight (matches FlowLineTheme.accentHi #8b6dff)
+    // Lavender highlight (matches FlowLineTheme.accentHi #60a5fa)
     private let lR: Double = 0.545
     private let lG: Double = 0.427
     private let lB: Double = 1.000

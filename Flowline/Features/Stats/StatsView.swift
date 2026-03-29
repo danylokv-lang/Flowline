@@ -55,7 +55,7 @@ struct StatsView: View {
                 .font(.system(size: 28, weight: .black))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [FlowLineTheme.mainTxt, Color(hex: "#c4b5fd").opacity(0.9)],
+                        colors: [FlowLineTheme.mainTxt, Color(hex: "#93c5fd").opacity(0.9)],
                         startPoint: .leading, endPoint: .trailing
                     )
                 )

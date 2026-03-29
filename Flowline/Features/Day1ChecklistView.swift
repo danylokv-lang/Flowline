@@ -84,7 +84,7 @@ struct Day1ChecklistView: View {
                                 .frame(height: 3)
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(LinearGradient(
-                                    colors: [FlowLineTheme.accent, Color(hex: "#c4b5fd")],
+                                    colors: [FlowLineTheme.accent, Color(hex: "#93c5fd")],
                                     startPoint: .leading, endPoint: .trailing))
                                 .frame(width: geo.size.width * progress, height: 3)
                                 .animation(.easeInOut(duration: 0.4), value: progress)

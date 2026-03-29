@@ -65,14 +65,9 @@ struct ProfileView: View {
                     if subscriptionManager.isPro {
                         // Pro — show manage / customer center
                         HStack(spacing: 10) {
-                            ZStack {
-                                Circle()
-                                    .fill(FlowLineTheme.accent.opacity(0.15))
-                                    .frame(width: 36, height: 36)
-                                Text("✦")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(FlowLineTheme.accent)
-                            }
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(FlowLineTheme.accent)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Flowline Pro")
                                     .font(.system(size: 14, weight: .bold))

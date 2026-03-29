@@ -19,44 +19,36 @@ struct AuthView: View {
             FlowLineTheme.mainBg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer()
+                Spacer().frame(height: 24)
 
                 // ── Logo ────────────────────────────────────────────────
-                VStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(FlowLineTheme.accent.opacity(0.15))
-                            .frame(width: 64, height: 64)
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 26, weight: .semibold))
-                            .foregroundColor(FlowLineTheme.accent)
-                    }
+                VStack(spacing: 12) {
                     Text("Flowline")
-                        .font(.system(size: 28, weight: .black))
+                        .font(.system(size: 32, weight: .black))
                         .foregroundColor(FlowLineTheme.mainTxt)
-                    Text("Your AI-powered daily planner")
-                        .font(.system(size: 13))
+                    Text("AI-powered daily planning")
+                        .font(.system(size: 14))
                         .foregroundColor(FlowLineTheme.secondTxt)
                 }
-                .padding(.bottom, 36)
+                .padding(.bottom, 40)
 
                 // ── Mode switcher ───────────────────────────────────────
                 HStack(spacing: 0) {
                     modeTab("Sign In", tab: .login)
                     modeTab("Create Account", tab: .register)
                 }
-                .background(FlowLineTheme.tertiaryBg)
+                .background(FlowLineTheme.secondBg)
                 .clipShape(Capsule())
-                .padding(.horizontal, 48)
-                .padding(.bottom, 28)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
 
                 // ── Form ────────────────────────────────────────────────
-                VStack(spacing: 12) {
+                VStack(spacing: 14) {
                     if mode == .register {
-                        authField("Name", text: $name, icon: "person")
+                        authField("Full name", text: $name, icon: "person")
                     }
                     #if os(iOS)
-                    authField("Email", text: $email, icon: "envelope", keyboardType: .emailAddress) {
+                    authField("Email address", text: $email, icon: "envelope", keyboardType: .emailAddress) {
                         if !email.isEmpty {
                             emailError = EmailValidator.isValid(email) ? nil : EmailValidator.errorMessage(for: email)
                         } else {
@@ -64,7 +56,7 @@ struct AuthView: View {
                         }
                     }
                     #else
-                    authField("Email", text: $email, icon: "envelope") {
+                    authField("Email address", text: $email, icon: "envelope") {
                         if !email.isEmpty {
                             emailError = EmailValidator.isValid(email) ? nil : EmailValidator.errorMessage(for: email)
                         } else {
@@ -77,27 +69,33 @@ struct AuthView: View {
                             .font(.system(size: 11))
                             .foregroundColor(.red.opacity(0.85))
                             .padding(.horizontal, 14)
-                            .padding(.top, -8)
+                            .padding(.top, -6)
                     }
                     authField("Password", text: $password, icon: "lock", isSecure: true)
                 }
-                .padding(.horizontal, 48)
+                .padding(.horizontal, 20)
 
                 // ── Error ───────────────────────────────────────────────
                 if let err = errorMessage {
-                    Text(err)
-                        .font(.system(size: 12))
-                        .foregroundColor(.red.opacity(0.85))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 48)
-                        .padding(.top, 10)
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundColor(.red.opacity(0.8))
+                        Text(err)
+                            .font(.system(size: 12))
+                            .foregroundColor(.red.opacity(0.85))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.red.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
                 }
 
                 // ── Submit button ───────────────────────────────────────
                 Button(action: submit) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(FlowLineTheme.accent)
                         if isLoading {
                             ProgressView()
                                 .progressViewStyle(.circular)
@@ -106,49 +104,57 @@ struct AuthView: View {
                         } else {
                             HStack(spacing: 6) {
                                 Text(mode == .login ? "Sign In" : "Create Account")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .font(.system(size: 15, weight: .bold))
                                 Image(systemName: "arrow.right")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white.opacity(0.8))
+                                    .font(.system(size: 12, weight: .semibold))
                             }
+                            .foregroundColor(.white)
                         }
                     }
-                    .frame(height: 44)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(FlowLineTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(isLoading || !isFormValid)
                 .opacity(isFormValid ? 1 : 0.5)
-                .padding(.horizontal, 48)
-                .padding(.top, 20)
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
 
                 // ── Forgot Password link (login only) ────────────────────
                 if mode == .login {
                     Button(action: { showForgotPassword = true }) {
                         Text("Forgot password?")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundColor(FlowLineTheme.accent)
                     }
                     .buttonStyle(.plain)
-                    .padding(.top, 12)
+                    .padding(.top, 14)
                 }
 
                 Spacer()
 
                 // ── Footer ──────────────────────────────────────────────
-                HStack(spacing: 4) {
-                    Text("By continuing you agree to our")
-                    Link("Terms of Use", destination: URL(string: "https://flowline.ink/terms")!)
-                    Text("and")
-                    Link("Privacy Policy", destination: URL(string: "https://flowline.ink/privacy")!)
+                VStack(spacing: 8) {
+                    Text("By continuing, you agree to our")
+                        .font(.system(size: 11))
+                        .foregroundColor(FlowLineTheme.secondTxt)
+                    HStack(spacing: 8) {
+                        Link("Terms of Use", destination: URL(string: "https://flowline.ink/terms")!)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(FlowLineTheme.accent)
+                        Text("•")
+                            .foregroundColor(FlowLineTheme.secondTxt)
+                        Link("Privacy Policy", destination: URL(string: "https://flowline.ink/privacy")!)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(FlowLineTheme.accent)
+                    }
                 }
-                .font(.system(size: 10))
-                .foregroundColor(FlowLineTheme.secondTxt.opacity(0.5))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 48)
-                .padding(.bottom, 20)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
             }
-            .frame(maxWidth: 420)
         }
         .animation(.easeInOut(duration: 0.2), value: mode)
         .animation(.easeInOut(duration: 0.15), value: errorMessage)

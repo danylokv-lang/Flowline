@@ -10,7 +10,7 @@ struct WidgetEducationCard: View {
     @State private var showHowTo = false
 
     private var shouldShow: Bool {
-        !hasSeen && streak.totalPlansCreated >= 1
+        !hasSeen && streak.totalPlansCreated >= 3
     }
 
     var body: some View {
@@ -110,7 +110,7 @@ struct WidgetEducationCard: View {
     private var widgetPreview: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(hex: "#1a1a2e"))
+                .fill(Color(hex: "#111118"))
                 .frame(width: 62, height: 62)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -242,7 +242,7 @@ struct WidgetHowToSheet: View {
             // Home screen widget (medium)
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(hex: "#1a1a2e"))
+                    .fill(Color(hex: "#111118"))
                     .frame(width: 160, height: 80)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -284,7 +284,7 @@ struct WidgetHowToSheet: View {
                 // Lock screen pill
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color(hex: "#1a1a2e"))
+                        .fill(Color(hex: "#111118"))
                         .frame(width: 130, height: 24)
                     HStack(spacing: 5) {
                         Circle().fill(FlowLineTheme.accent).frame(width: 5, height: 5)
@@ -297,7 +297,7 @@ struct WidgetHowToSheet: View {
                 // Small home screen widget
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(hex: "#1a1a2e"))
+                        .fill(Color(hex: "#111118"))
                         .frame(width: 64, height: 64)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)

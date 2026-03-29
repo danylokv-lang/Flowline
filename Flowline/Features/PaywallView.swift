@@ -14,11 +14,11 @@ struct FlowlinePaywallView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             // Background
-            Color(hex: "#080810").ignoresSafeArea()
+            Color(hex: "#0a0a0f").ignoresSafeArea()
 
             // Ambient glow
             RadialGradient(
-                colors: [Color(hex: "#6d4cfa").opacity(0.18), .clear],
+                colors: [Color(hex: "#3b82f6").opacity(0.08), .clear],
                 center: .init(x: 0.5, y: 0.35),
                 startRadius: 0,
                 endRadius: 400
@@ -46,29 +46,21 @@ struct FlowlinePaywallView: View {
                 VStack(spacing: 0) {
 
                     // ── Hero ──────────────────────────────────────
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(hex: "#6d4cfa").opacity(0.15))
-                                .frame(width: 80, height: 80)
-                            Text("✦")
-                                .font(.system(size: 38))
-                        }
-                        .padding(.top, 56)
-
+                    VStack(spacing: 8) {
                         Text("Flowline Pro")
-                            .font(.system(size: 30, weight: .black))
+                            .font(.system(size: 34, weight: .black))
                             .foregroundColor(.white)
+                            .padding(.top, 64)
 
                         Text("Unlimited AI planning, every day.")
                             .font(.system(size: 15))
-                            .foregroundColor(Color(hex: "#9999bb"))
+                            .foregroundColor(FlowLineTheme.secondTxt)
                     }
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 32)
 
                     // ── Features ──────────────────────────────────
                     VStack(spacing: 10) {
-                        featureRow(icon: "sparkles",                 color: "#6d4cfa", text: "Unlimited AI day planning")
+                        featureRow(icon: "sparkles",                 color: "#3b82f6", text: "Unlimited AI day planning")
                         featureRow(icon: "arrow.trianglehead.2.counterclockwise.rotate.90",
                                                                      color: "#3b9eff", text: "Unlimited replanning & smart reschedule")
                         featureRow(icon: "chart.bar.fill",           color: "#f59e0b", text: "Full stats, streaks & insights")
@@ -129,15 +121,8 @@ struct FlowlinePaywallView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(hex: "#8b6dff"), Color(hex: "#6d4cfa")],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .background(FlowLineTheme.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: Color(hex: "#6d4cfa").opacity(0.4), radius: 16, y: 6)
                     }
                     .buttonStyle(.plain)
                     .disabled(subscriptionManager.isLoading)
@@ -188,31 +173,29 @@ struct FlowlinePaywallView: View {
     // MARK: - Sub-views
 
     private func featureRow(icon: String, color: String, text: String) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(hex: color))
-                .frame(width: 28, height: 28)
-                .background(Color(hex: color).opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 7))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(FlowLineTheme.accent)
+                .frame(width: 20)
 
             Text(text)
                 .font(.system(size: 14))
-                .foregroundColor(Color(hex: "#eeeef5"))
+                .foregroundColor(FlowLineTheme.mainTxt)
 
             Spacer()
 
             Image(systemName: "checkmark")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(Color(hex: "#2ecc71"))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(FlowLineTheme.accent.opacity(0.7))
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color.white.opacity(0.03))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 4)
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+            Rectangle()
+                .fill(FlowLineTheme.border)
+                .frame(height: 1),
+            alignment: .bottom
         )
     }
 
@@ -229,11 +212,11 @@ struct FlowlinePaywallView: View {
                 // Radio dot
                 ZStack {
                     Circle()
-                        .stroke(selected ? Color(hex: "#6d4cfa") : Color(hex: "#444466"), lineWidth: 2)
+                        .stroke(selected ? Color(hex: "#3b82f6") : Color(hex: "#444466"), lineWidth: 2)
                         .frame(width: 20, height: 20)
                     if selected {
                         Circle()
-                            .fill(Color(hex: "#6d4cfa"))
+                            .fill(Color(hex: "#3b82f6"))
                             .frame(width: 10, height: 10)
                     }
                 }
@@ -266,16 +249,12 @@ struct FlowlinePaywallView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(
-                selected
-                    ? Color(hex: "#6d4cfa").opacity(0.12)
-                    : Color.white.opacity(0.03)
-            )
+            .background(FlowLineTheme.secondBg)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(
-                        selected ? Color(hex: "#6d4cfa").opacity(0.6) : Color.white.opacity(0.06),
+                        selected ? FlowLineTheme.accent.opacity(0.8) : FlowLineTheme.border,
                         lineWidth: selected ? 1.5 : 1
                     )
             )
@@ -310,11 +289,11 @@ struct FlowlineCustomerCenter: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#080810").ignoresSafeArea()
+            Color(hex: "#0a0a0f").ignoresSafeArea()
             VStack(spacing: 20) {
                 Image(systemName: "person.crop.circle.badge.checkmark")
                     .font(.system(size: 48))
-                    .foregroundColor(Color(hex: "#6d4cfa"))
+                    .foregroundColor(Color(hex: "#3b82f6"))
 
                 Text("Manage Subscription")
                     .font(.system(size: 20, weight: .bold))
@@ -338,7 +317,7 @@ struct FlowlineCustomerCenter: View {
                     #endif
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(hex: "#6d4cfa"))
+                .tint(Color(hex: "#3b82f6"))
 
                 Button("Restore Purchases") {
                     Task {
