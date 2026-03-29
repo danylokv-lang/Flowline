@@ -85,7 +85,9 @@ struct AppIntroView: View {
                                 .tag(index)
                         }
                     }
+                    #if os(iOS)
                     .tabViewStyle(.page(indexDisplayMode: .never))
+                    #endif
                     .animation(.easeInOut, value: page)
 
                     // CTA
