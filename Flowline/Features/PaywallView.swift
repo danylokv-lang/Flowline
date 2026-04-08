@@ -155,13 +155,27 @@ struct FlowlinePaywallView: View {
                             .padding(.bottom, 8)
                     }
 
-                    // Legal
-                    Text("Subscriptions auto-renew unless cancelled 24h before renewal.\nManage in App Store settings.")
-                        .font(.system(size: 10))
-                        .foregroundColor(Color(hex: "#44445a"))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 28)
-                        .padding(.bottom, 32)
+                    // Legal + required links (Guideline 3.1.2c)
+                    VStack(spacing: 10) {
+                        Text("Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or cancel in App Store Settings.")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color(hex: "#44445a"))
+                            .multilineTextAlignment(.center)
+
+                        HStack(spacing: 24) {
+                            Link("Privacy Policy",
+                                 destination: URL(string: "https://flowline.ink/privacy.html")!)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color(hex: "#3b82f6").opacity(0.8))
+
+                            Link("Terms of Use",
+                                 destination: URL(string: "https://flowline.ink/terms.html")!)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color(hex: "#3b82f6").opacity(0.8))
+                        }
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 32)
                 }
             }
         }
@@ -266,10 +280,27 @@ struct FlowlinePaywallView: View {
 
     private func purchase() async {
         await subscriptionManager.fetchOfferings()
+
+        #if DEBUG
+        let all = subscriptionManager.currentOffering?.availablePackages ?? []
+        print("🛒 Available packages:", all.map { "\($0.packageType) — \($0.storeProduct.productIdentifier)" })
+        print("🛒 pickYearly:", pickYearly)
+        print("🛒 yearlyPackage:", subscriptionManager.yearlyPackage?.storeProduct.productIdentifier ?? "nil")
+        print("🛒 monthlyPackage:", subscriptionManager.monthlyPackage?.storeProduct.productIdentifier ?? "nil")
+        #endif
+
         let pkgOpt = pickYearly
             ? (subscriptionManager.yearlyPackage ?? subscriptionManager.monthlyPackage)
             : subscriptionManager.monthlyPackage
-        guard let pkg = pkgOpt else { return }
+        guard let pkg = pkgOpt else {
+            #if DEBUG
+            print("❌ No package found — check RevenueCat dashboard offerings config")
+            #endif
+            return
+        }
+        #if DEBUG
+        print("✅ Purchasing:", pkg.storeProduct.productIdentifier)
+        #endif
         let success = await subscriptionManager.purchase(package: pkg)
         if success { onDismiss(); dismiss() }
     }

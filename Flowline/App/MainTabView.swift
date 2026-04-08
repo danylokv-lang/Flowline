@@ -155,6 +155,9 @@ private func toastGlowColor(streak: Int) -> Color {
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showStreakToast = false
+    @State private var showExpiredAlert = false
+    @State private var showPaywallAfterExpiry = false
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @ObservedObject private var streakManager = StreakManager.shared
     @Query(filter: #Predicate<CapturedTask> { !$0.isScheduled })
     private var pendingTasks: [CapturedTask]
@@ -222,6 +225,22 @@ struct MainTabView: View {
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showStreakToast)
         .withCelebrations()
+        // ── Subscription expiry detection ───────────────────────────────────
+        .onChange(of: subscriptionManager.proJustExpired) { _, expired in
+            if expired {
+                showExpiredAlert = true
+                subscriptionManager.clearExpiredFlag()
+            }
+        }
+        .alert("Your Flowline Pro subscription has ended", isPresented: $showExpiredAlert) {
+            Button("Renew Pro") { showPaywallAfterExpiry = true }
+            Button("Continue Free", role: .cancel) { }
+        } message: {
+            Text("You're now on the free plan (3 plans/week). Renew anytime to restore unlimited access.")
+        }
+        .sheet(isPresented: $showPaywallAfterExpiry) {
+            FlowlinePaywallView { }
+        }
     }
 
     private func showStreakToastBriefly() {

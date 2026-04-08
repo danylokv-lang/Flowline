@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Flowline — AI Daily Planner for iPhone & Mac</title>
-  <meta name="description" content="Chat with AI to plan your day in 60 seconds. Available on iPhone and macOS. Syncs with Google &amp; Apple Calendar. Start free." />
+  <title>Flowline — AI Day Planner for iPhone &amp; Mac</title>
+  <meta name="description" content="Chat with AI to plan your entire day in 60 seconds. Flowline reads your calendar, fits your tasks around your meetings, and builds a schedule you can actually follow. Free on iPhone and macOS." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://flowline.ink/" />
-  <meta property="og:title" content="Flowline — AI Daily Planner" />
-  <meta property="og:description" content="Get a realistic daily plan from AI. Works on iPhone and Mac. Syncs with your calendar. Free to start." />
+  <meta property="og:title" content="Flowline — AI Day Planner" />
+  <meta property="og:description" content="AI that plans your day around your actual time. Native on iPhone and macOS. Free to start." />
   <meta property="og:image" content="https://flowline.ink/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Flowline — AI Daily Planner" />
-  <meta name="twitter:description" content="Plan your day with AI. Available on iPhone and macOS. Syncs with Google &amp; Apple Calendar." />
+  <meta name="twitter:title" content="Flowline — AI Day Planner" />
+  <meta name="twitter:description" content="Plan your whole day with AI. Works around your calendar. Free on iPhone and Mac." />
   <meta name="twitter:image" content="https://flowline.ink/og-image.png" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
@@ -28,26 +28,25 @@
     <a href="/" class="wordmark">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".9"/>
-        <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
+        <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#070a12"/>
       </svg>
       Flowline
     </a>
     <nav class="nav-links">
       <a href="#how">How it works</a>
-      <a href="#ios">iOS</a>
-      <a href="terms.html">Terms</a>
-      <a href="privacy.html">Privacy</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
     </nav>
     <div class="nav-end">
       <button class="link-btn" onclick="openAuth('login')">Sign in</button>
-      <button class="cta-btn" onclick="openAuth('register')">Get started free</button>
+      <button class="cta-btn" onclick="openAuth('register')">Start free</button>
     </div>
   </div>
 </header>
 
 <!-- HERO -->
 <section class="hero">
-  <!-- Splite spotlight beam -->
+  <!-- Spotlight beam -->
   <svg class="hero-spotlight" viewBox="0 0 3787 2842" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <g filter="url(#hero-sf)">
       <ellipse cx="1924.71" cy="273.501" rx="1924.71" ry="273.501"
@@ -68,13 +67,13 @@
     <div class="hero-left">
       <div class="kicker">iPhone · macOS · Google Calendar · Apple Calendar</div>
       <h1 class="hero-h1">
-        AI that actually<br />
-        knows your<br />
-        <em>time.</em>
+        Your day, built<br>
+        around your<br>
+        <em>actual time.</em>
       </h1>
       <p class="hero-body">
-        Chat with AI to plan your day. Flowline reads your calendar, handles the logistics,
-        and gives you a realistic schedule that works — on your phone or Mac.
+        Chat with Flowline. It reads your calendar, fits your tasks between meetings,
+        and hands you a realistic schedule you can actually follow — natively on iPhone and Mac.
       </p>
       <div class="hero-actions">
         <button class="cta-btn cta-lg" onclick="openAuth('register')">
@@ -83,7 +82,15 @@
         </button>
         <a class="ghost-btn" href="#how">See how it works</a>
       </div>
-      <p class="hero-note">No credit card. Runs natively on macOS.</p>
+      <div class="hero-store-row">
+        <a class="store-badge" href="https://apps.apple.com/us/app/flowline-ai-day-planner/id6760857917" target="_blank" rel="noopener" aria-label="Download on the App Store">
+          <div class="store-badge-text">
+            <span class="store-badge-sub">Download on the</span>
+            <span class="store-badge-name">App Store</span>
+          </div>
+        </a>
+      </div>
+      <p class="hero-note">Free plan · No credit card · Native on iPhone and Mac</p>
     </div>
 
     <div class="hero-right">
@@ -94,15 +101,14 @@
             <span class="dot dot-yellow"></span>
             <span class="dot dot-green"></span>
           </div>
-          <span class="window-title">Flowline — Thursday, Mar 19</span>
+          <span class="window-title">Flowline — Thursday, Apr 3</span>
         </div>
         <div class="window-body">
-          <!-- Chat -->
           <div class="chat-pane">
-            <div class="chat-msg user">Morning! I have a client call at 2pm, need to finish the pitch deck, go to the gym, and reply to emails.</div>
+            <div class="chat-msg user">Morning. Client call at 2pm, need to finish the pitch deck, hit the gym, and clear my inbox.</div>
             <div class="chat-msg ai">
               <span class="ai-tag">✦ Flowline</span>
-              Here's your Thursday — I've kept your morning focused since the call is at 2:00 PM.
+              Here's your Thursday — morning blocked for deep focus since your call is at 2:00 PM.
               <div class="plan-preview">
                 <div class="plan-row work">
                   <span class="plan-dot"></span>
@@ -111,13 +117,13 @@
                 </div>
                 <div class="plan-row study">
                   <span class="plan-dot"></span>
-                  <span class="plan-name">Email triage</span>
-                  <span class="plan-time">11:30 – 12:00</span>
+                  <span class="plan-name">Inbox triage</span>
+                  <span class="plan-time">11:30 – 12:15</span>
                 </div>
                 <div class="plan-row personal">
                   <span class="plan-dot"></span>
                   <span class="plan-name">Lunch break</span>
-                  <span class="plan-time">12:00 – 13:00</span>
+                  <span class="plan-time">12:15 – 13:00</span>
                 </div>
                 <div class="plan-row work">
                   <span class="plan-dot"></span>
@@ -130,10 +136,10 @@
                   <span class="plan-time">17:00 – 18:30</span>
                 </div>
               </div>
-              Save this to calendar?
+              Save this to your calendar?
             </div>
-            <div class="chat-msg user">Perfect, save it.</div>
-            <div class="chat-msg ai"><span class="ai-tag">✦ Flowline</span> Done — your Thursday is locked in. Good luck on the call.</div>
+            <div class="chat-msg user">Perfect. Save it.</div>
+            <div class="chat-msg ai"><span class="ai-tag">✦ Flowline</span> Done — Thursday is locked in. Good luck on the call.</div>
           </div>
         </div>
       </div>
@@ -149,70 +155,104 @@
     <div class="divider-v"></div>
     <div class="stat"><strong>AI</strong> planning engine</div>
     <div class="divider-v"></div>
-    <div class="stat"><strong>iOS + macOS</strong> apps</div>
+    <div class="stat"><strong>iPhone + macOS</strong> native apps</div>
     <div class="divider-v"></div>
-    <div class="stat">Syncs <strong>Google</strong> & <strong>Apple</strong> Calendar</div>
+    <div class="stat">Syncs <strong>Google</strong> &amp; <strong>Apple</strong> Calendar</div>
     <div class="divider-v"></div>
     <div class="stat">Start <strong>free</strong> today</div>
   </div>
 </div>
 
+<!-- PROBLEM -->
+<section class="problem" id="problem">
+  <div class="problem-inner">
+    <div class="problem-text reveal">
+      <div class="kicker">The gap</div>
+      <h2>To-do lists tell you <em>what</em>.<br>Not when.</h2>
+      <p>Most productivity tools dump everything onto a list and leave the scheduling to you. That gap — between knowing what to do and knowing when to do it — is exactly where the day falls apart.</p>
+    </div>
+    <div class="problem-compare reveal">
+      <div class="compare-card compare-before">
+        <div class="compare-label">Without Flowline</div>
+        <div class="compare-list">
+          <div class="compare-item"><span class="ci-box"></span><span>Finish pitch deck</span></div>
+          <div class="compare-item"><span class="ci-box"></span><span>Reply to emails</span></div>
+          <div class="compare-item"><span class="ci-box"></span><span>Client call prep</span></div>
+          <div class="compare-item"><span class="ci-box"></span><span>Review contracts</span></div>
+          <div class="compare-item"><span class="ci-box"></span><span>Hit the gym</span></div>
+        </div>
+        <div class="compare-footer">Still deciding what to do first.</div>
+      </div>
+      <div class="compare-arrow">→</div>
+      <div class="compare-card compare-after">
+        <div class="compare-label after-label">With Flowline</div>
+        <div class="compare-schedule">
+          <div class="cs-row work"><span class="cs-time">09:00</span><span class="cs-block">Deep work — Pitch deck</span></div>
+          <div class="cs-row study"><span class="cs-time">11:30</span><span class="cs-block">Email triage</span></div>
+          <div class="cs-row personal"><span class="cs-time">12:15</span><span class="cs-block">Lunch break</span></div>
+          <div class="cs-row work"><span class="cs-time">13:00</span><span class="cs-block">Client call prep</span></div>
+          <div class="cs-row health"><span class="cs-time">17:00</span><span class="cs-block">Gym</span></div>
+        </div>
+        <div class="compare-footer compare-footer-accent">Planned in 60 seconds.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- HOW IT WORKS -->
 <section class="how" id="how">
   <div class="section-intro reveal">
     <div class="kicker">How it works</div>
-    <h2>A smarter way to start your day</h2>
+    <h2>From tasks to a full day —<br>in three steps.</h2>
     <p>Most planners make you do all the thinking. Flowline flips that.</p>
   </div>
 
-  <!-- Feature 1 -->
+  <!-- Step 01 -->
   <div class="feature-row reveal">
     <div class="feature-text">
       <div class="step-num">01</div>
-      <h3>Just tell it what you have to do</h3>
+      <h3>Tell it what's on your plate</h3>
       <p>
-        No forms. No templates. Talk to Flowline like you'd talk to a smart colleague
-        — "I need to finish the report, have a team call at 3, and want to hit the gym."
-        It handles the scheduling.
+        No forms. No templates. No time slots to fill manually.
+        Describe your day like you'd tell a colleague — Flowline handles the rest.
       </p>
       <ul class="feature-list">
-        <li>Understands natural language</li>
-        <li>Respects your working hours and preferences</li>
-        <li>Adapts to your energy levels throughout the day</li>
+        <li>Natural language input</li>
+        <li>Respects your working hours and energy patterns</li>
+        <li>Context-aware: knows what takes long and what doesn't</li>
       </ul>
     </div>
     <div class="feature-visual">
       <div class="mini-chat glow-card">
-        <div class="mini-msg u">I have a deadline Friday and three meetings today.</div>
+        <div class="mini-msg u">I have a deadline Friday, three meetings today, and want to leave by 6.</div>
         <div class="mini-msg a">
           <span class="ai-dot">✦</span>
-          Got it. I've blocked 09:00–12:00 for deep work on the deadline, left buffers around your meetings, and kept your evening clear.
+          Got it. I've blocked 09:00–12:00 for deep work on the deadline, left buffers around each meeting, and wrapped everything before 6:00 PM.
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Feature 2 -->
+  <!-- Step 02 -->
   <div class="feature-row feature-row-flip reveal">
     <div class="feature-text">
       <div class="step-num">02</div>
-      <h3>Lock in and actually stay focused</h3>
+      <h3>Lock in and stay focused</h3>
       <p>
-        Pick a block, start the timer. Flowline tracks your session right from the
-        menu bar — no switching apps, no losing your place. Hourly nudges remind
-        you to take a real break before burnout sneaks in.
+        Pick a block, start the timer. Flowline tracks your session in the menu bar —
+        no switching apps, no losing context. Hourly nudges remind you to take real breaks before burnout sets in.
       </p>
       <ul class="feature-list">
         <li>Per-block focus timer</li>
-        <li>Live countdown in your menu bar</li>
-        <li>Hourly break reminders — 5 or 10 min</li>
+        <li>Live countdown in the macOS menu bar</li>
+        <li>Break reminders — 5 or 10 minutes</li>
       </ul>
     </div>
     <div class="feature-visual">
       <div class="timer-visual glow-card">
         <svg class="timer-ring" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6"/>
-          <circle cx="60" cy="60" r="52" fill="none" stroke="#6d4cfa" stroke-width="6"
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#2563eb" stroke-width="6"
                   stroke-dasharray="326" stroke-dashoffset="82"
                   stroke-linecap="round" transform="rotate(-90 60 60)"/>
         </svg>
@@ -227,19 +267,17 @@
     </div>
   </div>
 
-  <!-- Feature 3 -->
+  <!-- Step 03 -->
   <div class="feature-row reveal">
     <div class="feature-text">
       <div class="step-num">03</div>
-      <h3>See your whole week, instantly</h3>
+      <h3>See your whole week, clearly</h3>
       <p>
-        A clean, color-coded calendar shows every planned block across the week.
-        Work is purple. Study is blue. Health is green. Personal is orange.
-        You know at a glance how your time is actually being spent.
+        A clean, color-coded calendar shows every planned block at a glance.
+        Work. Study. Health. Personal. You know exactly how your time is spent — and where it goes.
       </p>
       <ul class="feature-list">
-        <li>Full 7-day calendar view, color-coded by category</li>
-        <li>Right-click any block to delete it instantly</li>
+        <li>7-day calendar view, color-coded by category</li>
         <li>Delete or re-plan any day in seconds</li>
         <li>Syncs with Google Calendar &amp; Apple Calendar</li>
       </ul>
@@ -275,6 +313,105 @@
       </div>
     </div>
   </div>
+
+  <!-- Step 04 — Stats & Streaks -->
+  <div class="feature-row feature-row-flip reveal" id="features">
+    <div class="feature-text">
+      <div class="step-num">04</div>
+      <h3>Consistency you can see</h3>
+      <p>
+        Track your planning streak, weekly completion rate, and month-by-month history.
+        The longer the streak, the clearer the pattern — and the easier the habit becomes.
+      </p>
+      <ul class="feature-list">
+        <li>Streak counter with animated milestone rewards</li>
+        <li>Weekly completion rate tracking</li>
+        <li>Planning history and trends over time</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <div class="stats-mockup glow-card">
+        <div class="stats-top">
+          <div class="stat-pill streak-pill">
+            <span class="fire-icon">🔥</span>
+            <div>
+              <div class="stat-pill-val">14-day streak</div>
+              <div class="stat-pill-sub">Keep it going today</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-row-cards">
+          <div class="stat-mini-card">
+            <div class="smc-val">89%</div>
+            <div class="smc-label">Completion</div>
+          </div>
+          <div class="stat-mini-card">
+            <div class="smc-val">23</div>
+            <div class="smc-label">Plans this month</div>
+          </div>
+          <div class="stat-mini-card">
+            <div class="smc-val">6/7</div>
+            <div class="smc-label">Days this week</div>
+          </div>
+        </div>
+        <div class="stat-chart">
+          <div class="chart-bars">
+            <div class="chart-bar" style="height:65%"></div>
+            <div class="chart-bar chart-bar-full" style="height:100%"></div>
+            <div class="chart-bar" style="height:80%"></div>
+            <div class="chart-bar chart-bar-full" style="height:100%"></div>
+            <div class="chart-bar chart-bar-today" style="height:90%"></div>
+            <div class="chart-bar" style="height:25%"></div>
+            <div class="chart-bar" style="height:15%"></div>
+          </div>
+          <div class="chart-labels">
+            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 05 — Inbox -->
+  <div class="feature-row reveal">
+    <div class="feature-text">
+      <div class="step-num">05</div>
+      <h3>Capture anything. Schedule it later.</h3>
+      <p>
+        The Inbox is your thought dump. Add tasks anytime — commuting, between meetings, late at night.
+        When you plan the next day, AI pulls from your inbox and slots everything automatically.
+      </p>
+      <ul class="feature-list">
+        <li>Instant capture — no context or time needed</li>
+        <li>AI auto-schedules inbox items into your plan</li>
+        <li>Nothing falls through the cracks</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <div class="inbox-mockup glow-card">
+        <div class="inbox-header">
+          <span class="inbox-title">Inbox</span>
+          <span class="inbox-badge">5</span>
+        </div>
+        <div class="inbox-capture">
+          <div class="inbox-input-row">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span class="inbox-placeholder">Add a task…</span>
+          </div>
+        </div>
+        <div class="inbox-list">
+          <div class="inbox-item"><span class="inbox-dot"></span><span>Prepare Q2 budget overview</span></div>
+          <div class="inbox-item"><span class="inbox-dot"></span><span>Call dentist to reschedule</span></div>
+          <div class="inbox-item"><span class="inbox-dot"></span><span>Review onboarding document</span></div>
+          <div class="inbox-item"><span class="inbox-dot"></span><span>Send invoice to client</span></div>
+          <div class="inbox-item"><span class="inbox-dot"></span><span>Buy birthday gift for Maya</span></div>
+        </div>
+        <div class="inbox-footer-row">
+          <span class="inbox-ai-btn">✦ Schedule with AI</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- CALENDAR INTEGRATION -->
@@ -283,11 +420,11 @@
     <div class="section-intro reveal">
       <div class="kicker">Calendar Sync</div>
       <h2>Knows what's already<br>on your plate.</h2>
-      <p>Flowline reads your Google Calendar and Apple Calendar before planning — so the AI always works <em style="font-style:italic;color:var(--accent-hi)">around</em> your existing events, never on top of them.</p>
+      <p>Flowline reads your Google Calendar and Apple Calendar before planning — so AI always works <em style="font-style:italic;color:var(--accent-hi)">around</em> your existing events, never on top of them.</p>
     </div>
 
     <div class="int-bento reveal">
-      <!-- Main card: AI chat demo showing Google Calendar awareness -->
+      <!-- Main card -->
       <div class="int-card int-main glow-card">
         <div class="int-eyebrow">
           <span class="int-pill google-pill">● Google</span>
@@ -310,7 +447,7 @@
         </div>
       </div>
 
-      <!-- Right column: 3 small cards -->
+      <!-- Right column -->
       <div class="int-right">
         <div class="int-card int-sm glow-card">
           <div class="dual-cals">
@@ -333,7 +470,7 @@
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v9M5.5 8.5 9 12l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 14h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           </div>
           <h4>Save to any calendar</h4>
-          <p>Pick Google, iCloud, or any connected account. One click and your plan is locked in.</p>
+          <p>Pick Google, iCloud, or any connected account. One tap and your plan is locked in.</p>
         </div>
 
         <div class="int-card int-sm glow-card">
@@ -341,7 +478,7 @@
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="8" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6 8V6a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           </div>
           <h4>Private by design</h4>
-          <p>Everything runs on your Mac via EventKit. Your events are never uploaded or stored anywhere.</p>
+          <p>Everything runs locally via EventKit. Your calendar events are never uploaded or stored anywhere.</p>
         </div>
       </div>
     </div>
@@ -364,58 +501,136 @@
   </div>
 </div>
 
-<!-- iOS APP SECTION -->
-<section class="ios-section" id="ios">
-  <div class="ios-inner reveal">
-    <div class="ios-header">
-      <div class="kicker">Now on iOS</div>
-      <h2>Plan on your iPhone</h2>
-      <p>Flowline is now available on iPhone. Same AI planning power, designed for mobile.</p>
+<!-- PLATFORM (iOS + macOS) -->
+<section class="platform-section" id="platform">
+  <div class="platform-inner reveal">
+    <div class="platform-header">
+      <div class="kicker">Native apps</div>
+      <h2>At home on iPhone and Mac.</h2>
+      <p>Built with SwiftUI — not a web wrapper. Every tap is instant, every animation smooth. Flowline feels like it belongs on your device because it does.</p>
     </div>
 
-    <div class="ios-grid">
-      <div class="ios-card glow-card">
-        <div class="ios-icon">📱</div>
-        <h3>Plan on the go</h3>
-        <p>Add tasks, replan your day, and check your schedule from anywhere — all from your phone.</p>
+    <div class="platform-grid">
+      <div class="platform-card glow-card">
+        <div class="platform-icon">
+          <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><rect x="5" y="1" width="12" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="18.5" r="1" fill="currentColor"/><path d="M8.5 3.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <h3>iPhone</h3>
+        <p>Full AI planning, focus timer, streaks, and smart notifications — all from your pocket.</p>
       </div>
-      <div class="ios-card glow-card">
-        <div class="ios-icon">🔔</div>
-        <h3>Smart notifications</h3>
-        <p>Get reminders for upcoming blocks, encouragement to plan tomorrow, and streak tracking — all on your lock screen.</p>
+      <div class="platform-card glow-card">
+        <div class="platform-icon">
+          <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><rect x="2" y="3" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 19h8M11 16v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <h3>macOS</h3>
+        <p>Native Mac app with menu bar integration. Full planning power at your desk.</p>
       </div>
-      <div class="ios-card glow-card">
-        <div class="ios-icon">📊</div>
-        <h3>Stats & streaks</h3>
-        <p>Track your planning consistency, see completion rates, and watch your streak grow day after day.</p>
-      </div>
-      <div class="ios-card glow-card">
-        <div class="ios-icon">🏠</div>
+      <div class="platform-card glow-card">
+        <div class="platform-icon">
+          <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><rect x="1" y="5" width="20" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 5V4a3 3 0 016 0v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="6" y="11" width="4" height="3" rx="1" fill="currentColor" opacity=".4"/><rect x="12" y="11" width="4" height="3" rx="1" fill="currentColor" opacity=".4"/></svg>
+        </div>
         <h3>Home screen widgets</h3>
-        <p>See today's schedule at a glance with customizable widgets on your home screen or lock screen.</p>
+        <p>Today's schedule visible from the lock screen — no app to open, no friction.</p>
+      </div>
+      <div class="platform-card glow-card">
+        <div class="platform-icon">
+          <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><path d="M11 4L18 8V14L11 18L4 14V8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 8L15 10.5V13.5L11 16L7 13.5V10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>One account, everywhere</h3>
+        <p>Sign up once. Plans, streaks, and preferences sync automatically across all devices.</p>
       </div>
     </div>
 
-    <div class="ios-cta">
+    <div class="platform-cta">
       <button class="cta-btn cta-lg" onclick="openAuth('register')">
-        Get Flowline
+        Get Flowline free
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <p class="ios-note">Sign up once, use on iPhone + macOS</p>
+      
+        </div>
+      </a>
+      <p class="platform-note">Free plan · iPhone · macOS · No credit card</p>
     </div>
   </div>
 </section>
 
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="pricing-inner">
+    <div class="section-intro reveal" style="margin: 0 auto 64px; text-align: center; max-width: 520px;">
+      <div class="kicker">Pricing</div>
+      <h2>Start free. Upgrade when you're ready.</h2>
+      <p>Every core feature is free. Flowline Pro removes the weekly limit for people who plan daily.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card reveal">
+        <div class="plan-top">
+          <div class="plan-name">Free</div>
+          <div class="plan-price-row">
+            <span class="plan-price">$0</span>
+            <span class="plan-per">/mo</span>
+          </div>
+          <p class="plan-desc">Everything you need to start building a daily planning habit.</p>
+        </div>
+        <ul class="plan-list">
+          <li><span class="li-mark">✓</span> 3 plans per week</li>
+          <li><span class="li-mark">✓</span> AI planning chat</li>
+          <li><span class="li-mark">✓</span> Weekly calendar view</li>
+          <li><span class="li-mark">✓</span> Focus timer</li>
+          <li><span class="li-mark">✓</span> Task inbox</li>
+          <li><span class="li-mark">✓</span> Streak tracking</li>
+          <li><span class="li-mark">✓</span> Google &amp; Apple Calendar sync</li>
+          <li><span class="li-mark">✓</span> iPhone + macOS</li>
+        </ul>
+        <button class="outline-btn plan-cta" onclick="openAuth('register')">Start free</button>
+      </div>
+
+      <div class="pricing-card pricing-pro glow-card reveal">
+        <div class="pro-badge">PRO</div>
+        <div class="plan-top">
+          <div class="plan-name">Flowline Pro</div>
+          <div class="plan-price-row">
+            <span class="plan-price">$4.99</span>
+            <span class="plan-per">/mo</span>
+          </div>
+          <p class="plan-annual">$34.99/yr — save 42%</p>
+          <p class="plan-desc">Unlimited planning for people who take their day seriously.</p>
+        </div>
+        <ul class="plan-list">
+          <li><span class="li-mark pro">✓</span> <strong>Unlimited plans</strong></li>
+          <li><span class="li-mark pro">✓</span> Everything in Free</li>
+          <li><span class="li-mark pro">✓</span> Priority AI responses</li>
+          <li><span class="li-mark pro">✓</span> Advanced streak milestones</li>
+          <li><span class="li-mark pro">✓</span> Detailed stats &amp; trends</li>
+          <li><span class="li-mark pro">✓</span> Early access to new features</li>
+        </ul>
+        <button class="cta-btn plan-cta" onclick="openAuth('register')">
+          Get Pro
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- BOTTOM CTA -->
 <section class="bottom-cta">
   <div class="bottom-cta-inner reveal">
-    <h2>Start planning smarter tomorrow.</h2>
-    <p>Get Flowline for free today. Available on iPhone, macOS, and web. No credit card required.</p>
-    <button class="cta-btn cta-lg" onclick="openAuth('register')">
-      Create your account
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
+    <h2>Start planning smarter today.</h2>
+    <p>Replace your to-do list with a plan that actually works. Free on iPhone and Mac — no credit card required.</p>
+    <div class="bottom-cta-actions">
+      <button class="cta-btn cta-lg" onclick="openAuth('register')">
+        Create your free account
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="store-badge" href="https://apps.apple.com/us/app/flowline-ai-day-planner/id6760857917" target="_blank" rel="noopener" aria-label="Download on the App Store">
+        <div class="store-badge-text">
+          <span class="store-badge-sub">Download on the</span>
+          <span class="store-badge-name">App Store</span>
+        </div>
+      </a>
+    </div>
   </div>
 </section>
 
@@ -425,17 +640,18 @@
     <a href="/" class="wordmark footer-wordmark">
       <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
         <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="currentColor" opacity=".8"/>
-        <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
+        <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#070a12"/>
       </svg>
       Flowline
     </a>
     <div class="footer-links">
       <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
       <a href="terms.html">Terms of Use</a>
       <a href="privacy.html">Privacy Policy</a>
       <a href="mailto:dkov.dev@gmail.com">Contact</a>
     </div>
-    <p class="footer-copy">© 2026 Flowline. Made for people who want their day back.</p>
+    <p class="footer-copy">© 2026 Flowline. Built for people who want their day back.</p>
   </div>
 </footer>
 
@@ -448,7 +664,7 @@
 
     <div class="modal-brand">
       <svg width="24" height="24" viewBox="0 0 18 18" fill="none">
-        <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="#6d4cfa" opacity=".9"/>
+        <path d="M9 1L16 5V13L9 17L2 13V5L9 1Z" fill="#2563eb" opacity=".9"/>
         <path d="M9 5L13 7.5V12.5L9 15L5 12.5V7.5L9 5Z" fill="#080810"/>
       </svg>
       <span>Flowline</span>
@@ -499,11 +715,15 @@
       <!-- Password -->
       <div class="nebula-field">
         <div class="nebula-input">
-          <input id="passwordInput" type="password" class="input" placeholder=" " autocomplete="current-password" required />
+          <input id="passwordInput" type="password" class="input input--has-eye" placeholder=" " autocomplete="current-password" required />
           <label class="user-label" for="passwordInput">Password</label>
           <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path d="M18 8h-1V6c0-2.8-2.2-5-5-5S7 3.2 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.7 1.4-3.1 3.1-3.1 1.7 0 3.1 1.4 3.1 3.1v2z"/>
           </svg>
+          <button type="button" class="eye-toggle" onclick="toggleEye('passwordInput',this)" tabindex="-1" aria-label="Show password">
+            <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <svg class="eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display:none"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+          </button>
           <div class="nebula-particle" style="--x:0.3;--y:-0.5;--delay:0.0s"></div>
           <div class="nebula-particle" style="--x:0.6;--y:-0.2;--delay:0.2s"></div>
           <div class="nebula-particle" style="--x:0.4;--y:0.4;--delay:0.4s"></div>
@@ -512,6 +732,27 @@
           <div class="nebula-particle" style="--x:0.7;--y:0.3;--delay:0.5s"></div>
         </div>
         <button type="button" id="forgotLink" class="forgot-link" style="margin-top:8px;display:block;text-align:right" onclick="switchTab('forgot')">Forgot password?</button>
+      </div>
+
+      <!-- Confirm Password (register only) -->
+      <div id="confirmPasswordGroup" class="nebula-field hidden">
+        <div class="nebula-input">
+          <input id="confirmPasswordInput" type="password" class="input input--has-eye" placeholder=" " autocomplete="new-password" />
+          <label class="user-label" for="confirmPasswordInput">Confirm password</label>
+          <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M18 8h-1V6c0-2.8-2.2-5-5-5S7 3.2 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.7 1.4-3.1 3.1-3.1 1.7 0 3.1 1.4 3.1 3.1v2z"/>
+          </svg>
+          <button type="button" class="eye-toggle" onclick="toggleEye('confirmPasswordInput',this)" tabindex="-1" aria-label="Show password">
+            <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <svg class="eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display:none"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+          </button>
+          <div class="nebula-particle" style="--x:0.3;--y:-0.5;--delay:0.0s"></div>
+          <div class="nebula-particle" style="--x:0.6;--y:-0.2;--delay:0.2s"></div>
+          <div class="nebula-particle" style="--x:0.4;--y:0.4;--delay:0.4s"></div>
+          <div class="nebula-particle" style="--x:0.8;--y:0.1;--delay:0.1s"></div>
+          <div class="nebula-particle" style="--x:0.2;--y:-0.6;--delay:0.3s"></div>
+          <div class="nebula-particle" style="--x:0.7;--y:0.3;--delay:0.5s"></div>
+        </div>
       </div>
 
       <div id="authError" class="error-box hidden"></div>

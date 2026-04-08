@@ -21,7 +21,11 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var currentOffering:   Offering?     = nil
     @Published private(set) var plansThisWeek:     Int           = 0
     @Published private(set) var isLoading:         Bool          = false
-    @Published var errorMessage: String?                         = nil
+    @Published var errorMessage:  String?                        = nil
+    /// Fires once when an active Pro subscription expires mid-session.
+    @Published private(set) var proJustExpired:   Bool           = false
+
+    private var wasProBeforeUpdate: Bool = false
 
     // MARK: - Constants
 
@@ -142,7 +146,14 @@ final class SubscriptionManager: ObservableObject {
         Self.configureIfNeeded()
         Purchases.shared.delegate = RCDelegateHandler.shared
         RCDelegateHandler.shared.onCustomerInfoUpdate = { [weak self] info in
-            Task { @MainActor [weak self] in self?.customerInfo = info }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let wasPro = self.isPro
+                self.customerInfo = info
+                if wasPro && !self.isPro {
+                    self.proJustExpired = true
+                }
+            }
         }
         resetIfNewWeek()
         plansThisWeek = UserDefaults.standard.integer(forKey: kPlansWeek)
@@ -156,14 +167,22 @@ final class SubscriptionManager: ObservableObject {
     // MARK: - RevenueCat: Fetch
 
     func refreshCustomerInfo() async {
+        let wasPro = isPro
         do {
             customerInfo = try await Purchases.shared.customerInfo()
+            // Detect mid-session expiry: was Pro, now isn't
+            if wasPro && !isPro {
+                proJustExpired = true
+            }
         } catch {
             #if DEBUG
             print("RevenueCat customerInfo error:", error.localizedDescription)
             #endif
         }
     }
+
+    /// Call after showing the expired-subscription UI so the flag resets.
+    func clearExpiredFlag() { proJustExpired = false }
 
     func fetchOfferings() async {
         do {
@@ -212,9 +231,32 @@ final class SubscriptionManager: ObservableObject {
 
     // MARK: - Convenience Package Accessors
 
-    var monthlyPackage:  Package? { currentOffering?.monthly }
-    var yearlyPackage:   Package? { currentOffering?.annual }
-    var lifetimePackage: Package? { currentOffering?.lifetime }
+    var monthlyPackage: Package? {
+        currentOffering?.monthly
+        ?? currentOffering?.availablePackages.first(where: { $0.packageType == .monthly })
+        ?? currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier.contains("monthly") })
+    }
+
+    var yearlyPackage: Package? {
+        currentOffering?.annual
+        ?? currentOffering?.availablePackages.first(where: { $0.packageType == .annual })
+        ?? currentOffering?.availablePackages.first(where: {
+            $0.storeProduct.productIdentifier.contains("annual")
+            || $0.storeProduct.productIdentifier.contains("yearly")
+            || $0.storeProduct.productIdentifier.contains("year")
+        })
+    }
+
+    var lifetimePackage: Package? {
+        currentOffering?.lifetime
+        ?? currentOffering?.availablePackages.first(where: { $0.packageType == .lifetime })
+        ?? currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier.contains("lifetime") })
+    }
+
+    /// The expiration date of the active Pro entitlement (nil if lifetime or not subscribed).
+    var proExpirationDate: Date? {
+        customerInfo?.entitlements[Self.entitlementID]?.expirationDate
+    }
 
     // MARK: - Private
 

@@ -137,11 +137,14 @@ function switchTab(tab) {
     document.getElementById('tab-login').classList.toggle('active', tab === 'login');
     document.getElementById('tab-register').classList.toggle('active', tab === 'register');
     document.getElementById('nameGroup').classList.toggle('hidden', tab === 'login');
+    document.getElementById('confirmPasswordGroup').classList.toggle('hidden', tab !== 'register');
     document.getElementById('submitLabel').textContent = tab === 'login' ? 'Sign in' : 'Create account';
     document.getElementById('authError').classList.add('hidden');
 
     const pwInput = document.getElementById('passwordInput');
     pwInput.autocomplete = tab === 'login' ? 'current-password' : 'new-password';
+    document.getElementById('confirmPasswordInput').value = '';
+    resetEye('confirmPasswordInput');
   }
 
   // Reset forgot form
@@ -150,6 +153,26 @@ function switchTab(tab) {
     document.getElementById('forgotError').classList.add('hidden');
     document.getElementById('forgotSuccess').classList.add('hidden');
   }
+}
+
+// ── Password eye toggle ──────────────────────────────────────────────────
+function toggleEye(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  btn.querySelector('.eye-open').style.display  = show ? 'none' : '';
+  btn.querySelector('.eye-closed').style.display = show ? '' : 'none';
+}
+
+function resetEye(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.type = 'password';
+  const btn = input.closest('.nebula-input').querySelector('.eye-toggle');
+  if (!btn) return;
+  btn.querySelector('.eye-open').style.display  = '';
+  btn.querySelector('.eye-closed').style.display = 'none';
 }
 
 // ── Submit auth ───────────────────────────────────────────────────────────
@@ -171,6 +194,12 @@ async function submitAuth(e) {
   }
   if (password.length < 6) {
     showError('Password must be at least 6 characters.'); return;
+  }
+  if (activeTab === 'register') {
+    const confirm = document.getElementById('confirmPasswordInput').value;
+    if (password !== confirm) {
+      showError('Passwords do not match.'); return;
+    }
   }
 
   setLoading(true, submitBtn, submitLabel, submitSpinner);
@@ -303,32 +332,32 @@ function injectToastStyle() {
     .fl-toast {
       position: fixed; bottom: 28px; left: 50%;
       transform: translateX(-50%) translateY(20px);
-      background: #0f0f1e; border: 1px solid rgba(109,76,250,.4);
+      background: #0c1018; border: 1px solid rgba(37,99,235,.4);
       border-radius: 14px; padding: 14px 20px;
       display: flex; align-items: center; gap: 14px;
-      box-shadow: 0 12px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(109,76,250,.1);
+      box-shadow: 0 12px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(37,99,235,.1);
       z-index: 9999; opacity: 0; transition: opacity .3s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
       font-family: Inter, sans-serif; white-space: nowrap; pointer-events: none;
     }
     .fl-toast-in  { opacity: 1; transform: translateX(-50%) translateY(0); }
     .fl-toast-out { opacity: 0; transform: translateX(-50%) translateY(10px); transition: opacity .3s ease, transform .3s ease; }
-    .fl-toast-icon { color: #8b6dff; font-size: 18px; flex-shrink: 0; }
+    .fl-toast-icon { color: #3b82f6; font-size: 18px; flex-shrink: 0; }
     .fl-toast-body { display: flex; flex-direction: column; gap: 2px; }
-    .fl-toast-title { font-size: 14px; font-weight: 600; color: #eeeef5; }
-    .fl-toast-sub   { font-size: 13px; color: #6666aa; }
+    .fl-toast-title { font-size: 14px; font-weight: 600; color: #e8edf5; }
+    .fl-toast-sub   { font-size: 13px; color: #64748b; }
     .nav-avatar {
       width: 32px; height: 32px; border-radius: 50%;
-      background: linear-gradient(135deg, #6d4cfa, #9b6dff);
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
       color: #fff; font-size: 12px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       cursor: default; flex-shrink: 0;
     }
     .forgot-link {
       background: none; border: none; padding: 0; cursor: pointer;
-      font-size: 13px; color: #6666aa; font-family: inherit;
+      font-size: 13px; color: #64748b; font-family: inherit;
       transition: color .2s;
     }
-    .forgot-link:hover { color: #8b6dff; }
+    .forgot-link:hover { color: #3b82f6; }
     .success-box {
       background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25);
       border-radius: 8px; padding: 12px 14px;

@@ -1582,7 +1582,6 @@ After planning, tell the user which inbox tasks you included):
                     skipValidationOnNextSave = false
                 }
 
-                let isFirstPlan = StreakManager.shared.totalPlansCreated == 0
                 try planSaver.save(plan: plan, for: planDate, context: modelContext)
                 await MainActor.run { CelebrationManager.shared.triggerConfetti() }
                 WidgetDataWriter.shared.refresh(context: modelContext)

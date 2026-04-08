@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "email-preview",
+      "name": "screenshots",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "4321", "backend"],
+      "runtimeArgs": ["serve", "-p", "4321", "screenshots"],
       "port": 4321
     },
     {

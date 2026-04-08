@@ -7,17 +7,45 @@
 		<key>Flowline.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>1</integer>
+			<integer>2</integer>
 		</dict>
 		<key>FlowlineWidgetExtension.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>2</integer>
+			<integer>3</integer>
 		</dict>
 		<key>Flowline_iOS.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>0</integer>
+			<integer>2</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>971EAD082F7097B1006D2662</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>9752E0112F6704A700CBF252</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>9752E0202F6704A800CBF252</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>9752E02A2F6704A800CBF252</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>97B43E4B2F73134E004B28DE</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

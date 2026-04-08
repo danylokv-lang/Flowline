@@ -197,6 +197,8 @@ private struct iOSSettingsRoot: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @AppStorage("lastLoggedInUserId")     private var lastLoggedInUserId: String = ""
 
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @State private var showPaywall         = false
     @State private var showLogoutConfirm   = false
     @State private var showDeleteConfirm   = false
     @State private var isDeletingAccount   = false
@@ -205,6 +207,63 @@ private struct iOSSettingsRoot: View {
     var body: some View {
         NavigationStack {
             List {
+                // ── Flowline Pro ─────────────────────────────────────────────
+                Section {
+                    if subscriptionManager.isPro {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(Color.blue)
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Flowline Pro")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text(subscriptionManager.isLifetime ? "Lifetime access" : "Active subscription")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Text("Active")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.green)
+                        }
+                        .padding(.vertical, 4)
+                    } else {
+                        Button { showPaywall = true } label: {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .fill(Color.blue)
+                                        .frame(width: 30, height: 30)
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.white)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Upgrade to Flowline Pro")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                    Text("Unlimited AI planning · 3-day free trial")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("Subscription")
+                }
+
                 // ── Personalisation ──────────────────────────────────────────
                 Section {
                     NavigationLink {
@@ -370,6 +429,7 @@ private struct iOSSettingsRoot: View {
         } message: {
             Text(deleteAccountError ?? "")
         }
+        .flowlinePaywall(isPresented: $showPaywall, subscriptionManager: subscriptionManager)
     }
 
     // ── Row helper ────────────────────────────────────────────────────────────
